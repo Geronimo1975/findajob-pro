@@ -94,14 +94,22 @@
         </button>
       </sc-for>
     </nav>
-    <div style="flex-shrink: 0; padding: 14px; border-top: 1px solid #3d3a39; display: flex; align-items: center; gap: 10px; justify-content: center;">
-      <div style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: #00d992; color: #101010; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 600; font-size: 13px;">{{ initials }}</div>
-      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
-        <div style="min-width: 0; flex: 1;">
-          <div style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ profileName }}</div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b949e;">logged in</div>
-        </div>
-      </sc-if>
+    <div style="flex-shrink: 0; padding: 10px; border-top: 1px solid #3d3a39;">
+      <!-- Identity is a real control, not decoration: it is the only way out of the
+           app, and a <div> is unreachable by keyboard and invisible to a screen
+           reader. Signing out POSTs /api/v1/auth/logout/ and lands on auth.html. -->
+      <button type="button" onClick="{{ signOut }}" title="{{ signOutLabel }}" aria-label="{{ signOutLabel }}" style="{{ signOutStyle }}" style-hover="background: #1a1a1a;">
+        <div style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: #00d992; color: #101010; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 600; font-size: 13px;">{{ initials }}</div>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+            <div style="min-width: 0; flex: 1; text-align: left;">
+              <div style="font-size: 12.5px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ profileName }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b949e; white-space: nowrap;">{{ signOutLabel }}</div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b949e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M15 17l5-5-5-5M20 12H9M12 3H5a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h7"></path></svg>
+          </div>
+        </sc-if>
+      </button>
     </div>
   </aside>
 
@@ -916,10 +924,34 @@ class Component extends DCLogic {
   async componentDidMount() {
     // Mock API mirrors DRF endpoints — swap api.js internals with real fetches to go live.
     this.api = await import('./api.js');
-    this.legal = await import('./legal.js');
+
     // The landing page's footer deep-links here as app.html#legal-<doc>, so Impressum,
     // Datenschutz, AGB etc. are reachable in one click from the public page.
     const m = /^#legal-(terms|privacy|cookies|impressum|withdrawal|dpa)$/.exec(location.hash);
+
+    // Spec §7 — the gate is the API, not the shell. index.html and app.html stay
+    // publicly served so the demo keeps working; the data behind /api/v1/* is
+    // what requires a session. `?demo=1` skips the call entirely and renders the
+    // fixtures below, minting no session and setting no cookie.
+    // A #legal-* deep link is exempt for a harder reason than convenience: § 5 DDG
+    // requires the Impressum to be reachable WITHOUT an account, and every one of
+    // those links is published on the public landing page.
+    if (new URLSearchParams(location.search).get('demo') !== '1' && !m) {
+      try {
+        await this.api.getMe();
+      } catch (err) {
+        if (err && err.status === 401) {
+          const next = location.pathname + location.search + location.hash;
+          location.replace('/auth.html?next=' + encodeURIComponent(next));
+          return;
+        }
+        // Any other failure — backend not deployed yet, offline, 502 — degrades
+        // to the demo shell. Bouncing to a login page that cannot work either
+        // would take the whole site down, and UI-first is not negotiable.
+      }
+    }
+
+    this.legal = await import('./legal.js');
     if (m) this.setState({ nav: 'legal', legalDoc: m[1] });
     this.setState({
       jobs: this.api.JOBS.map(j => ({ ...j })),
@@ -1002,6 +1034,7 @@ class Component extends DCLogic {
     const T = {
       en: {
         nav: { dashboard: 'Dashboard', search: 'Job Search', advisor: 'Advisor', analytics: 'Analytics', history: 'History', network: 'Network', documents: 'Documents', profile: 'Profile', integrations: 'APIs', settings: 'Modules', org: 'Organization', billing: 'Billing', legal: 'Legal' },
+        signout: 'Sign out',
         screens: {
           dashboard: ['Dashboard', 'One module per platform · aggregated view on All'],
           search: ['Job Search Profile', 'What you\'re open to — like LinkedIn\'s "Open to Work"'],
@@ -1021,6 +1054,7 @@ class Component extends DCLogic {
       },
       de: {
         nav: { dashboard: 'Dashboard', search: 'Jobsuche', advisor: 'Berater', analytics: 'Analysen', history: 'Verlauf', network: 'Netzwerk', documents: 'Dokumente', profile: 'Profil', integrations: 'APIs', settings: 'Module', org: 'Organisation', billing: 'Abrechnung', legal: 'Rechtliches' },
+        signout: 'Abmelden',
         screens: {
           dashboard: ['Dashboard', 'Ein Modul pro Plattform · aggregierte Ansicht unter „All"'],
           search: ['Jobsuche-Profil', 'Wofür Sie offen sind — wie LinkedIns „Open to Work"'],
@@ -1040,6 +1074,7 @@ class Component extends DCLogic {
       },
       ro: {
         nav: { dashboard: 'Dashboard', search: 'Căutare job', advisor: 'Consultant', analytics: 'Analize', history: 'Istoric', network: 'Rețea', documents: 'Documente', profile: 'Profil', integrations: 'API-uri', settings: 'Module', org: 'Organizație', billing: 'Abonament', legal: 'Legal' },
+        signout: 'Deconectare',
         screens: {
           dashboard: ['Dashboard', 'Un modul per platformă · vedere agregată pe „All"'],
           search: ['Profil de căutare', 'La ce ești deschis — ca „Open to Work" de pe LinkedIn'],
@@ -1179,6 +1214,15 @@ class Component extends DCLogic {
       sidebarToggleTitle: s.collapsed ? 'Expand sidebar' : 'Collapse sidebar',
       sidebarToggleIcon: s.collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6',
       initials: profile.name.split(' ').map(w => w[0]).join('').slice(0, 2), profileName: profile.name,
+      signOutLabel: tr.signout,
+      signOutStyle: 'display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; border-radius: 7px; cursor: pointer; padding: ' + (s.collapsed ? '8px 0; justify-content: center;' : '8px 10px;'),
+      // Best-effort POST: a demo visitor and an already-expired session both have
+      // nothing to destroy, and neither may be trapped inside the shell — so the
+      // navigation happens either way.
+      signOut: async () => {
+        try { if (api) await api.logout(); } catch { /* no session, or no backend yet */ }
+        location.assign('/auth.html?signedout=1');
+      },
       isDashboard: s.nav === 'dashboard', isHistory: s.nav === 'history', isDocuments: s.nav === 'documents', isProfile: s.nav === 'profile', isSettings: s.nav === 'settings', isIntegrations: s.nav === 'integrations',
       isOrg: s.nav === 'org', isBilling: s.nav === 'billing', isSearch: s.nav === 'search',
       isAdvisor: s.nav === 'advisor', isAnalytics: s.nav === 'analytics',

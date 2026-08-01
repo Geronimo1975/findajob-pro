@@ -1,7 +1,15 @@
-// Mock API layer — mirrors the Django/DRF endpoints 1:1.
-// To connect the real backend: set BASE, replace each mock body with fetch(BASE+path).
+// The frontend's single HTTP owner (spec §8) plus the demo fixtures.
+// There is deliberately no second fetch helper anywhere else in web/ — one
+// implementation of CSRF, one error shape, one place to change the base URL.
 export const BASE = '/api/v1';
 export const ENDPOINTS = {
+  // --- auth / session (M1) ---
+  authCsrf: '/auth/csrf/',                  // GET  -> sets the csrftoken cookie
+  authRequest: '/auth/request-code/',       // POST {email, lang} -> 202 {masked_email, expires_in, resend_in}
+  authVerify: '/auth/verify-code/',         // POST {email, code, accepts_terms} -> 200 + session
+  authLogout: '/auth/logout/',              // POST -> 204
+  me: '/me/',                               // GET  -> {user, org, membership_role, memberships, lang}
+
   platforms: '/platforms/',                 // GET list, PATCH /platforms/:id/ {is_active}
   jobs: '/jobs/',                           // GET ?platform=&status=
   generate: '/jobs/:id/generate/',          // POST -> Application {generated_content, generated_cover_letter, suggested_documents}
@@ -14,6 +22,99 @@ export const ENDPOINTS = {
   billing: '/billing/',                     // GET {plan, usage}, POST /billing/subscribe/ {plan, cycle}
   skillmatch: '/jobs/:id/skill-match/',     // GET {score, matched, missing}
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HTTP layer
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Mocks are opt-in and fail CLOSED (spec §9). Live is the default: a bundle that
+// silently served invented data in production would be worse than an outage,
+// because the user cannot tell the difference.
+export const USE_MOCK = typeof window !== 'undefined' && window.__FINDJOB_MOCK__ === true;
+if (USE_MOCK && !/^(localhost|127\.|.*\.local)$/.test(location.hostname)) {
+  throw new Error('mock API blocked off-localhost');
+}
+
+/** Every failure the API can produce, in one shape: {"error":{code, detail}}. */
+export class ApiError extends Error {
+  constructor(status, code, detail, retryAfter) {
+    super(detail || code || `HTTP ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code || 'http_error';
+    this.retryAfter = retryAfter;      // seconds, only meaningful on 429
+  }
+  /** True when the request never reached the server — offline, DNS, 502. */
+  get isUnreachable() { return this.status === 0; }
+}
+
+export function readCookie(name) {
+  const prefix = name + '=';
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) return decodeURIComponent(part.slice(prefix.length));
+  }
+  return '';
+}
+
+export async function request(path, { method = 'GET', body } = {}) {
+  let res;
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      // 'same-origin', NOT 'include': nginx proxies /api/ on this very origin,
+      // so the session cookie rides along without opening a CORS surface.
+      credentials: 'same-origin',
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        // DRF's APIView is csrf_exempt, so the token is the only thing standing
+        // between an anonymous POST and cross-site login CSRF.
+        ...(method !== 'GET' ? { 'X-CSRFToken': readCookie('csrftoken') } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Kept distinct from an HTTP error on purpose: callers must be able to tell
+    // "the API said no" from "there is no API", and degrade rather than bounce
+    // the visitor to a login page that cannot work either.
+    throw new ApiError(0, 'network_unreachable', 'The server could not be reached.');
+  }
+
+  if (res.status === 204) return null;
+
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = (payload && payload.error) || {};
+    const retryAfter = Number(
+      err.retry_after ?? (payload && payload.retry_after) ?? res.headers.get('Retry-After') ?? 0
+    ) || undefined;
+    throw new ApiError(res.status, err.code, err.detail, retryAfter);
+  }
+  return payload;
+}
+
+/**
+ * Prime the csrftoken cookie. Must be awaited on load of every page that can
+ * POST, before any form is submittable — the first POST would otherwise be
+ * rejected for a token the browser has never been given.
+ */
+export async function bootstrapCsrf() {
+  try {
+    await request(ENDPOINTS.authCsrf);
+    return true;
+  } catch {
+    return false;      // no backend yet, or offline: the page stays readable
+  }
+}
+
+export const requestCode = (email, lang) =>
+  request(ENDPOINTS.authRequest, { method: 'POST', body: { email, lang } });
+
+export const verifyCode = (email, code, accepts_terms) =>
+  request(ENDPOINTS.authVerify, { method: 'POST', body: { email, code, accepts_terms } });
+
+export const logout = () => request(ENDPOINTS.authLogout, { method: 'POST' });
+
+export const getMe = () => request(ENDPOINTS.me);
 
 // SaaS plans — Claude.ai-style tier structure (per-seat for Team/Enterprise)
 export const PLANS = [

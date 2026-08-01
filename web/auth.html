@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Findjob.pro</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="same-origin">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  /* Voltagent dark theme — the tokens are binding (voltagent-design skill):
+     canvas #101010, hairline #3d3a39, accent #00d992 on the primary button only,
+     Inter + JetBrains Mono, 6px button radius, 44px touch targets, no light mode. */
+  :root {
+    --canvas: #101010; --surface: #1a1a1a; --surface-2: #2a2a2a; --hairline: #3d3a39;
+    --accent: #00d992; --accent-soft: #2fd6a1; --on-accent: #101010;
+    --ink: #f2f2f2; --ink-strong: #ffffff; --body: #bdbdbd; --mute: #8b949e;
+    --danger: #e5534b; --warning: #e6b34d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--canvas); }
+  body {
+    font-family: Inter, system-ui, -apple-system, sans-serif; color: var(--ink);
+    min-height: 100dvh; display: flex; flex-direction: column;
+  }
+  a { color: var(--accent-soft); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 24px; border-bottom: 1px solid var(--hairline);
+  }
+  /* the anchor rule above would otherwise paint the whole wordmark green */
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: 0.02em; color: var(--ink-strong); }
+  .brand:hover { text-decoration: none; }
+  .brand span { color: var(--accent); }
+  .langs { margin-left: auto; display: flex; gap: 2px; background: var(--surface);
+           border: 1px solid var(--hairline); border-radius: 6px; padding: 2px; }
+  .langs button {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer;
+    background: none; color: var(--mute); min-height: 28px;
+  }
+  .langs button:hover { color: var(--ink); }
+  .langs button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card {
+    width: 100%; max-width: 420px; background: var(--canvas);
+    border: 1px solid var(--hairline); border-radius: 10px; padding: 28px 26px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--mute); margin-bottom: 12px;
+  }
+  h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; letter-spacing: -0.4px; color: var(--ink-strong); }
+  .sub { margin: 0 0 22px; font-size: 14px; line-height: 1.6; color: var(--body); }
+  .sub b { color: var(--ink); font-weight: 600; word-break: break-all; }
+
+  label { display: block; font-size: 12.5px; font-weight: 600; color: var(--body); margin-bottom: 6px; }
+  input[type="email"], input[type="text"] {
+    width: 100%; background: var(--surface); color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: 6px;
+    /* 16px is a hard floor, not a taste call: iOS Safari auto-zooms the viewport
+       on focus for any input below 16px, and this screen's mainline path is a
+       phone. The zoom does not undo itself on blur. */
+    padding: 12px 14px; font-family: inherit; font-size: 16px; min-height: 44px;
+  }
+  input:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #code {
+    font-family: 'JetBrains Mono', monospace; font-size: 26px; letter-spacing: 0.42em;
+    text-align: center; padding: 12px 8px 12px 22px; /* letter-spacing pads the right */
+  }
+  button.primary {
+    width: 100%; margin-top: 16px; min-height: 44px;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    background: var(--accent); color: var(--on-accent);
+    border: none; border-radius: 6px; padding: 12px 16px; cursor: pointer;
+  }
+  button.primary:hover:not(:disabled) { opacity: 0.9; }
+  button.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.link {
+    background: none; border: none; color: var(--mute); font-family: inherit;
+    font-size: 13px; cursor: pointer; padding: 10px 4px; min-height: 44px;
+  }
+  button.link:hover:not(:disabled) { color: var(--ink); }
+  button.link:disabled { cursor: default; opacity: 0.7; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Affirmative consent, never passive grey text (spec §10). */
+  .terms { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; }
+  .terms input { margin: 2px 0 0; width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+  .terms label { font-size: 12.5px; font-weight: 400; color: var(--body); line-height: 1.5; margin: 0; }
+  .terms.invalid { border-left: 2px solid var(--danger); padding-left: 10px; margin-left: -12px; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+  .expiry { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--mute); margin-top: 8px; }
+
+  .msg { margin-top: 16px; font-size: 13px; line-height: 1.55; border-radius: 6px; padding: 10px 12px; }
+  .msg.error { background: rgba(229,83,75,0.12); border: 1px solid rgba(229,83,75,0.35); color: var(--danger); }
+  .msg.warn  { background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35); color: var(--warning); }
+  .msg.ok    { background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35); color: var(--accent-soft); }
+  [hidden] { display: none !important; }
+
+  footer { padding: 18px 24px; border-top: 1px solid var(--hairline);
+           font-size: 12px; line-height: 1.7; color: var(--mute); text-align: center; }
+  footer a { color: var(--mute); }
+
+  @media (max-width: 480px) {
+    header { padding: 12px 16px; }
+    main { padding: 16px; align-items: flex-start; }
+    .card { padding: 22px 18px; border-radius: 8px; }
+    h1 { font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="index.html">Findjob<span>.pro</span></a>
+    <div class="langs" role="group" aria-label="Language" id="langs"></div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="eyebrow" id="eyebrow">Secure sign-in</div>
+
+      <!-- STEP 1 — email -->
+      <form id="step-email" novalidate>
+        <h1 id="t-email-title">Sign in</h1>
+        <p class="sub" id="t-email-sub"></p>
+        <label for="email" id="t-email-label">E-mail address</label>
+        <input id="email" name="email" type="email" autocomplete="email" enterkeyhint="send"
+               inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        <button class="primary" type="submit" id="btn-send"></button>
+      </form>
+
+      <!-- STEP 2 — six-digit code -->
+      <form id="step-code" novalidate hidden>
+        <h1 id="t-code-title">Enter your code</h1>
+        <p class="sub" id="t-code-sub"></p>
+        <label for="code" id="t-code-label">6-digit code</label>
+        <!-- No maxlength: it truncates a PASTE ("123 456" would land as "123 45").
+             The input/paste handlers below extract the six digits instead. -->
+        <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
+               autocomplete="one-time-code" enterkeyhint="go" autocapitalize="off"
+               autocorrect="off" spellcheck="false" required aria-describedby="expiry">
+        <div class="expiry" id="expiry"></div>
+
+        <div class="terms" id="terms-wrap">
+          <input type="checkbox" id="accepts_terms">
+          <label for="accepts_terms" id="t-terms"></label>
+        </div>
+
+        <button class="primary" type="submit" id="btn-verify"></button>
+        <div class="row">
+          <button class="link" type="button" id="btn-back"></button>
+          <button class="link" type="button" id="btn-resend"></button>
+        </div>
+      </form>
+
+      <div class="msg" id="msg" hidden role="alert"></div>
+    </div>
+  </main>
+
+  <footer>
+    <span id="t-legal-note"></span>
+    <a href="app.html#legal-privacy" id="t-privacy">Privacy</a> ·
+    <a href="app.html#legal-terms" id="t-terms-link">Terms</a> ·
+    <a href="app.html#legal-impressum" id="t-impressum">Impressum</a>
+  </footer>
+
+  <noscript>
+    <div style="max-width: 420px; margin: 24px auto; padding: 0 24px; font-size: 13px; color: #bdbdbd; text-align: center;">
+      Signing in needs JavaScript. Please enable it, or write to
+      <a href="mailto:support@findajob.pro">support@findajob.pro</a>.
+    </div>
+  </noscript>
+
+<script type="module">
+// The only HTTP owner is api.js (spec §8) — this file never calls fetch() itself,
+// so there is exactly one CSRF implementation and one error shape in web/.
+import { bootstrapCsrf, requestCode, verifyCode, ApiError } from './api.js';
+
+// ── i18n ─────────────────────────────────────────────────────────────────────
+// Same T-table shape index.html uses: T[lang] = {…}, every string present in all
+// three languages so a missing key can never fall back to English mid-sentence.
+const T = {
+  en: {
+    eyebrow: 'Secure sign-in',
+    emailTitle: 'Sign in',
+    emailSub: 'We e-mail you a 6-digit code. No password to remember, nothing to reset.',
+    emailLabel: 'E-mail address',
+    send: 'Send me a code',
+    sending: 'Sending…',
+    codeTitle: 'Enter your code',
+    codeSub: 'We sent a 6-digit code to <b>{email}</b>. Check your spam folder if it is not there.',
+    codeLabel: '6-digit code',
+    validFor: 'Code expires in {mm}:{ss}',
+    validExpired: 'This code has expired — request a new one.',
+    verify: 'Sign in',
+    verifying: 'Checking…',
+    back: '← Wrong address?',
+    resend: 'Resend code',
+    resendIn: 'Resend in {s}s',
+    resent: 'A new code is on its way. Older codes still work.',
+    signedOut: 'You are signed out.',
+    terms: 'I accept the <a href="app.html#legal-terms" target="_blank" rel="noopener">Terms (AGB)</a> and the <a href="app.html#legal-privacy" target="_blank" rel="noopener">Privacy Policy</a>.',
+    legalNote: 'Login and session storage are strictly necessary (§ 25(2) TTDSG) and need no consent banner.',
+    privacy: 'Privacy', terms_link: 'Terms', impressum: 'Impressum',
+    errors: {
+      invalid_email: 'That does not look like a valid e-mail address.',
+      rate_limited: 'Too many requests from here. Please try again in {s} seconds.',
+      invalid_code: 'That code is not correct. Check the newest e-mail and try again.',
+      code_expired: 'That code has expired. Request a new one.',
+      too_many_attempts: 'Too many wrong attempts for this code. Request a new one.',
+      terms_required: 'Please accept the Terms and the Privacy Policy to continue.',
+      terms_outdated: 'Our terms have changed. Please open them, read the current version and accept again.',
+      delivery_unavailable: 'We cannot send e-mail right now. Please try again in a few minutes.',
+      network_unreachable: 'The server could not be reached. Check your connection and try again.',
+      empty_code: 'Enter the 6 digits from the e-mail.',
+      session_expired: 'This page sat idle too long. Please request a new code.',
+      generic: 'Something went wrong. Please try again.',
+    },
+  },
+  de: {
+    eyebrow: 'Sichere Anmeldung',
+    emailTitle: 'Anmelden',
+    emailSub: 'Wir senden Ihnen einen 6-stelligen Code per E-Mail. Kein Passwort, nichts zurückzusetzen.',
+    emailLabel: 'E-Mail-Adresse',
+    send: 'Code anfordern',
+    sending: 'Wird gesendet…',
+    codeTitle: 'Code eingeben',
+    codeSub: 'Wir haben einen 6-stelligen Code an <b>{email}</b> gesendet. Bitte auch den Spam-Ordner prüfen.',
+    codeLabel: '6-stelliger Code',
+    validFor: 'Code läuft ab in {mm}:{ss}',
+    validExpired: 'Dieser Code ist abgelaufen — bitte einen neuen anfordern.',
+    verify: 'Anmelden',
+    verifying: 'Wird geprüft…',
+    back: '← Falsche Adresse?',
+    resend: 'Code erneut senden',
+    resendIn: 'Erneut in {s}s',
+    resent: 'Ein neuer Code ist unterwegs. Ältere Codes gelten weiterhin.',
+    signedOut: 'Sie sind abgemeldet.',
+    terms: 'Ich akzeptiere die <a href="app.html#legal-terms" target="_blank" rel="noopener">AGB</a> und die <a href="app.html#legal-privacy" target="_blank" rel="noopener">Datenschutzerklärung</a>.',
+    legalNote: 'Anmeldung und Sitzungsspeicher sind unbedingt erforderlich (§ 25 Abs. 2 TTDSG) und einwilligungsfrei.',
+    privacy: 'Datenschutz', terms_link: 'AGB', impressum: 'Impressum',
+    errors: {
+      invalid_email: 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.',
+      rate_limited: 'Zu viele Anfragen von hier. Bitte in {s} Sekunden erneut versuchen.',
+      invalid_code: 'Dieser Code stimmt nicht. Bitte die neueste E-Mail prüfen und erneut versuchen.',
+      code_expired: 'Dieser Code ist abgelaufen. Bitte einen neuen anfordern.',
+      too_many_attempts: 'Zu viele Fehlversuche für diesen Code. Bitte einen neuen anfordern.',
+      terms_required: 'Bitte akzeptieren Sie die AGB und die Datenschutzerklärung, um fortzufahren.',
+      terms_outdated: 'Unsere Bedingungen haben sich geändert. Bitte öffnen Sie die aktuelle Fassung und akzeptieren Sie erneut.',
+      delivery_unavailable: 'E-Mail-Versand ist derzeit nicht möglich. Bitte in wenigen Minuten erneut versuchen.',
+      network_unreachable: 'Der Server ist nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.',
+      empty_code: 'Bitte die 6 Ziffern aus der E-Mail eingeben.',
+      session_expired: 'Diese Seite war zu lange inaktiv. Bitte einen neuen Code anfordern.',
+      generic: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+    },
+  },
+  ro: {
+    eyebrow: 'Autentificare securizată',
+    emailTitle: 'Autentificare',
+    emailSub: 'Îți trimitem pe e-mail un cod din 6 cifre. Fără parolă de ținut minte, fără resetări.',
+    emailLabel: 'Adresă de e-mail',
+    send: 'Trimite-mi un cod',
+    sending: 'Se trimite…',
+    codeTitle: 'Introdu codul',
+    codeSub: 'Am trimis un cod din 6 cifre la <b>{email}</b>. Verifică și folderul spam.',
+    codeLabel: 'Cod din 6 cifre',
+    validFor: 'Codul expiră în {mm}:{ss}',
+    validExpired: 'Acest cod a expirat — cere unul nou.',
+    verify: 'Intră în cont',
+    verifying: 'Se verifică…',
+    back: '← Altă adresă?',
+    resend: 'Retrimite codul',
+    resendIn: 'Retrimite în {s}s',
+    resent: 'Un cod nou este pe drum. Codurile mai vechi rămân valabile.',
+    signedOut: 'Te-ai deconectat.',
+    terms: 'Accept <a href="app.html#legal-terms" target="_blank" rel="noopener">Termenii (AGB)</a> și <a href="app.html#legal-privacy" target="_blank" rel="noopener">Politica de confidențialitate</a>.',
+    legalNote: 'Autentificarea și stocarea sesiunii sunt strict necesare (§ 25(2) TTDSG) și nu necesită consimțământ.',
+    privacy: 'Confidențialitate', terms_link: 'Termeni', impressum: 'Impressum',
+    errors: {
+      invalid_email: 'Adresa de e-mail nu pare validă.',
+      rate_limited: 'Prea multe cereri de aici. Reîncearcă în {s} secunde.',
+      invalid_code: 'Codul nu este corect. Verifică cel mai recent e-mail și încearcă din nou.',
+      code_expired: 'Codul a expirat. Cere unul nou.',
+      too_many_attempts: 'Prea multe încercări greșite pentru acest cod. Cere unul nou.',
+      terms_required: 'Acceptă Termenii și Politica de confidențialitate pentru a continua.',
+      terms_outdated: 'Termenii s-au schimbat. Deschide versiunea curentă și acceptă din nou.',
+      delivery_unavailable: 'Nu putem trimite e-mail acum. Încearcă din nou în câteva minute.',
+      network_unreachable: 'Serverul nu poate fi contactat. Verifică conexiunea și încearcă din nou.',
+      empty_code: 'Introdu cele 6 cifre din e-mail.',
+      session_expired: 'Pagina a stat inactivă prea mult. Cere un cod nou.',
+      generic: 'Ceva nu a mers. Încearcă din nou.',
+    },
+  },
+};
+
+const PENDING_KEY = 'findajob.auth.pending';
+const LANG_KEY = 'findajob.lang';
+const DEFAULT_EXPIRES_IN = 600;   // 10 min — mirrors EmailOTP.expires_at (spec §4)
+const DEFAULT_RESEND_IN = 60;     // 60 s  — mirrors the otp:cd:{email} budget (spec §5)
+
+const $ = id => document.getElementById(id);
+const els = {
+  langs: $('langs'), eyebrow: $('eyebrow'), msg: $('msg'), expiry: $('expiry'),
+  stepEmail: $('step-email'), stepCode: $('step-code'),
+  email: $('email'), code: $('code'), terms: $('accepts_terms'), termsWrap: $('terms-wrap'),
+  btnSend: $('btn-send'), btnVerify: $('btn-verify'), btnBack: $('btn-back'), btnResend: $('btn-resend'),
+};
+
+let lang = pickLang();
+let pending = null;    // {email, step:'code', sentAt, expiresAt, cooldownUntil}
+let ticker = null;
+let submitting = false;
+
+// ── storage helpers ──────────────────────────────────────────────────────────
+// Safari in private mode throws on write, and an iframe with third-party storage
+// blocked throws on read. Neither may take the login screen down.
+function safeStorage(store, op, key, value) {
+  try {
+    if (op === 'get') return store.getItem(key);
+    if (op === 'set') return store.setItem(key, value);
+    if (op === 'del') return store.removeItem(key);
+  } catch { /* storage unavailable — the flow still works, just not across reloads */ }
+  return null;
+}
+
+// ── language ─────────────────────────────────────────────────────────────────
+function pickLang() {
+  const q = new URLSearchParams(location.search).get('lang');
+  const stored = safeStorage(localStorage, 'get', LANG_KEY);
+  const nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  for (const c of [q, stored, nav]) if (c && Object.prototype.hasOwnProperty.call(T, c)) return c;
+  return 'en';
+}
+
+function applyLang() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  document.title = t.emailTitle + ' — Findjob.pro';
+  els.eyebrow.textContent = t.eyebrow;
+  $('t-email-title').textContent = t.emailTitle;
+  $('t-email-sub').textContent = t.emailSub;
+  $('t-email-label').textContent = t.emailLabel;
+  $('t-code-title').textContent = t.codeTitle;
+  $('t-code-label').textContent = t.codeLabel;
+  $('t-terms').innerHTML = t.terms;          // trusted literal from the table above
+  $('t-legal-note').textContent = t.legalNote + ' ';
+  $('t-privacy').textContent = t.privacy;
+  $('t-terms-link').textContent = t.terms_link;
+  $('t-impressum').textContent = t.impressum;
+  els.btnSend.textContent = t.send;
+  els.btnVerify.textContent = t.verify;
+  els.btnBack.textContent = t.back;
+  renderCodeSub();
+  tick();                                    // re-label the countdown in the new language
+  els.langs.querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+}
+
+function renderCodeSub() {
+  if (!pending) return;
+  // The address is shown UNMASKED on purpose: the whole point of the "wrong
+  // address?" escape hatch is letting the user spot their own typo, which a
+  // server-masked a•••@g•••.de defeats. It is the address they just typed.
+  $('t-code-sub').innerHTML = T[lang].codeSub.replace('{email}', escapeHtml(pending.email));
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+for (const code of ['en', 'de', 'ro']) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.lang = code;
+  b.textContent = code.toUpperCase();
+  b.addEventListener('click', () => {
+    lang = code;
+    safeStorage(localStorage, 'set', LANG_KEY, code);
+    applyLang();
+  });
+  els.langs.appendChild(b);
+}
+
+// ── pending state — must survive a tab switch (spec §11) ─────────────────────
+// The mainline mobile path is: type e-mail → switch to the Mail app → come back.
+// iOS Safari evicts backgrounded tabs, so without rehydration the user returns to
+// an empty form and every code already sent to them is orphaned. Written to BOTH
+// stores: sessionStorage keeps it tab-local on a shared device, localStorage
+// survives the eviction that kills the whole session store.
+function savePending() {
+  if (!pending) return;
+  const raw = JSON.stringify(pending);
+  safeStorage(sessionStorage, 'set', PENDING_KEY, raw);
+  safeStorage(localStorage, 'set', PENDING_KEY, raw);
+}
+
+function clearPending() {
+  pending = null;
+  safeStorage(sessionStorage, 'del', PENDING_KEY);
+  safeStorage(localStorage, 'del', PENDING_KEY);
+}
+
+function loadPending() {
+  for (const store of [sessionStorage, localStorage]) {
+    const raw = safeStorage(store, 'get', PENDING_KEY);
+    if (!raw) continue;
+    try {
+      const p = JSON.parse(raw);
+      if (p && typeof p.email === 'string' && p.step === 'code' && Number(p.expiresAt) > Date.now()) {
+        return {
+          email: p.email,
+          step: 'code',
+          sentAt: Number(p.sentAt) || Date.now(),
+          expiresAt: Number(p.expiresAt),
+          cooldownUntil: Number(p.cooldownUntil) || 0,
+        };
+      }
+    } catch { /* corrupt entry — fall through to the next store */ }
+  }
+  return null;
+}
+
+// ── messages ─────────────────────────────────────────────────────────────────
+function showMessage(kind, text) {
+  els.msg.className = 'msg ' + kind;
+  els.msg.textContent = text;
+  els.msg.hidden = false;
+}
+
+function clearMessage() {
+  els.msg.hidden = true;
+  els.msg.textContent = '';
+  els.termsWrap.classList.remove('invalid');
+}
+
+function showApiError(err) {
+  const t = T[lang].errors;
+  const code = err instanceof ApiError ? err.code : 'generic';
+  const termsIssue = code === 'terms_required' || code === 'terms_outdated';
+  let text = t[code] || t.generic;
+  if (text.indexOf('{s}') !== -1) {
+    text = text.replace('{s}', String(err.retryAfter || DEFAULT_RESEND_IN));
+  }
+  showMessage(termsIssue ? 'warn' : 'error', text);
+  els.termsWrap.classList.toggle('invalid', termsIssue);
+  if (termsIssue) { els.terms.checked = false; els.terms.focus(); }
+
+  // A dead code is only recoverable by asking for a new one, so unblock resend
+  // immediately instead of making the user wait out a cooldown they cannot use.
+  if (code === 'code_expired' || code === 'too_many_attempts') {
+    if (pending) { pending.cooldownUntil = 0; savePending(); }
+    tick();
+  }
+  if (code === 'rate_limited' && pending) {
+    pending.cooldownUntil = Date.now() + (err.retryAfter || DEFAULT_RESEND_IN) * 1000;
+    savePending();
+    tick();
+  }
+}
+
+// ── step switching ───────────────────────────────────────────────────────────
+function goToCodeStep({ keepCode = false } = {}) {
+  els.stepEmail.hidden = true;
+  els.stepCode.hidden = false;
+  renderCodeSub();
+  if (!keepCode) els.code.value = '';
+  tick();
+  startTicker();
+  els.code.focus();
+}
+
+function goToEmailStep() {
+  clearPending();
+  stopTicker();
+  clearMessage();
+  els.stepCode.hidden = true;
+  els.stepEmail.hidden = false;
+  els.terms.checked = false;
+  els.email.focus();
+  els.email.select();
+}
+
+// ── countdown ────────────────────────────────────────────────────────────────
+// Every tick recomputes from absolute timestamps rather than decrementing a
+// counter: background tabs throttle (and iOS suspends) timers, so a decrementing
+// countdown drifts minutes off after a trip to the Mail app. This one is
+// self-correcting the moment the tab is foregrounded again.
+function tick() {
+  const t = T[lang];
+  if (!pending) {
+    els.expiry.textContent = '';
+    els.btnResend.disabled = false;
+    els.btnResend.textContent = t.resend;
+    return;
+  }
+  const now = Date.now();
+
+  const cooldownLeft = Math.ceil((pending.cooldownUntil - now) / 1000);
+  if (cooldownLeft > 0) {
+    els.btnResend.disabled = true;
+    els.btnResend.textContent = t.resendIn.replace('{s}', String(cooldownLeft));
+  } else {
+    els.btnResend.disabled = false;
+    els.btnResend.textContent = t.resend;
+  }
+
+  const expiryLeft = Math.max(0, Math.floor((pending.expiresAt - now) / 1000));
+  if (expiryLeft <= 0) {
+    els.expiry.textContent = t.validExpired;
+  } else {
+    els.expiry.textContent = t.validFor
+      .replace('{mm}', String(Math.floor(expiryLeft / 60)))
+      .replace('{ss}', String(expiryLeft % 60).padStart(2, '0'));
+  }
+}
+
+function startTicker() {
+  stopTicker();
+  ticker = setInterval(tick, 1000);
+}
+
+function stopTicker() {
+  if (ticker) { clearInterval(ticker); ticker = null; }
+}
+
+// ── requests ─────────────────────────────────────────────────────────────────
+/**
+ * Django rotates/expires the csrftoken cookie, and this page is designed to be
+ * left open while the user walks to their mailbox. A 403 with no machine code is
+ * what a stale token looks like, so re-prime the cookie and retry exactly once —
+ * otherwise a perfectly valid code fails with an unexplainable error.
+ */
+async function withCsrfRetry(send) {
+  try {
+    return await send();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403 && err.code === 'http_error') {
+      await bootstrapCsrf();
+      return await send();
+    }
+    throw err;
+  }
+}
+
+async function sendCode(email, { isResend = false } = {}) {
+  if (submitting) return false;
+  submitting = true;
+  const btn = isResend ? els.btnResend : els.btnSend;
+  const label = btn.textContent;
+  btn.disabled = true;
+  if (!isResend) btn.textContent = T[lang].sending;
+  clearMessage();
+  try {
+    // 202 is unconditional and identically shaped for known and unknown addresses
+    // (spec §6) — this screen must therefore never branch on the response either.
+    const res = await withCsrfRetry(() => requestCode(email, lang));
+    const now = Date.now();
+    const expiresIn = Number(res && res.expires_in) || DEFAULT_EXPIRES_IN;
+    const resendIn = Number(res && res.resend_in) || DEFAULT_RESEND_IN;
+    pending = {
+      email,
+      step: 'code',
+      sentAt: now,
+      expiresAt: now + expiresIn * 1000,
+      cooldownUntil: now + resendIn * 1000,   // the countdown IS the server's resend_in
+    };
+    savePending();
+    goToCodeStep();
+    if (isResend) showMessage('ok', T[lang].resent);
+    return true;
+  } catch (err) {
+    showApiError(err);
+    return false;
+  } finally {
+    submitting = false;
+    if (isResend) tick();                     // cooldown state owns this button
+    else { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
+// ── step 1 submit ────────────────────────────────────────────────────────────
+els.stepEmail.addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = els.email.value.trim();
+  // Deliberately permissive: the server is the authority on address validity and
+  // answers identically for known and unknown addresses, so the only job here is
+  // catching an obvious slip before spending a rate-limit budget on it.
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    showMessage('error', T[lang].errors.invalid_email);
+    els.email.focus();
+    return;
+  }
+  await sendCode(email);
+});
+
+// ── step 2 submit ────────────────────────────────────────────────────────────
+els.stepCode.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (submitting) return;
+  if (!pending) { goToEmailStep(); showMessage('warn', T[lang].errors.session_expired); return; }
+
+  const code = els.code.value.replace(/\D/g, '');
+  if (code.length !== 6) {
+    showMessage('error', T[lang].errors.empty_code);
+    els.code.focus();
+    return;
+  }
+  // Consent is affirmative and checked here first so the answer is instant; the
+  // server enforces it again (400 terms_required) and is the record of truth.
+  if (!els.terms.checked) {
+    showMessage('warn', T[lang].errors.terms_required);
+    els.termsWrap.classList.add('invalid');
+    els.terms.focus();
+    return;
+  }
+
+  submitting = true;
+  const label = els.btnVerify.textContent;
+  els.btnVerify.disabled = true;
+  els.btnVerify.textContent = T[lang].verifying;
+  clearMessage();
+  try {
+    await withCsrfRetry(() => verifyCode(pending.email, code, true));
+    clearPending();
+    stopTicker();
+    // Full navigation, not history.pushState: the session cookie was just set and
+    // app.html must boot from scratch against it.
+    location.assign(safeNext());
+  } catch (err) {
+    showApiError(err);
+    els.code.focus();
+    els.code.select();
+  } finally {
+    submitting = false;
+    els.btnVerify.disabled = false;
+    els.btnVerify.textContent = label;
+  }
+});
+
+els.btnBack.addEventListener('click', goToEmailStep);
+els.btnResend.addEventListener('click', () => {
+  if (pending) sendCode(pending.email, { isResend: true });
+  else goToEmailStep();
+});
+
+// ── code input: typing, autofill and paste ───────────────────────────────────
+// A pasted OTP arrives in every shape: "123456", "123 456", or a whole sentence
+// lifted out of the mail client. Prefer a standalone six-digit group, so
+// "Your Findjob.pro code is 123456" does not become "2026…" from the year.
+els.code.addEventListener('paste', e => {
+  if (!e.clipboardData) return;                    // let the input handler cope
+  const text = e.clipboardData.getData('text') || '';
+  if (!text) return;
+  const m = text.match(/(?:^|\D)(\d{6})(?:\D|$)/) || text.replace(/\D/g, '').match(/^(\d{6})/);
+  if (!m) return;
+  e.preventDefault();
+  els.code.value = m[1];
+  els.code.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+els.code.addEventListener('input', () => {
+  const digits = els.code.value.replace(/\D/g, '').slice(0, 6);
+  if (els.code.value !== digits) els.code.value = digits;
+  // Submit the moment six digits are in — but only once consent is given, or the
+  // round trip is guaranteed to come back 400 terms_required and burn a request.
+  if (digits.length === 6 && els.terms.checked && !submitting) els.stepCode.requestSubmit();
+});
+
+els.terms.addEventListener('change', () => {
+  if (els.terms.checked) {
+    els.termsWrap.classList.remove('invalid');
+    if (els.msg.className.indexOf('warn') !== -1) clearMessage();
+  }
+});
+
+/**
+ * Only ever navigate to a path on this origin. `?next=//evil.example` and
+ * `?next=https://evil.example` are the classic open-redirect payloads, and
+ * `/\evil.example` is the backslash variant browsers normalise to `//`.
+ */
+function safeNext() {
+  const next = new URLSearchParams(location.search).get('next');
+  if (next && /^\/[^/\\]/.test(next)) return next;
+  return '/app.html';
+}
+
+// ── mount ────────────────────────────────────────────────────────────────────
+function mount() {
+  applyLang();
+
+  // Prime the csrftoken cookie before any form can submit — the very first POST
+  // is otherwise rejected for a token the browser was never given (spec §8).
+  bootstrapCsrf();
+
+  if (new URLSearchParams(location.search).get('signedout') === '1') {
+    clearPending();
+    showMessage('ok', T[lang].signedOut);
+  }
+
+  pending = loadPending();
+  if (pending) {
+    goToCodeStep();
+  } else {
+    // Carried over from the landing page's sign-up modal so the address is typed
+    // once, not twice. Never auto-submitted: sending a code stays a deliberate act.
+    const prefill = new URLSearchParams(location.search).get('email');
+    if (prefill && prefill.length <= 254 && prefill.indexOf('@') !== -1) els.email.value = prefill;
+    els.email.focus();
+  }
+}
+
+// Re-sync when the tab comes back: the timers above were throttled or suspended
+// while the user was in their mail client, and a bfcache restore does not re-run
+// module scripts at all — mount() would never fire again on iOS "back".
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+window.addEventListener('pageshow', e => {
+  if (!e.persisted) return;
+  pending = loadPending();
+  if (pending) { goToCodeStep({ keepCode: true }); } else if (els.stepCode.hidden === false) { goToEmailStep(); }
+});
+
+mount();
+</script>
+</body>
+</html>

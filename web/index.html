@@ -63,7 +63,7 @@
           <button onClick="{{ lg.go }}" style="{{ lg.style }}" style-hover="color: #f2f2f2;">{{ lg.label }}</button>
         </sc-for>
       </div>
-      <a href="app.html" style="font-size: 13px; font-weight: 600; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 8px 16px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tLogin }}</a>
+      <a href="{{ loginHref }}" style="font-size: 13px; font-weight: 600; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 8px 16px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tLogin }}</a>
       <button onClick="{{ startOnboarding }}" style="font-family: Inter, sans-serif; font-size: 13px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 9px 18px; cursor: pointer;" style-hover="opacity: 0.9;">{{ tSignup }}</button>
     </div>
   </nav>
@@ -75,7 +75,7 @@
     <p style="max-width: 620px; margin: 22px auto 0; font-size: 17px; line-height: 1.65; color: #bdbdbd;">{{ tHeroSub }}</p>
     <div style="display: flex; gap: 12px; justify-content: center; margin-top: 32px;">
       <button onClick="{{ startOnboarding }}" style="font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 13px 26px; cursor: pointer;" style-hover="opacity: 0.9;">{{ tCta }}</button>
-      <a href="app.html" style="display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; color: #2fd6a1; border: 1px solid #3d3a39; border-radius: 6px; padding: 13px 26px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tDemo }}</a>
+      <a href="app.html?demo=1" style="display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; color: #2fd6a1; border: 1px solid #3d3a39; border-radius: 6px; padding: 13px 26px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tDemo }}</a>
     </div>
     <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e; margin-top: 16px;">{{ tNoCard }}</div>
     <div style="margin: 56px auto 0; max-width: 860px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 10px; padding: 18px; text-align: left;">
@@ -211,7 +211,7 @@
       </sc-if>
       <div style="display: flex; gap: 10px; margin-top: 22px;">
         <sc-if value="{{ obIsLast }}" hint-placeholder-val="{{ false }}">
-          <a href="app.html" style="flex: 1; text-align: center; font-size: 13.5px; font-weight: 600; background: #00d992; color: #101010; border-radius: 6px; padding: 11px 0;" style-hover="opacity: 0.9; text-decoration: none;">{{ tFinish }}</a>
+          <a href="{{ obFinishHref }}" style="flex: 1; text-align: center; font-size: 13.5px; font-weight: 600; background: #00d992; color: #101010; border-radius: 6px; padding: 11px 0;" style-hover="opacity: 0.9; text-decoration: none;">{{ tFinish }}</a>
         </sc-if>
         <sc-if value="{{ obNotLast }}" hint-placeholder-val="{{ true }}">
           <button onClick="{{ obNext }}" style="flex: 1; font-family: Inter, sans-serif; font-size: 13.5px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 11px 0; cursor: pointer;" style-hover="opacity: 0.9;">{{ tContinue }}</button>
@@ -346,6 +346,13 @@ class Component extends DCLogic {
         label,
         href: 'app.html#legal-' + ['terms', 'privacy', 'cookies', 'impressum', 'withdrawal'][i],
       })),
+      // Carry the chosen language into the sign-in screen, and hand it the address
+      // the sign-up modal already collected — otherwise the visitor types the same
+      // e-mail twice in a row. auth.html only PREFILLS it; nothing is sent until
+      // the visitor presses the button there.
+      loginHref: 'auth.html?lang=' + s.lang,
+      obFinishHref: 'auth.html?lang=' + s.lang +
+        (s.obEmail.trim() ? '&email=' + encodeURIComponent(s.obEmail.trim()) : ''),
       startOnboarding: () => this.setState({ onboardingOpen: true, obStep: 0 }),
       closeOnboarding: () => this.setState({ onboardingOpen: false }),
       onboardingOpen: s.onboardingOpen,
@@ -373,6 +380,13 @@ class Component extends DCLogic {
     };
   }
 }
+</script>
+<script type="module">
+  // Spec §8: api.js is the single owner of HTTP, and the csrftoken cookie is
+  // primed here as well as on auth.html — so the first POST of the sign-in flow
+  // always carries a token, even if auth.html's own bootstrap is still in flight.
+  import { bootstrapCsrf } from './api.js';
+  bootstrapCsrf();
 </script>
 </body>
 </html>
