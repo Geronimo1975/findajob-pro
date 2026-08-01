@@ -1,0 +1,38 @@
+# Real candidate documents — personal data (CV, certificates, references, signature).
+# Keep the directory skeleton, never the contents.
+/documents/**
+!/documents/**/
+!/documents/**/.gitkeep
+
+# Secrets
+.env
+*.pem
+
+# Claude local overrides. The REST of .claude/ is committed on purpose — the skills
+# under .claude/skills/ are project knowledge, not personal config.
+.claude/settings.local.json
+
+# Python / Django — the backend phase will need these
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+.venv/
+env/
+venv/
+db.sqlite3
+/staticfiles/
+/media/
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Scratch output from browser automation / screenshots taken while verifying
+.playwright-mcp/
+/*.png
+
+# Superpowers scratch
+.superpowers/

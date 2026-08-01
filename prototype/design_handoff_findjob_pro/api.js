@@ -1,0 +1,165 @@
+// Mock API layer — mirrors the Django/DRF endpoints 1:1.
+// To connect the real backend: set BASE, replace each mock body with fetch(BASE+path).
+export const BASE = '/api/v1';
+export const ENDPOINTS = {
+  platforms: '/platforms/',                 // GET list, PATCH /platforms/:id/ {is_active}
+  jobs: '/jobs/',                           // GET ?platform=&status=
+  generate: '/jobs/:id/generate/',          // POST -> Application {generated_content, generated_cover_letter, suggested_documents}
+  send: '/applications/:id/send/',          // POST {sent_manually}
+  documents: '/documents/',
+  profile: '/profile/',
+  integrations: '/integrations/',           // GET list, POST /integrations/:id/connect/ {api_key}, DELETE key
+  contacts: '/contacts/',                   // networking CRM
+  org: '/org/',                             // GET org, POST /org/invite/ {email, role}
+  billing: '/billing/',                     // GET {plan, usage}, POST /billing/subscribe/ {plan, cycle}
+  skillmatch: '/jobs/:id/skill-match/',     // GET {score, matched, missing}
+};
+
+// SaaS plans — Claude.ai-style tier structure (per-seat for Team/Enterprise)
+export const PLANS = [
+  { id: 'free',       name: 'Free',       monthly: 0,   yearly: 0,   seat: false, tagline: 'Try the tracker',
+    limits: { apps: 10,  gens: 20,   platforms: 2,  seats: 1 },
+    features: ['10 applications / month', '20 AI generations', '2 platform modules', 'Manual send only', 'Community support'] },
+  { id: 'pro',        name: 'Pro',        monthly: 20,  yearly: 17,  seat: false, tagline: 'For an active job search', popular: true,
+    limits: { apps: 100, gens: 500,  platforms: 99, seats: 1 },
+    features: ['100 applications / month', '500 AI generations', 'All platform modules', 'Auto-send (low-risk sources)', 'Canva templates', 'Email support'] },
+  { id: 'max',        name: 'Max',        monthly: 100, yearly: 85,  seat: false, tagline: '5×–20× more usage',
+    limits: { apps: 1000, gens: 5000, platforms: 99, seats: 1 },
+    features: ['1,000 applications / month', '5,000 AI generations', 'Priority AI queue', 'n8n workflow automation', 'API access', 'Priority support'] },
+  { id: 'team',       name: 'Team',       monthly: 30,  yearly: 25,  seat: true,  tagline: 'Agencies & career coaches · min 5 seats',
+    limits: { apps: 500, gens: 2500, platforms: 99, seats: 100 },
+    features: ['Everything in Pro, per seat', 'Central admin & roles', 'Shared document library', 'Client workspaces', 'Usage analytics', 'DPA (AVV) included'] },
+];
+
+export const ORG = {
+  name: 'Popescu Career Services', plan: 'pro', cycle: 'monthly', seats_included: 1,
+  members: [
+    { id: 1, name: 'Andrei Popescu', email: 'andrei@popescu.dev',   role: 'owner',  status: 'active',  last_active: 'now' },
+    { id: 2, name: 'Ioana Radu',     email: 'ioana@popescu.dev',    role: 'admin',  status: 'active',  last_active: '2h ago' },
+    { id: 3, name: 'Mihai Georgescu', email: 'mihai.g@gmail.com',   role: 'member', status: 'active',  last_active: '1d ago' },
+    { id: 4, name: 'elena.v@yahoo.com', email: 'elena.v@yahoo.com', role: 'member', status: 'invited', last_active: '—' },
+  ],
+};
+
+export const USAGE = { apps: 34, gens: 212, docs_mb: 48, period_ends: 'Aug 28, 2026' };
+
+
+// Connected apps — API keys are stored encrypted server-side, never in the frontend.
+export const INTEGRATIONS = [
+  { id: 'anthropic', name: 'Anthropic',  category: 'AI generation',   purpose: 'Claude API — generates emails, cover letters and founder messages.', connected: true,  key_hint: 'sk-ant-••••••••7f2a', used_by: 'AI Engine (core)' },
+  { id: 'openai',    name: 'OpenAI',     category: 'AI generation',   purpose: 'Fallback model for content generation and embeddings for skill matching.', connected: false, key_hint: null, used_by: 'AI Engine (core)' },
+  { id: 'canva',     name: 'Canva',      category: 'Documents',       purpose: 'Export CVs and cover letters into branded Canva templates.', connected: false, key_hint: null, used_by: 'Document Library' },
+  { id: 'telegram',  name: 'Telegram',   category: 'Notifications',   purpose: 'Bot notifications: new skill matches, daily digest, send confirmations.', connected: true,  key_hint: '7293•••••••:AAH••••', used_by: 'n8n workflows' },
+  { id: 'whatsapp',  name: 'WhatsApp',   category: 'Notifications',   purpose: 'WhatsApp Business API alerts for high-priority job matches.', connected: false, key_hint: null, used_by: 'n8n workflows' },
+  { id: 'jotform',   name: 'Jotform',    category: 'Forms',           purpose: 'Pre-fill external application forms from your master profile.', connected: false, key_hint: null, used_by: 'Apply pipeline' },
+  { id: 'slack',     name: 'Slack',      category: 'Notifications',   purpose: 'Channel alerts on skill match + daily aggregated digest.', connected: false, key_hint: null, used_by: 'n8n workflows' },
+];
+
+export const PLATFORMS = [
+  { id: 'linkedin',  name: 'LinkedIn',          connector_type: 'browser_automation', auth_method: 'cookie_session', apply_mechanism: 'in_platform_form',   risk: 'high',   auto_send: false, is_active: true,  rate_limit: '10/day, 90s delay', note: 'Semi-manual only. Submit is always a human click — automation violates the User Agreement.' },
+  { id: 'wwr',       name: 'We Work Remotely',  connector_type: 'rss',                auth_method: 'none',           apply_mechanism: 'email',              risk: 'low',    auto_send: true,  is_active: true,  rate_limit: '60/day, 5s delay',  note: 'Official RSS feed. Safe for full automation.' },
+  { id: 'remoteok',  name: 'RemoteOK',          connector_type: 'api',                auth_method: 'none',           apply_mechanism: 'email',              risk: 'low',    auto_send: true,  is_active: true,  rate_limit: '60/day, 5s delay',  note: 'Official JSON API. Safe for full automation.' },
+  { id: 'wellfound', name: 'Wellfound',         connector_type: 'scraper_html',       auth_method: 'login_form',     apply_mechanism: 'message_to_founder', risk: 'medium', auto_send: false, is_active: true,  rate_limit: '15/day, 60s delay', note: 'Founder messages need mandatory human review before send.' },
+  { id: 'indeed',    name: 'Indeed',            connector_type: 'api',                auth_method: 'api_key',        apply_mechanism: 'external_redirect',  risk: 'high',   auto_send: false, is_active: false, rate_limit: 'feed only',         note: 'Scraping prohibited. Publisher XML feed or manual paste only.' },
+];
+
+const H = 3600e3, D = 24 * H;
+const now = Date.now();
+export const JOBS = [
+  { id: 101, platform: 'remoteok',  title: 'Senior Django Engineer',        company: 'Loftware',      salary: '$140–170k', tags: ['Django','DRF','Postgres'],   scraped_at: now - 2*H,  status: 'pending', psd: { apply_email: 'jobs@loftware.io' } },
+  { id: 102, platform: 'wwr',       title: 'Backend Engineer (Python)',     company: 'Fathom Health',  salary: '$130–160k', tags: ['Python','Celery','Redis'],   scraped_at: now - 4*H,  status: 'pending', psd: { apply_email: 'hiring@fathom.health' } },
+  { id: 103, platform: 'linkedin',  title: 'Staff Software Engineer',       company: 'Datchworth',     salary: '$180–220k', tags: ['Python','AWS','Leadership'], scraped_at: now - 6*H,  status: 'pending', psd: { easy_apply: true, connection: true } },
+  { id: 104, platform: 'wellfound', title: 'Founding Backend Engineer',     company: 'Relay (YC S25)', salary: '$120k + 1.2%', tags: ['Django','HTMX','0→1'],    scraped_at: now - 8*H,  status: 'pending', psd: { founder: 'Maya Chen' } },
+  { id: 105, platform: 'remoteok',  title: 'Platform Engineer',             company: 'Sourcegraph',    salary: '$150–185k', tags: ['Go','Python','K8s'],         scraped_at: now - 11*H, status: 'pending', psd: { apply_email: 'talent@sourcegraph.com' } },
+  { id: 106, platform: 'linkedin',  title: 'Engineering Manager, Platform', company: 'Vercel',         salary: '—',         tags: ['Management','Infra'],        scraped_at: now - D,    status: 'sent', sent_manually: true,  sent_at: now - 20*H, psd: { easy_apply: true, connection: false } },
+  { id: 107, platform: 'wwr',       title: 'Python Developer (Contract)',   company: 'Doist',          salary: '$95/hr',    tags: ['Python','APIs'],             scraped_at: now - D,    status: 'sent', sent_manually: false, sent_at: now - 22*H, psd: { apply_email: 'work@doist.com' } },
+  { id: 108, platform: 'wellfound', title: 'Senior Full-stack Engineer',    company: 'Braintrust',     salary: '$140–175k', tags: ['Django','React'],            scraped_at: now - 30*H, status: 'pending', psd: { founder: 'Adam Jackson' } },
+  { id: 109, platform: 'indeed',    title: 'Software Engineer III',         company: 'Cigna Group',    salary: '$125–155k', tags: ['Python','SQL'],              scraped_at: now - 32*H, status: 'pending', psd: {} },
+  { id: 110, platform: 'remoteok',  title: 'Backend Engineer, Billing',     company: 'Paddle',         salary: '£85–105k',  tags: ['Python','Stripe','DRF'],     scraped_at: now - 2*D,  status: 'sent', sent_manually: false, sent_at: now - 40*H, psd: { apply_email: 'careers@paddle.com' } },
+  { id: 111, platform: 'linkedin',  title: 'Principal Engineer, Payments',  company: 'Wise',           salary: '—',         tags: ['Python','Payments'],         scraped_at: now - 2*D,  status: 'pending', psd: { easy_apply: false, connection: true } },
+  { id: 112, platform: 'wwr',       title: 'Django Developer',              company: 'Kraken Tech',    salary: '€90–115k',  tags: ['Django','Energy','Celery'],  scraped_at: now - 3*D,  status: 'pending', psd: { apply_email: 'jobs@kraken.tech' } },
+];
+
+export const DOCUMENTS = [
+  { id: 1, name: 'CV — Backend (EN).pdf',        kind: 'cv',          tags: ['Django','Python','APIs'], size: '184 KB', updated: 'Jul 12, 2026', ats_score: 92 },
+  { id: 2, name: 'CV — Full-stack (EN).pdf',     kind: 'cv',          tags: ['Django','React','HTMX'],  size: '201 KB', updated: 'Jul 12, 2026', ats_score: 87 },
+  { id: 3, name: 'CV — Engineering Lead.pdf',    kind: 'cv',          tags: ['Leadership','Infra'],     size: '176 KB', updated: 'Jun 03, 2026', ats_score: 74 },
+  { id: 4, name: 'AWS Solutions Architect.pdf',  kind: 'certificate', tags: ['AWS'],                    size: '96 KB',  updated: 'Feb 20, 2026' },
+  { id: 5, name: 'BSc Computer Science.pdf',     kind: 'diploma',     tags: [],                         size: '312 KB', updated: 'Jan 08, 2025' },
+  { id: 6, name: 'Celery at Scale — talk.pdf',   kind: 'other',       tags: ['Celery','Redis'],         size: '2.1 MB', updated: 'May 30, 2026' },
+];
+
+export const PROFILE = {
+  name: 'Andrei Popescu', headline: 'Senior Backend Engineer — Django / Python',
+  email: 'andrei@popescu.dev', location: 'Bucharest, RO (UTC+2) — remote',
+  years: 9, tone: 'direct',
+  skills: ['Django','DRF','Python','Celery','Redis','PostgreSQL','HTMX','Playwright','AWS','n8n'],
+  summary: '9 years building backend systems in Python/Django — billing platforms, task pipelines and internal tooling. Comfortable owning services end-to-end, from data model to deploy.',
+};
+
+// Networking CRM (mirrors GET /contacts/)
+export const CONTACTS = [
+  { id: 1, name: 'Maya Chen',        role: 'Founder & CEO',       company: 'Relay (YC S25)', source: 'Wellfound', status: 'messaged',   last_touch: 'Jul 28', next_action: 'Follow up if no reply by Aug 4' },
+  { id: 2, name: 'Tom Okafor',       role: 'Eng Manager',         company: 'Vercel',         source: 'LinkedIn',  status: 'replied',    last_touch: 'Jul 30', next_action: 'Send CV — he offered referral' },
+  { id: 3, name: 'Sara Lindqvist',   role: 'Head of Talent',      company: 'Kraken Tech',    source: 'LinkedIn',  status: 'to_contact', last_touch: '—',      next_action: 'Intro message re: Django role' },
+  { id: 4, name: 'Diego Fernández',  role: 'Staff Engineer',      company: 'Paddle',         source: 'Referral',  status: 'referred',   last_touch: 'Jul 22', next_action: 'Thank-you note after interview' },
+  { id: 5, name: 'Priya Nair',       role: 'Technical Recruiter', company: 'Sourcegraph',    source: 'RemoteOK',  status: 'messaged',   last_touch: 'Jul 26', next_action: 'Awaiting screening slot' },
+];
+
+// Skill match — % of job tags covered by profile skills (mirrors GET /jobs/:id/skill-match/)
+export function skillMatch(job, profile) {
+  const matched = job.tags.filter(t => profile.skills.includes(t));
+  const missing = job.tags.filter(t => !profile.skills.includes(t));
+  return { score: Math.round((matched.length / job.tags.length) * 100), matched, missing };
+}
+
+// Canva Brand Templates (mirrors GET /integrations/canva/templates/?type=cv|cover)
+export const CANVA_TEMPLATES = {
+  cv: [
+    { id: 'cv1',  name: 'Geneva',     layout: 'sidebar',  accent: '#0d6e64' },
+    { id: 'cv2',  name: 'Helsinki',   layout: 'band',     accent: '#17191d' },
+    { id: 'cv3',  name: 'Porto',      layout: 'two-col',  accent: '#b3382c' },
+    { id: 'cv4',  name: 'Kyoto',      layout: 'minimal',  accent: '#9a6a00' },
+    { id: 'cv5',  name: 'Oslo',       layout: 'centered', accent: '#5b5bd6' },
+    { id: 'cv6',  name: 'Marseille',  layout: 'sidebar',  accent: '#1a7f37' },
+    { id: 'cv7',  name: 'Austin',     layout: 'band',     accent: '#0d6e64' },
+    { id: 'cv8',  name: 'Tallinn',    layout: 'two-col',  accent: '#17191d' },
+    { id: 'cv9',  name: 'Bergen',     layout: 'minimal',  accent: '#5b5bd6' },
+    { id: 'cv10', name: 'Valencia',   layout: 'centered', accent: '#b3382c' },
+  ],
+  cover: [
+    { id: 'cl1',  name: 'Letterhead Classic', layout: 'band',     accent: '#17191d' },
+    { id: 'cl2',  name: 'Monogram',           layout: 'centered', accent: '#0d6e64' },
+    { id: 'cl3',  name: 'Margin Note',        layout: 'sidebar',  accent: '#9a6a00' },
+    { id: 'cl4',  name: 'Plainspoken',        layout: 'minimal',  accent: '#6b6e74' },
+    { id: 'cl5',  name: 'Split Header',       layout: 'two-col',  accent: '#5b5bd6' },
+    { id: 'cl6',  name: 'Signature',          layout: 'minimal',  accent: '#0d6e64' },
+    { id: 'cl7',  name: 'Bold Address',       layout: 'band',     accent: '#b3382c' },
+    { id: 'cl8',  name: 'Studio',             layout: 'sidebar',  accent: '#17191d' },
+    { id: 'cl9',  name: 'Centerline',         layout: 'centered', accent: '#1a7f37' },
+    { id: 'cl10', name: 'Typewriter',         layout: 'minimal',  accent: '#9a6a00' },
+  ],
+};
+
+// AI content generation — tone adapted per platform (mirrors POST /jobs/:id/generate/).
+export function generateContent(job, profile) {
+  const p = job.platform, first = profile.name.split(' ')[0];
+  if (p === 'linkedin') return {
+    message: `Hi — I saw the ${job.title} opening at ${job.company}. I've spent ${profile.years} years on ${job.tags.slice(0,2).join(' and ')} systems and I think there's a strong overlap with what your team is building. Happy to share specifics — CV attached. — ${first}`,
+    cover_letter: null,
+  };
+  if (p === 'wellfound') return {
+    message: `Hey ${job.psd.founder || 'there'} — ${first} here. ${job.company} caught my eye because you're solving this at the data-model level, not with another dashboard. I've built ${job.tags[0]} systems for ${profile.years} years, mostly 0→1, and I'd genuinely enjoy doing it again at your stage. Short intro call this week?`,
+    cover_letter: null,
+  };
+  return {
+    message: `Subject: Application — ${job.title}\n\nDear ${job.company} team,\n\nI'm applying for the ${job.title} role. Over ${profile.years} years I've shipped production systems in ${job.tags.join(', ')}, most recently ${profile.headline.toLowerCase().replace('senior backend engineer — ','on ')} platforms at scale.\n\nMy CV and cover letter are attached. I'm available for an interview at your convenience.\n\nBest regards,\n${profile.name}`,
+    cover_letter: `Dear Hiring Team,\n\n${job.company}'s ${job.title} role matches my background closely: ${profile.summary}\n\nSpecifically relevant to this position: ${job.tags.join(', ')}. I keep review cycles short and documentation honest.\n\nSincerely,\n${profile.name}`,
+  };
+}
+
+export function suggestDocuments(job) {
+  const scored = DOCUMENTS.map(d => ({ d, s: d.tags.filter(t => job.tags.includes(t)).length + (d.kind === 'cv' ? 1 : 0) }));
+  scored.sort((a, b) => b.s - a.s);
+  return scored.slice(0, 3).map(x => x.d.id);
+}

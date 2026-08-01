@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /$
+Disallow: /app.html
+Disallow: /vendor/
+Disallow: /api.js
+Disallow: /legal.js
+Disallow: /support.js
+
+Sitemap: https://findajob.pro/sitemap.xml

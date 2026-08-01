@@ -1,0 +1,19 @@
+# findajob.pro — UI-first static stack (deployed at /root/findajob/ on the VPS)
+# Traefik (external stack) routes findajob.pro -> findajob-web:80 in-network.
+name: findajob
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: findajob-web
+    restart: unless-stopped
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
+    name: gethub_gethub-network

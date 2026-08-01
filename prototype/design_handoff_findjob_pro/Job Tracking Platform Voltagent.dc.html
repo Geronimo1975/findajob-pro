@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #101010; }
+  body { font-family: Inter, sans-serif; color: #f2f2f2; }
+  a { color: #00d992; text-decoration: none; } a:hover { color: #10b981; text-decoration: underline; }
+  * { box-sizing: border-box; } input, textarea, select, option { color: #f2f2f2; } select { background: #1a1a1a; }
+  textarea:focus, input:focus { outline: 2px solid #00d992; outline-offset: -1px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes slidein { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes toastin { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: #3d3a39; border-radius: 5px; }
+</style>
+</helmet>
+<div style="display: grid; grid-template-columns: {{ sidebarCols }}; min-height: 100vh; background: #101010;">
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="background: #101010; border-right: 1px solid #3d3a39; color: #f2f2f2; display: flex; flex-direction: column; padding: 16px 0; position: sticky; top: 0; height: 100vh; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 0 14px 16px; border-bottom: 1px solid #3d3a39; min-height: 40px;">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="min-width: 0;">
+          <div style="font-family: Inter, sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 0.02em; white-space: nowrap;">Findjob<span style="color: #00d992;">.pro</span></div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b949e; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;">internal · restricted</div>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleSidebar }}" title="{{ sidebarToggleTitle }}" style="margin-left: auto; margin-right: auto; background: none; border: none; color: #8b949e; cursor: pointer; padding: 6px; border-radius: 6px; display: flex;" style-hover="background: #1a1a1a; color: #f2f2f2;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ sidebarToggleIcon }}"></path></svg>
+      </button>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 2px; padding: 12px 8px;">
+      <sc-for list="{{ navItems }}" as="nv" hint-placeholder-count="7">
+        <button onClick="{{ nv.go }}" title="{{ nv.label }}" style="{{ nv.style }}" style-hover="background: #1a1a1a; color: #ffffff;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="{{ nv.d }}"></path></svg>
+          <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}"><span style="white-space: nowrap;">{{ nv.label }}</span></sc-if>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="margin-top: auto; padding: 14px; border-top: 1px solid #3d3a39; display: flex; align-items: center; gap: 10px; justify-content: center;">
+      <div style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: #00d992; color: #101010; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 600; font-size: 13px;">{{ initials }}</div>
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="min-width: 0; flex: 1;">
+          <div style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ profileName }}</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b949e;">logged in</div>
+        </div>
+      </sc-if>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main style="min-width: 0; display: flex; flex-direction: column;">
+    <header style="display: flex; align-items: baseline; justify-content: space-between; padding: 22px 28px 0;">
+      <div>
+        <h1 style="margin: 0; font-family: Inter, sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -0.6px;">{{ screenTitle }}</h1>
+        <div style="font-size: 13px; color: #8b949e; margin-top: 3px;">{{ screenSub }}</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="display: flex; gap: 2px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 6px; padding: 2px;">
+          <sc-for list="{{ langToggles }}" as="lg" hint-placeholder-count="3">
+            <button onClick="{{ lg.go }}" style="{{ lg.style }}" style-hover="color: #f2f2f2;">{{ lg.label }}</button>
+          </sc-for>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e;">{{ apiHint }}</div>
+      </div>
+    </header>
+
+    <!-- ======= DASHBOARD ======= -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 14px 16px;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e;">{{ k.label }}</div>
+              <div style="font-family: Inter, sans-serif; font-size: 26px; font-weight: 700; margin-top: 4px; color: {{ k.color }};">{{ k.value }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 6px; border-bottom: 2px solid #3d3a39; flex-wrap: wrap; align-items: center;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+            <button onClick="{{ t.go }}" style="{{ t.style }}" style-hover="color: #ffffff;">
+              {{ t.label }}
+              <span style="{{ t.countStyle }}">{{ t.count }}</span>
+            </button>
+          </sc-for>
+          <div style="margin-left: auto; display: flex; gap: 4px; padding-bottom: 6px;">
+            <sc-for list="{{ viewToggles }}" as="vt" hint-placeholder-count="2">
+              <button onClick="{{ vt.go }}" style="{{ vt.style }}" style-hover="border-color: #00d992;">{{ vt.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ tabNote }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px; background: {{ tabNoteBg }}; border: 1px solid {{ tabNoteBorder }}; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #bdbdbd;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: {{ tabNoteColor }}; border: 1px solid {{ tabNoteColor }}; border-radius: 4px; padding: 2px 7px; white-space: nowrap;">{{ tabRisk }} risk</span>
+            <span>{{ tabNote }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start;">
+            <sc-for list="{{ boardCols }}" as="bc" hint-placeholder-count="3">
+              <div style="background: #1a1a1a; border-radius: 10px; padding: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 0 4px;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: {{ bc.color }};">{{ bc.label }}</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; background: #3d3a39; border-radius: 10px; padding: 1px 7px; color: #8b949e;">{{ bc.count }}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <sc-for list="{{ bc.cards }}" as="cd" hint-placeholder-count="2">
+                    <button onClick="{{ cd.onClick }}" style="text-align: left; background: #101010; border: 1px solid #3d3a39; border-radius: 8px; padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; font-family: Inter, sans-serif;" style-hover="border-color: #00d992;">
+                      <div style="font-weight: 600; font-size: 13px; color: #f2f2f2;">{{ cd.title }}</div>
+                      <div style="font-size: 12px; color: #8b949e;">{{ cd.company }}</div>
+                      <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; padding: 1px 6px;">{{ cd.platformName }}</span>
+                        <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: {{ cd.matchColor }};">{{ cd.match }}%</span>
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isTable }}" hint-placeholder-val="{{ true }}">
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; overflow-x: auto;">
+        <div style="min-width: 1024px;">
+          <div style="display: grid; grid-template-columns: {{ gridCols }}; gap: 12px; padding: 10px 18px; background: #1a1a1a; border-bottom: 1px solid #3d3a39; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">
+            <div>Role / Company</div>
+            <sc-if value="{{ showSource }}" hint-placeholder-val="{{ true }}"><div>Source</div></sc-if>
+            <div>{{ extraColLabel }}</div>
+            <div>Match</div>
+            <div>Salary</div>
+            <div>Scraped</div>
+            <div>Status</div>
+            <div>Action</div>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: {{ gridCols }}; gap: 12px; padding: 13px 18px; border-bottom: 1px solid #2a2a2a; align-items: center; font-size: 13.5px;">
+              <div style="min-width: 0;">
+                <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</div>
+                <div style="font-size: 12px; color: #8b949e; margin-top: 1px;">{{ r.company }}</div>
+              </div>
+              <sc-if value="{{ showSource }}" hint-placeholder-val="{{ true }}">
+                <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 7px; white-space: nowrap;">{{ r.platformName }}</span></div>
+              </sc-if>
+              <div style="font-size: 12px; color: #bdbdbd;">{{ r.extra }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: {{ r.matchColor }};">{{ r.match }}%</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">{{ r.salary }}</div>
+              <div style="font-size: 12px; color: #8b949e;">{{ r.ago }}</div>
+              <div><span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span></div>
+              <div>
+                <sc-if value="{{ r.canStart }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ r.onStart }}" style="font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer;" style-hover="background: #2fd6a1;">Start</button>
+                </sc-if>
+                <sc-if value="{{ r.isRunning }}" hint-placeholder-val="{{ false }}">
+                  <span style="display: inline-flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #e6b34d;">
+                    <span style="width: 12px; height: 12px; border: 2px solid #e6b34d; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.7s linear infinite;"></span>
+                    {{ r.phase }}
+                  </span>
+                </sc-if>
+                <sc-if value="{{ r.canReview }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ r.onReview }}" style="font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; background: #101010; color: #00d992; border: 1.5px solid #00d992; border-radius: 6px; padding: 6px 14px; cursor: pointer;" style-hover="background: rgba(0,217,146,0.10);">Review</button>
+                </sc-if>
+                <sc-if value="{{ r.isSent }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #2fd6a1;">✓ {{ r.sentHow }}</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 36px; text-align: center; color: #8b949e; font-size: 13px;">No jobs in this module yet.</div>
+          </sc-if>
+        </div>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ======= JOB SEARCH PROFILE ======= -->
+    <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 14px; max-width: 860px;">
+        <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #bdbdbd;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #00d992; flex-shrink: 0;"></span>
+          <span><strong style="color: #f2f2f2;">Open to work.</strong> These preferences drive module scraping filters and skill matching.</span>
+          <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;">* required</span>
+        </div>
+        <sc-for list="{{ prefLists }}" as="pf" hint-placeholder-count="3">
+          <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 18px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 10px;">{{ pf.label }} <span style="color: #e5534b;">*</span></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px;">
+              <sc-for list="{{ pf.chips }}" as="ch" hint-placeholder-count="5">
+                <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; background: rgba(0,217,146,0.10); color: #2fd6a1; border: 1px solid rgba(0,217,146,0.35); border-radius: 20px; padding: 5px 7px 5px 13px;">
+                  {{ ch.label }}
+                  <button onClick="{{ ch.remove }}" style="background: none; border: none; color: #8b949e; cursor: pointer; font-size: 13px; line-height: 1; padding: 0 4px;" style-hover="color: #e5534b;">✕</button>
+                </span>
+              </sc-for>
+            </div>
+            <sc-if value="{{ pf.canAdd }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; gap: 8px;">
+                <input placeholder="{{ pf.placeholder }}" value="{{ pf.draft }}" onChange="{{ pf.onDraft }}" style="flex: 1; max-width: 300px; font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 8px 11px; background: #1a1a1a;">
+                <button onClick="{{ pf.add }}" style="font-size: 12.5px; font-weight: 600; background: none; color: #2fd6a1; border: 1px solid rgba(0,217,146,0.35); border-radius: 6px; padding: 8px 14px; cursor: pointer;" style-hover="background: rgba(0,217,146,0.10);">+ Add</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ pf.atMax }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #e6b34d;">You've reached the maximum (5)</div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-for list="{{ prefToggles }}" as="pt" hint-placeholder-count="2">
+          <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 18px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 10px;">{{ pt.label }} <sc-if value="{{ pt.required }}" hint-placeholder-val="{{ false }}"><span style="color: #e5534b;">*</span></sc-if></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+              <sc-for list="{{ pt.options }}" as="op" hint-placeholder-count="4">
+                <button onClick="{{ op.toggle }}" style="{{ op.style }}" style-hover="border-color: #00d992;">{{ op.check }} {{ op.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ prefRadios }}" as="pr" hint-placeholder-count="2">
+          <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 18px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 10px;">{{ pr.label }} <sc-if value="{{ pr.required }}" hint-placeholder-val="{{ false }}"><span style="color: #e5534b;">*</span></sc-if></div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <sc-for list="{{ pr.options }}" as="ro" hint-placeholder-count="2">
+                <button onClick="{{ ro.pick }}" style="{{ ro.style }}" style-hover="border-color: #00d992;">
+                  <span style="{{ ro.dotStyle }}"></span>
+                  <span style="text-align: left;">
+                    <span style="display: block; font-size: 13px; font-weight: 600; color: #f2f2f2;">{{ ro.title }}</span>
+                    <span style="display: block; font-size: 11.5px; color: #8b949e; margin-top: 2px;">{{ ro.desc }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display: flex; gap: 10px;">
+          <button onClick="{{ savePrefs }}" style="font-size: 13px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 7px; padding: 10px 22px; cursor: pointer;" style-hover="opacity: 0.9;">Save preferences</button>
+          <span style="align-self: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e;">PUT /api/v1/search-profile/</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ======= NETWORK ======= -->
+    <sc-if value="{{ isNetwork }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 1.6fr 1.4fr 0.9fr 1fr 0.8fr 1.8fr; gap: 12px; padding: 10px 18px; background: #1a1a1a; border-bottom: 1px solid #3d3a39; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">
+            <div>Contact</div><div>Company</div><div>Source</div><div>Status</div><div>Last touch</div><div>Next action</div>
+          </div>
+          <sc-for list="{{ contactRows }}" as="c" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: 1.6fr 1.4fr 0.9fr 1fr 0.8fr 1.8fr; gap: 12px; padding: 13px 18px; border-bottom: 1px solid #2a2a2a; align-items: center; font-size: 13.5px;">
+              <div><div style="font-weight: 600;">{{ c.name }}</div><div style="font-size: 12px; color: #8b949e;">{{ c.role }}</div></div>
+              <div style="font-size: 13px;">{{ c.company }}</div>
+              <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 7px;">{{ c.source }}</span></div>
+              <div><button onClick="{{ c.advance }}" title="Click to advance status" style="{{ c.statusStyle }}" style-hover="opacity: 0.8;">{{ c.statusLabel }}</button></div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b949e;">{{ c.lastTouch }}</div>
+              <div style="font-size: 12.5px; color: #bdbdbd;">{{ c.nextAction }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size: 12px; color: #8b949e;">Click a status pill to advance it: to contact → messaged → replied → referred. AI email writer for follow-ups uses the same engine as applications.</div>
+      </div>
+    </sc-if>
+
+    <!-- ======= HISTORY ======= -->
+    <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; gap: 8px;">
+          <sc-for list="{{ historyFilters }}" as="f" hint-placeholder-count="3">
+            <button onClick="{{ f.go }}" style="{{ f.style }}" style-hover="border-color: #00d992;">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr 1fr; gap: 12px; padding: 10px 18px; background: #1a1a1a; border-bottom: 1px solid #3d3a39; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">
+            <div>Role / Company</div><div>Source</div><div>Sent</div><div>Mode</div><div>Status</div>
+          </div>
+          <sc-for list="{{ historyRows }}" as="h" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr 1fr; gap: 12px; padding: 13px 18px; border-bottom: 1px solid #2a2a2a; align-items: center; font-size: 13.5px;">
+              <div><div style="font-weight: 600;">{{ h.title }}</div><div style="font-size: 12px; color: #8b949e;">{{ h.company }}</div></div>
+              <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 7px;">{{ h.platformName }}</span></div>
+              <div style="font-size: 12px; color: #8b949e;">{{ h.ago }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: {{ h.modeColor }};">{{ h.mode }}</div>
+              <div><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #2fd6a1; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35); border-radius: 20px; padding: 3px 10px;">SENT</span></div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noHistory }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 36px; text-align: center; color: #8b949e; font-size: 13px;">No applications sent yet for this filter.</div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ======= DOCUMENTS ======= -->
+    <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+        <div style="grid-column: 1 / -1; display: flex; gap: 10px; align-items: center;">
+          <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; background: #00d992; color: #101010; border-radius: 7px; padding: 10px 18px; cursor: pointer;" style-hover="background: #2fd6a1;">
+            ↑ Upload document
+            <input type="file" accept=".pdf,.doc,.docx" onChange="{{ onUpload }}" style="display: none;">
+          </label>
+          <button onClick="{{ toggleGenPanel }}" style="font-size: 13px; font-weight: 600; background: #101010; color: #00d992; border: 1.5px solid #00d992; border-radius: 7px; padding: 9px 18px; cursor: pointer;" style-hover="background: rgba(0,217,146,0.10);">✦ Generate with AI</button>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e; margin-left: auto;">POST /api/v1/documents/ · encrypted at rest</span>
+        </div>
+        <sc-if value="{{ genPanelOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="grid-column: 1 / -1; background: #101010; border: 1.5px solid #00d992; border-radius: 10px; padding: 16px 18px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+            <div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 5px;">Document type</div>
+              <select onChange="{{ onGenKind }}" style="font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a; min-width: 180px;">
+                <sc-for list="{{ genKinds }}" as="gk" hint-placeholder-count="3">
+                  <option value="{{ gk.id }}">{{ gk.label }}</option>
+                </sc-for>
+              </select>
+            </div>
+            <div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 5px;">Tailored for job</div>
+              <select onChange="{{ onGenJob }}" style="font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a; min-width: 260px;">
+                <sc-for list="{{ genJobs }}" as="gj" hint-placeholder-count="3">
+                  <option value="{{ gj.id }}">{{ gj.label }}</option>
+                </sc-for>
+              </select>
+            </div>
+            <sc-if value="{{ hasTemplates }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-basis: 100%; margin-top: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Template</span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #ffffff; background: #7d2ae8; border-radius: 4px; padding: 2px 7px;">via Canva</span>
+                  <span style="{{ canvaStatusStyle }}">{{ canvaStatusLabel }}</span>
+                </div>
+                <sc-if value="{{ canvaNotConnected }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; align-items: center; gap: 12px; background: rgba(125,42,232,0.12); border: 1px solid rgba(125,42,232,0.4); border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 12.5px; color: #bdbdbd;">
+                    Connect your Canva account to load these brand templates for export.
+                    <button onClick="{{ goToApis }}" style="margin-left: auto; font-size: 12px; font-weight: 600; background: #7d2ae8; color: #ffffff; border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer; white-space: nowrap;" style-hover="opacity: 0.9;">Connect Canva →</button>
+                  </div>
+                </sc-if>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px;">
+                  <sc-for list="{{ genTemplates }}" as="tp" hint-placeholder-count="10">
+                    <button onClick="{{ tp.pick }}" style="{{ tp.style }}" style-hover="border-color: #00d992;">
+                      <div style="width: 100%; aspect-ratio: 3 / 4; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; position: relative; overflow: hidden;">
+                        <div style="{{ tp.accentStyle }}"></div>
+                        <div style="position: absolute; left: 30%; right: 12%; top: 34%; height: 3px; background: #4a4744; border-radius: 2px;"></div>
+                        <div style="position: absolute; left: 30%; right: 20%; top: 46%; height: 3px; background: #3d3a39; border-radius: 2px;"></div>
+                        <div style="position: absolute; left: 30%; right: 28%; top: 58%; height: 3px; background: #3d3a39; border-radius: 2px;"></div>
+                        <div style="position: absolute; left: 30%; right: 16%; top: 70%; height: 3px; background: #2a2a2a; border-radius: 2px;"></div>
+                      </div>
+                      <div style="font-size: 10.5px; font-weight: 600; color: #bdbdbd; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center;">{{ tp.name }}</div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ genBusy }}" hint-placeholder-val="{{ false }}">
+              <span style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #e6b34d; padding: 10px 0;">
+                <span style="width: 13px; height: 13px; border: 2px solid #e6b34d; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.7s linear infinite;"></span>
+                generating from master profile…
+              </span>
+            </sc-if>
+            <sc-if value="{{ genIdle }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ runGenerate }}" style="font-size: 13px; font-weight: 600; background: #00d992; color: #ffffff; border: none; border-radius: 7px; padding: 10px 20px; cursor: pointer;" style-hover="opacity: 0.9;">Generate</button>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-for list="{{ docCards }}" as="d" hint-placeholder-count="6">
+          <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+              <div style="font-weight: 600; font-size: 13.5px; line-height: 1.35;">{{ d.name }}</div>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: {{ d.kindColor }}; border: 1px solid {{ d.kindColor }}; border-radius: 4px; padding: 2px 6px; white-space: nowrap;">{{ d.kind }}</span>
+            </div>
+            <sc-if value="{{ d.hasAts }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e;">ATS score</span>
+                <span style="font-family: Inter, sans-serif; font-size: 15px; font-weight: 700; color: {{ d.atsColor }};">{{ d.ats }}</span>
+                <div style="flex: 1; height: 5px; background: #1a1a1a; border-radius: 3px; overflow: hidden;"><div style="height: 100%; width: {{ d.atsWidth }}; background: {{ d.atsColor }};"></div></div>
+              </div>
+            </sc-if>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px; min-height: 20px;">
+              <sc-for list="{{ d.tags }}" as="tg" hint-placeholder-count="2">
+                <span style="font-size: 11px; background: #1a1a1a; border-radius: 4px; padding: 2px 8px; color: #bdbdbd;">{{ tg }}</span>
+              </sc-for>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e; display: flex; justify-content: space-between; border-top: 1px solid #2a2a2a; padding-top: 10px;">
+              <span>{{ d.size }}</span><span>upd. {{ d.updated }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- ======= PROFILE ======= -->
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; max-width: 760px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <sc-for list="{{ profileFields }}" as="pf" hint-placeholder-count="6">
+            <div style="{{ pf.wrapStyle }}">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 5px;">{{ pf.label }}</div>
+              <input value="{{ pf.value }}" onChange="{{ pf.onChange }}" style="width: 100%; font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a;">
+            </div>
+          </sc-for>
+          <div style="grid-column: 1 / -1;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 5px;">Summary (used in AI prompts)</div>
+            <textarea value="{{ profileSummary }}" onChange="{{ onSummaryChange }}" rows="3" style="width: 100%; font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a; resize: vertical;"></textarea>
+          </div>
+        </div>
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 20px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 10px;">Skills (drives document matching)</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+            <sc-for list="{{ profileSkills }}" as="sk" hint-placeholder-count="8">
+              <span style="font-size: 12.5px; font-weight: 500; background: rgba(0,217,146,0.10); color: #00d992; border: 1px solid rgba(0,217,146,0.35); border-radius: 20px; padding: 4px 12px;">{{ sk }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ======= ORGANIZATION ======= -->
+    <sc-if value="{{ isOrg }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 14px; max-width: 980px;">
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; gap: 14px;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(0,217,146,0.12); color: #00d992; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 700; font-size: 16px;">{{ orgInitial }}</div>
+          <div>
+            <div style="font-family: Inter, sans-serif; font-weight: 600; font-size: 15.5px;">{{ orgName }}</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e; margin-top: 2px;">{{ orgPlanLine }}</div>
+          </div>
+          <button onClick="{{ goBilling }}" style="margin-left: auto; font-size: 12.5px; font-weight: 600; background: none; color: #2fd6a1; border: none; cursor: pointer;" style-hover="text-decoration: underline;">Manage plan →</button>
+        </div>
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; overflow: hidden;">
+          <div style="display: flex; gap: 10px; padding: 14px 18px; border-bottom: 1px solid #3d3a39; align-items: center;">
+            <input placeholder="colleague@company.com" value="{{ inviteDraft }}" onChange="{{ onInviteDraft }}" style="flex: 1; max-width: 320px; font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a;">
+            <button onClick="{{ sendInvite }}" style="{{ inviteStyle }}" style-hover="opacity: 0.9;">Invite member</button>
+            <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e;">{{ seatsLine }}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr 90px; gap: 12px; padding: 10px 18px; background: #1a1a1a; border-bottom: 1px solid #3d3a39; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">
+            <div>Member</div><div>Role</div><div>Status</div><div>Last active</div><div></div>
+          </div>
+          <sc-for list="{{ memberRows }}" as="m" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr 90px; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #2a2a2a; align-items: center; font-size: 13px;">
+              <div><div style="font-weight: 600;">{{ m.name }}</div><div style="font-size: 11.5px; color: #8b949e;">{{ m.email }}</div></div>
+              <div><button onClick="{{ m.cycleRole }}" title="Click to change role" style="{{ m.roleStyle }}" style-hover="opacity: 0.8;">{{ m.roleLabel }}</button></div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{ m.statusColor }};">{{ m.status }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e;">{{ m.lastActive }}</div>
+              <div>
+                <sc-if value="{{ m.removable }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ m.remove }}" style="font-size: 11.5px; font-weight: 600; background: none; color: #e5534b; border: none; cursor: pointer;" style-hover="text-decoration: underline;">Remove</button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size: 12px; color: #8b949e;">Roles: owner (billing + everything), admin (manage members & modules), member (own job search only). Data is isolated per workspace — multi-tenant.</div>
+      </div>
+    </sc-if>
+
+    <!-- ======= BILLING ======= -->
+    <sc-if value="{{ isBilling }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 860px;">
+          <sc-for list="{{ usageMeters }}" as="u" hint-placeholder-count="3">
+            <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 14px 16px;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e;">{{ u.label }}</div>
+              <div style="font-family: Inter, sans-serif; font-size: 20px; font-weight: 600; margin: 6px 0; color: #f2f2f2;">{{ u.value }}</div>
+              <div style="height: 5px; background: #2a2a2a; border-radius: 3px; overflow: hidden;"><div style="height: 100%; width: {{ u.width }}; background: {{ u.color }};"></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <sc-for list="{{ cycleToggles }}" as="cy" hint-placeholder-count="2">
+            <button onClick="{{ cy.go }}" style="{{ cy.style }}" style-hover="border-color: #00d992;">{{ cy.label }}</button>
+          </sc-for>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #2fd6a1;">save ~15% with yearly</span>
+          <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e;">period resets {{ periodEnds }}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1100px;">
+          <sc-for list="{{ planCards }}" as="pl" hint-placeholder-count="4">
+            <div style="{{ pl.cardStyle }}">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="font-family: Inter, sans-serif; font-weight: 700; font-size: 16px;">{{ pl.name }}</div>
+                <sc-if value="{{ pl.popular }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #101010; background: #00d992; border-radius: 20px; padding: 2px 8px;">POPULAR</span>
+                </sc-if>
+              </div>
+              <div style="font-size: 11.5px; color: #8b949e; margin-top: 3px; min-height: 30px;">{{ pl.tagline }}</div>
+              <div style="margin: 10px 0 12px;">
+                <span style="font-family: Inter, sans-serif; font-size: 26px; font-weight: 700; color: #f2f2f2;">{{ pl.price }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;"> {{ pl.per }}</span>
+              </div>
+              <button onClick="{{ pl.select }}" style="{{ pl.btnStyle }}" style-hover="opacity: 0.88;">{{ pl.btnLabel }}</button>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 14px; border-top: 1px solid #2a2a2a; padding-top: 12px;">
+                <sc-for list="{{ pl.features }}" as="ft" hint-placeholder-count="4">
+                  <div style="display: flex; gap: 7px; font-size: 11.5px; color: #bdbdbd; line-height: 1.4;"><span style="color: #00d992;">✓</span><span>{{ ft }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size: 12px; color: #8b949e;">All prices USD. Team is billed per seat (min 5). Stripe handles checkout & invoicing — <span style="font-family: 'JetBrains Mono', monospace;">POST /api/v1/billing/subscribe/</span>.</div>
+      </div>
+    </sc-if>
+
+    <!-- ======= INTEGRATIONS ======= -->
+    <sc-if value="{{ isIntegrations }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 1100px;">
+        <sc-for list="{{ integrationCards }}" as="ig" hint-placeholder-count="6">
+          <div style="background: #101010; border: 1px solid {{ ig.borderColor }}; border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: {{ ig.iconBg }}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-family: Inter, sans-serif; font-weight: 700; font-size: 15px;">{{ ig.initial }}</div>
+              <div>
+                <div style="font-family: Inter, sans-serif; font-weight: 600; font-size: 15px;">{{ ig.name }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e;">{{ ig.category }} · {{ ig.usedBy }}</div>
+              </div>
+              <span style="{{ ig.statusStyle }}">{{ ig.statusLabel }}</span>
+            </div>
+            <div style="font-size: 12.5px; color: #8b949e; line-height: 1.45;">{{ ig.purpose }}</div>
+            <sc-if value="{{ ig.connected }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <code style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 9px 11px; color: #bdbdbd;">{{ ig.keyHint }}</code>
+                <button onClick="{{ ig.disconnect }}" style="font-size: 12px; font-weight: 600; background: #101010; color: #e5534b; border: 1px solid rgba(229,83,75,0.35); border-radius: 6px; padding: 8px 14px; cursor: pointer; white-space: nowrap;" style-hover="background: rgba(229,83,75,0.12);">Disconnect</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ ig.notConnected }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="password" placeholder="{{ ig.placeholder }}" value="{{ ig.draft }}" onChange="{{ ig.onDraft }}" style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; border: 1px solid #3d3a39; border-radius: 6px; padding: 9px 11px; background: #1a1a1a;">
+                <button onClick="{{ ig.connect }}" style="{{ ig.connectStyle }}" style-hover="opacity: 0.9;">Connect</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <div style="grid-column: 1 / -1; font-size: 12px; color: #8b949e; display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: 'JetBrains Mono', monospace;">🔒</span> Keys are sent once to the backend, stored encrypted at rest, and never exposed back to the browser — only a masked hint is returned.
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ======= SETTINGS ======= -->
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 12px; max-width: 980px;">
+        <sc-for list="{{ platformCards }}" as="pc" hint-placeholder-count="5">
+          <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 20px; opacity: {{ pc.opacity }};">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="font-family: Inter, sans-serif; font-weight: 600; font-size: 15.5px;">{{ pc.name }}</div>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: {{ pc.riskColor }}; border: 1px solid {{ pc.riskColor }}; border-radius: 4px; padding: 2px 7px;">{{ pc.risk }} risk</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{ pc.sendColor }};">{{ pc.sendMode }}</span>
+              <button onClick="{{ pc.toggle }}" style="{{ pc.toggleStyle }}" style-hover="opacity: 0.85;">{{ pc.toggleLabel }}</button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px;">
+              <sc-for list="{{ pc.contract }}" as="cf" hint-placeholder-count="4">
+                <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 8px 10px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e;">{{ cf.k }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; margin-top: 3px; color: #f2f2f2;">{{ cf.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size: 12.5px; color: #8b949e; margin-top: 10px;">{{ pc.note }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </main>
+
+    <!-- ======= LEGAL ======= -->
+    <sc-if value="{{ isLegal }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 20px 28px 40px; display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start; max-width: 1080px;">
+        <div style="display: flex; flex-direction: column; gap: 4px; position: sticky; top: 20px;">
+          <sc-for list="{{ legalTabs }}" as="lt" hint-placeholder-count="6">
+            <button onClick="{{ lt.go }}" style="{{ lt.style }}" style-hover="background: #1a1a1a; color: #f2f2f2;">{{ lt.label }}</button>
+          </sc-for>
+          <div style="font-size: 11px; color: #8b949e; margin-top: 10px; line-height: 1.5; padding: 0 12px;">{{ legalNote }}</div>
+        </div>
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 24px 28px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 14px; margin-bottom: 18px;">
+            <h2 style="margin: 0; font-family: Inter, sans-serif; font-size: 19px; font-weight: 600; letter-spacing: -0.3px;">{{ legalTitle }}</h2>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e; white-space: nowrap;">{{ legalUpdated }}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <sc-for list="{{ legalSections }}" as="ls" hint-placeholder-count="6">
+              <div>
+                <div style="font-size: 13.5px; font-weight: 600; color: #f2f2f2; margin-bottom: 5px;">{{ ls.h }}</div>
+                <div style="font-size: 13px; color: #bdbdbd; line-height: 1.65; white-space: pre-line;">{{ ls.p }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  <!-- ============ DRAWER ============ -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 40;"></div>
+    <div style="position: fixed; top: 0; right: 0; bottom: 0; width: 560px; max-width: 92vw; background: #101010; z-index: 41; box-shadow: -12px 0 40px rgba(0,0,0,0.7); display: flex; flex-direction: column; animation: slidein 0.22s ease-out;">
+      <div style="padding: 20px 24px 16px; border-bottom: 1px solid #3d3a39;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+          <div>
+            <div style="font-family: Inter, sans-serif; font-weight: 700; font-size: 18px;">{{ dJob.title }}</div>
+            <div style="font-size: 13px; color: #8b949e; margin-top: 2px;">{{ dJob.company }} · {{ dJob.salary }}</div>
+          </div>
+          <button onClick="{{ closeDrawer }}" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #8b949e; line-height: 1;" style-hover="color: #ffffff;">✕</button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px; align-items: center;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 8px;">{{ dPlatformName }}</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: {{ dRiskColor }}; border: 1px solid {{ dRiskColor }}; border-radius: 4px; padding: 2px 7px;">{{ dRisk }} risk</span>
+          <span style="font-size: 12px; color: #8b949e;">{{ dToneNote }}</span>
+        </div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 18px 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Skill match</span>
+            <span style="font-family: Inter, sans-serif; font-size: 18px; font-weight: 700; color: {{ dMatchColor }};">{{ dMatch }}%</span>
+            <div style="flex: 1; height: 6px; background: #2a2a2a; border-radius: 3px; overflow: hidden;"><div style="height: 100%; width: {{ dMatchWidth }}; background: {{ dMatchColor }}; border-radius: 3px;"></div></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+            <sc-for list="{{ dMatchChips }}" as="mc" hint-placeholder-count="3">
+              <span style="{{ mc.style }}">{{ mc.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">{{ dMessageLabel }}</div>
+            <button onClick="{{ regenerate }}" style="font-size: 11.5px; font-weight: 600; color: #00d992; background: none; border: none; cursor: pointer;" style-hover="text-decoration: underline;">↻ Regenerate</button>
+          </div>
+          <textarea value="{{ dMessage }}" onChange="{{ onMessageChange }}" rows="9" style="width: 100%; font-family: Inter, sans-serif; font-size: 13px; line-height: 1.55; border: 1px solid #3d3a39; border-radius: 8px; padding: 12px 14px; background: #1a1a1a; resize: vertical;"></textarea>
+        </div>
+        <sc-if value="{{ dHasCover }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 6px;">Cover letter</div>
+            <textarea value="{{ dCover }}" onChange="{{ onCoverChange }}" rows="7" style="width: 100%; font-family: Inter, sans-serif; font-size: 13px; line-height: 1.55; border: 1px solid #3d3a39; border-radius: 8px; padding: 12px 14px; background: #1a1a1a; resize: vertical;"></textarea>
+          </div>
+        </sc-if>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 8px;">Attached documents (auto-matched — click to toggle)</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{ dDocs }}" as="dd" hint-placeholder-count="3">
+              <button onClick="{{ dd.toggle }}" style="{{ dd.style }}" style-hover="border-color: #00d992;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; width: 18px; color: {{ dd.checkColor }};">{{ dd.check }}</span>
+                <span style="font-size: 13px; font-weight: 500;">{{ dd.name }}</span>
+                <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; color: #8b949e;">{{ dd.kind }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 6px;">Notes &amp; tasks (private)</div>
+          <textarea value="{{ dNotes }}" onChange="{{ onNotesChange }}" rows="3" placeholder="e.g. Ask about on-call rotation; deadline Friday…" style="width: 100%; font-family: Inter, sans-serif; font-size: 13px; line-height: 1.5; border: 1px solid #3d3a39; border-radius: 8px; padding: 10px 12px; background: #1a1a1a; resize: vertical;"></textarea>
+        </div>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #3d3a39; background: #1a1a1a;">
+        <sc-if value="{{ dManualWarning }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size: 12px; color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;">⚠ {{ dManualWarning }}</div>
+        </sc-if>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button onClick="{{ closeDrawer }}" style="font-size: 13px; font-weight: 600; background: #101010; color: #bdbdbd; border: 1px solid #3d3a39; border-radius: 7px; padding: 10px 18px; cursor: pointer;" style-hover="border-color: #00d992;">Close</button>
+          <button onClick="{{ confirmSend }}" style="font-size: 13px; font-weight: 600; background: {{ dSendBg }}; color: #101010; border: none; border-radius: 7px; padding: 10px 20px; cursor: pointer;" style-hover="opacity: 0.9;">{{ dSendLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ COOKIE BANNER ============ -->
+  <sc-if value="{{ cookieBannerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); width: 640px; max-width: 94vw; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 18px; z-index: 55; box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
+      <div style="font-size: 13px; font-weight: 600; color: #f2f2f2;">{{ cookieTitle }}</div>
+      <div style="font-size: 12px; color: #bdbdbd; line-height: 1.5; margin-top: 5px;">{{ cookieText }} <button onClick="{{ openCookiePolicy }}" style="background: none; border: none; padding: 0; color: #2fd6a1; cursor: pointer; font-size: 12px;" style-hover="text-decoration: underline;">{{ cookieLink }}</button></div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button onClick="{{ acceptAllCookies }}" style="font-size: 12.5px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer;" style-hover="opacity: 0.9;">{{ cookieAcceptAll }}</button>
+        <button onClick="{{ acceptEssentialCookies }}" style="font-size: 12.5px; font-weight: 600; background: #101010; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 8px 16px; cursor: pointer;" style-hover="border-color: #f2f2f2;">{{ cookieEssentialOnly }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; border: 1px solid #3d3a39; color: #f2f2f2; font-size: 13px; font-weight: 500; border-radius: 8px; padding: 12px 20px; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,0.5); animation: toastin 0.2s ease-out; display: flex; align-items: center; gap: 8px;">
+      <span style="color: #00d992;">✓</span> {{ toast }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;autoSendLowRisk&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Behavior&quot;}, &quot;showRiskBanners&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  state = {
+    nav: 'dashboard', tab: 'all', histFilter: 'all', view: 'table', collapsed: false,
+    contacts: [], notes: {},
+    genPanelOpen: false, genBusy: false, genKind: 'cv', genJobId: null, genTemplate: null,
+    org: null, inviteDraft: '', plan: 'pro', cycle: 'monthly',
+    prefs: {
+      titles: ['AI Software Developer', 'Automation Architect', 'DevOps Developer', 'Django Developer', 'Artificial Intelligence Consultant'],
+      locTypes: ['On-site', 'Hybrid', 'Remote'],
+      locOnsite: ['European Union', 'Hamburg, Germany', 'Romania', 'EMEA', 'Dubai, United Arab Emirates'],
+      locRemote: ['Europe', 'Switzerland', 'United Arab Emirates', 'Saudi Arabia', 'Romania'],
+      start: 'immediately',
+      empTypes: ['Full-time', 'Contract'],
+      visibility: 'recruiters',
+    },
+    prefDrafts: {},
+    lang: 'en', legal: null, legalDoc: 'terms', cookieConsent: null,
+    jobs: [], platforms: [], docs: [], profile: null,
+    integrations: [], keyDrafts: {},
+    apps: {},           // jobId -> {message, cover_letter, docIds}
+    running: {},        // jobId -> phase label
+    drawerJobId: null, toast: null,
+  };
+  api = null;
+  async componentDidMount() {
+    // Mock API mirrors DRF endpoints — swap api.js internals with real fetches to go live.
+    this.api = await import('./api.js');
+    this.legal = await import('./legal.js');
+    this.setState({
+      jobs: this.api.JOBS.map(j => ({ ...j })),
+      platforms: this.api.PLATFORMS.map(p => ({ ...p })),
+      docs: this.api.DOCUMENTS, profile: { ...this.api.PROFILE },
+      integrations: this.api.INTEGRATIONS.map(i => ({ ...i })),
+      contacts: this.api.CONTACTS.map(c => ({ ...c })),
+      org: { ...this.api.ORG, members: this.api.ORG.members.map(m => ({ ...m })) },
+    });
+  }
+  plat(id) {
+    const p = this.state.platforms.find(x => x.id === id) || {};
+    if (p.risk === 'low' && (this.props.autoSendLowRisk ?? true) === false) return { ...p, auto_send: false };
+    return p;
+  }
+  ago(ts) {
+    const m = Math.round((Date.now() - ts) / 60000);
+    if (m < 60) return m + 'm ago';
+    const h = Math.round(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.round(h / 24) + 'd ago';
+  }
+  startJob(id) {
+    const phases = ['analyzing job…', 'matching docs…', 'generating…'];
+    let i = 0;
+    const tick = () => {
+      if (i < phases.length) {
+        this.setState(s => ({ running: { ...s.running, [id]: phases[i] } }));
+        i++; setTimeout(tick, 750);
+      } else {
+        const job = this.state.jobs.find(j => j.id === id);
+        const gen = this.api.generateContent(job, this.state.profile);
+        const docIds = this.api.suggestDocuments(job);
+        this.setState(s => {
+          const running = { ...s.running }; delete running[id];
+          return {
+            running,
+            apps: { ...s.apps, [id]: { message: gen.message, cover_letter: gen.cover_letter, docIds } },
+            jobs: s.jobs.map(j => j.id === id ? { ...j, status: 'review' } : j),
+            drawerJobId: id,
+          };
+        });
+      }
+    };
+    tick();
+  }
+  send(id) {
+    const job = this.state.jobs.find(j => j.id === id);
+    const manual = !this.plat(job.platform).auto_send;
+    this.setState(s => ({
+      jobs: s.jobs.map(j => j.id === id ? { ...j, status: 'sent', sent_manually: manual, sent_at: Date.now() } : j),
+      drawerJobId: null,
+      toast: manual ? 'Message copied — marked as sent (manual).' : 'Application sent automatically via email.',
+    }));
+    if (manual && navigator.clipboard) navigator.clipboard.writeText(this.state.apps[id].message).catch(() => {});
+    setTimeout(() => this.setState({ toast: null }), 3200);
+  }
+  statusMeta(st) {
+    return {
+      pending: ['PENDING', 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;'],
+      running: ['RUNNING', 'color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35);'],
+      review:  ['REVIEW',  'color: #00d992; background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35);'],
+      sent:    ['SENT',    'color: #2fd6a1; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35);'],
+    }[st] || ['—', ''];
+  }
+  riskColor(r) { return { high: '#e5534b', medium: '#e6b34d', low: '#2fd6a1' }[r] || '#8b949e'; }
+  matchColor(n) { return n >= 80 ? '#2fd6a1' : n >= 50 ? '#e6b34d' : '#e5534b'; }
+  renderVals() {
+    const s = this.state, api = this.api;
+    const profile = s.profile || { name: '', skills: [], summary: '' };
+    const canvaConnected = !!(s.integrations.find(i => i.id === 'canva') || {}).connected;
+    const T = {
+      en: {
+        nav: { dashboard: 'Dashboard', search: 'Job Search', history: 'History', network: 'Network', documents: 'Documents', profile: 'Profile', integrations: 'APIs', settings: 'Modules', org: 'Organization', billing: 'Billing', legal: 'Legal' },
+        screens: {
+          dashboard: ['Dashboard', 'One module per platform · aggregated view on All'],
+          search: ['Job Search Profile', 'What you\'re open to — like LinkedIn\'s "Open to Work"'],
+          history: ['Application History', 'Everything sent, filterable by source'],
+          network: ['Networking Tracker', 'Founders, recruiters and referrals — one CRM'],
+          documents: ['Document Library', 'CVs, certificates, diplomas — tag-matched to jobs'],
+          profile: ['Master Profile', 'Feeds every AI prompt across all modules'],
+          org: ['Organization', 'Members, roles and seats — one isolated workspace'],
+          billing: ['Plans & Billing', 'Free, Pro and Max — cancel anytime'],
+          integrations: ['APIs & Integrations', 'Connect the apps used for generation, documents and notifications'],
+          settings: ['Platform Modules', 'Each module is an isolated Django app with a common contract'],
+          legal: ['Legal', 'German market compliance — GDPR/DSGVO, DDG, TTDSG'],
+        },
+        cookie: ['We value your privacy', 'We use essential cookies for login and security. Optional cookies store your dashboard preferences and enable privacy-friendly analytics (§ 25 TTDSG).', 'Cookie Policy →', 'Accept all', 'Essential only'],
+      },
+      de: {
+        nav: { dashboard: 'Dashboard', search: 'Jobsuche', history: 'Verlauf', network: 'Netzwerk', documents: 'Dokumente', profile: 'Profil', integrations: 'APIs', settings: 'Module', org: 'Organisation', billing: 'Abrechnung', legal: 'Rechtliches' },
+        screens: {
+          dashboard: ['Dashboard', 'Ein Modul pro Plattform · aggregierte Ansicht unter „All"'],
+          search: ['Jobsuche-Profil', 'Wofür Sie offen sind — wie LinkedIns „Open to Work"'],
+          history: ['Bewerbungsverlauf', 'Alles Versendete, filterbar nach Quelle'],
+          network: ['Netzwerk-Tracker', 'Gründer, Recruiter und Empfehlungen — ein CRM'],
+          documents: ['Dokumentenbibliothek', 'Lebensläufe, Zertifikate, Zeugnisse — per Tag zugeordnet'],
+          profile: ['Master-Profil', 'Grundlage für jeden KI-Prompt in allen Modulen'],
+          org: ['Organisation', 'Mitglieder, Rollen und Plätze — ein isolierter Workspace'],
+          billing: ['Tarife & Abrechnung', 'Free, Pro und Max — jederzeit kündbar'],
+          integrations: ['APIs & Integrationen', 'Apps für Generierung, Dokumente und Benachrichtigungen verbinden'],
+          settings: ['Plattform-Module', 'Jedes Modul ist eine isolierte Django-App mit gemeinsamem Vertrag'],
+          legal: ['Rechtliches', 'Compliance für den deutschen Markt — DSGVO, DDG, TTDSG'],
+        },
+        cookie: ['Wir respektieren Ihre Privatsphäre', 'Wir verwenden essenzielle Cookies für Login und Sicherheit. Optionale Cookies speichern Ihre Dashboard-Einstellungen und ermöglichen datenschutzfreundliche Analyse (§ 25 TTDSG).', 'Cookie-Richtlinie →', 'Alle akzeptieren', 'Nur essenzielle'],
+      },
+      ro: {
+        nav: { dashboard: 'Dashboard', search: 'Căutare job', history: 'Istoric', network: 'Rețea', documents: 'Documente', profile: 'Profil', integrations: 'API-uri', settings: 'Module', org: 'Organizație', billing: 'Abonament', legal: 'Legal' },
+        screens: {
+          dashboard: ['Dashboard', 'Un modul per platformă · vedere agregată pe „All"'],
+          search: ['Profil de căutare', 'La ce ești deschis — ca „Open to Work" de pe LinkedIn'],
+          history: ['Istoric aplicări', 'Tot ce s-a trimis, filtrabil după sursă'],
+          network: ['Networking Tracker', 'Founderi, recruiteri și recomandări — un singur CRM'],
+          documents: ['Bibliotecă documente', 'CV-uri, certificate, diplome — asociate prin tag-uri'],
+          profile: ['Profil master', 'Alimentează fiecare prompt AI din toate modulele'],
+          org: ['Organizație', 'Membri, roluri și locuri — un workspace izolat'],
+          billing: ['Planuri & Abonament', 'Free, Pro și Max — anulezi oricând'],
+          integrations: ['API-uri & Integrări', 'Conectează aplicațiile pentru generare, documente și notificări'],
+          settings: ['Module platforme', 'Fiecare modul e o aplicație Django izolată, cu contract comun'],
+          legal: ['Legal', 'Conformitate pentru piața germană — RGPD/DSGVO, DDG, TTDSG'],
+        },
+        cookie: ['Îți respectăm confidențialitatea', 'Folosim cookie-uri esențiale pentru login și securitate. Cookie-urile opționale rețin preferințele de dashboard și permit analiză prietenoasă cu confidențialitatea (§ 25 TTDSG).', 'Politica de cookie-uri →', 'Accept toate', 'Doar esențiale'],
+      },
+    };
+    const tr = T[s.lang] || T.en;
+    const apiHints = {
+      dashboard: 'GET /api/v1/jobs/?platform=' + (s.tab === 'all' ? '' : s.tab), search: 'GET /api/v1/search-profile/',
+      history: 'GET /api/v1/applications/?status=sent', network: 'GET /api/v1/contacts/', documents: 'GET /api/v1/documents/',
+      profile: 'GET /api/v1/profile/', org: 'GET /api/v1/org/', billing: 'GET /api/v1/billing/',
+      integrations: 'GET /api/v1/integrations/', settings: 'GET /api/v1/platforms/', legal: 'GET /api/v1/legal/?lang=' + s.lang,
+    };
+    const [screenTitle, screenSub] = tr.screens[s.nav];
+    const apiHint = apiHints[s.nav];
+    const icons = {
+      dashboard: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+      history: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 8v4l3 3',
+      network: 'M9 7a3 3 0 1 0 0 6a3 3 0 1 0 0-6M17 9a2.5 2.5 0 1 1 0 5M3 21c0-3.3 2.7-6 6-6s6 2.7 6 6M15.5 15.3c2.6.5 4.5 2.8 4.5 5.7',
+      documents: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 13h6M9 17h6',
+      profile: 'M12 4a4 4 0 1 0 0 8a4 4 0 1 0 0-8M4 21c0-4 3.6-7 8-7s8 3 8 7',
+      integrations: 'M13 2L4 14h6l-1 8l9-12h-6z',
+      settings: 'M12 2l8 4.5v9L12 20l-8-4.5v-9zM12 11v9M4 6.5l8 4.5l8-4.5',
+      org: 'M3 21h18M5 21V7l7-4l7 4v14M9 9h0.01M9 13h0.01M15 9h0.01M15 13h0.01M9 21v-4h6v4',
+      search: 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14M21 21l-4.35-4.35',
+      legal: 'M12 3v18M8 21h8M6 7L3 13a3 3 0 0 0 6 0zM18 7l-3 6a3 3 0 0 0 6 0zM5 7h14',
+      billing: 'M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM2 10h20M6 15h4',
+    };
+    const navItems = [
+      'dashboard', 'search', 'history', 'network', 'documents', 'profile', 'integrations', 'settings', 'org', 'billing', 'legal',
+    ].map(id => ({
+      label: tr.nav[id], d: icons[id],
+      style: 'display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font-family: Inter, sans-serif; font-size: 13.5px; font-weight: 500; padding: 9px ' + (s.collapsed ? '0; justify-content: center;' : '12px;') + ' border-radius: 7px; border: none; cursor: pointer; ' + (s.nav === id ? 'background: #1a1a1a; color: #00d992;' : 'background: none; color: #8b949e;'),
+      go: () => this.setState({ nav: id }),
+    }));
+    // dashboard
+    const tabDefs = [{ id: 'all', name: 'All' }, ...s.platforms.map(p => ({ id: p.id, name: p.name }))];
+    const countFor = id => s.jobs.filter(j => (id === 'all' || j.platform === id) && j.status !== 'sent').length;
+    const tabs = tabDefs.map(t => ({
+      label: t.name, count: countFor(t.id),
+      style: 'display: flex; align-items: center; gap: 7px; font-family: Inter, sans-serif; font-size: 13.5px; font-weight: 600; background: none; border: none; border-bottom: 2px solid ' + (s.tab === t.id ? '#00d992' : 'transparent') + '; margin-bottom: -2px; padding: 9px 14px; cursor: pointer; color: ' + (s.tab === t.id ? '#ffffff' : '#8b949e') + ';',
+      countStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10.5px; border-radius: 10px; padding: 1px 7px; ' + (s.tab === t.id ? 'background: #00d992; color: #101010;' : 'background: #2a2a2a; color: #8b949e;'),
+      go: () => this.setState({ tab: t.id }),
+    }));
+    const curPlat = s.tab === 'all' ? null : this.plat(s.tab);
+    const extraLabels = { linkedin: 'Easy Apply / Conn.', wellfound: 'Founder', wwr: 'Apply email', remoteok: 'Apply email', indeed: 'Apply route' };
+    const showSource = s.tab === 'all';
+    const gridCols = showSource
+      ? 'minmax(200px, 1.8fr) 132px minmax(140px, 1fr) 64px 104px 78px 90px 122px'
+      : 'minmax(200px, 1.8fr) minmax(140px, 1fr) 64px 104px 78px 90px 122px';
+    const visible = s.jobs.filter(j => s.tab === 'all' || j.platform === s.tab);
+    const rows = visible.map(j => {
+      const p = this.plat(j.platform);
+      const match = api ? api.skillMatch(j, profile).score : 0;
+      const [statusLabel, statusCss] = this.statusMeta(s.running[j.id] ? 'running' : j.status);
+      let extra = '—';
+      if (j.platform === 'linkedin') extra = (j.psd.easy_apply ? 'Easy Apply ✓' : 'External') + (j.psd.connection ? ' · conn ✓' : '');
+      else if (j.platform === 'wellfound') extra = j.psd.founder || '—';
+      else if (j.psd.apply_email) extra = j.psd.apply_email;
+      else if (j.platform === 'indeed') extra = 'Indeed Apply';
+      return {
+        title: j.title, company: j.company, platformName: p.name, salary: j.salary, ago: this.ago(j.scraped_at), extra,
+        match, matchColor: this.matchColor(match),
+        statusLabel, statusStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; border-radius: 20px; padding: 3px 10px; ' + statusCss,
+        canStart: j.status === 'pending' && !s.running[j.id],
+        isRunning: !!s.running[j.id], phase: s.running[j.id] || '',
+        canReview: j.status === 'review' && !s.running[j.id],
+        isSent: j.status === 'sent',
+        sentHow: j.sent_manually ? 'sent manually' : 'sent auto',
+        onStart: () => this.startJob(j.id),
+        onReview: () => this.setState({ drawerJobId: j.id }),
+      };
+    });
+    const kpis = [
+      { label: 'Active modules', value: s.platforms.filter(p => p.is_active).length + '/' + (s.platforms.length || 5), color: '#f2f2f2' },
+      { label: 'Jobs pending', value: s.jobs.filter(j => j.status === 'pending').length, color: '#f2f2f2' },
+      { label: 'In review', value: s.jobs.filter(j => j.status === 'review').length, color: '#00d992' },
+      { label: 'Sent this week', value: s.jobs.filter(j => j.status === 'sent').length, color: '#2fd6a1' },
+    ];
+    // board view
+    const boardDefs = [['pending', 'Pending', '#8b949e'], ['review', 'In review', '#00d992'], ['sent', 'Sent', '#2fd6a1']];
+    const boardCols = boardDefs.map(([st, label, color]) => {
+      const cards = visible.filter(j => (st === 'pending' ? (j.status === 'pending' || s.running[j.id]) : j.status === st)).map(j => {
+        const m = api ? api.skillMatch(j, profile).score : 0;
+        return {
+          title: j.title, company: j.company, platformName: this.plat(j.platform).name,
+          match: m, matchColor: this.matchColor(m),
+          onClick: () => { if (j.status === 'review') this.setState({ drawerJobId: j.id }); else if (j.status === 'pending' && !s.running[j.id]) this.startJob(j.id); },
+        };
+      });
+      return { label, color, count: cards.length, cards };
+    });
+    const viewToggles = [['table', 'Table'], ['board', 'Board']].map(([id, label]) => ({
+      label,
+      style: 'font-family: Inter, sans-serif; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 5px 12px; cursor: pointer; border: 1px solid ' + (s.view === id ? '#00d992' : '#3d3a39') + '; ' + (s.view === id ? 'background: #00d992; color: #101010;' : 'background: #101010; color: #8b949e;'),
+      go: () => this.setState({ view: id }),
+    }));
+    // network
+    const contactStatuses = ['to_contact', 'messaged', 'replied', 'referred'];
+    const contactMeta = {
+      to_contact: ['TO CONTACT', 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;'],
+      messaged:   ['MESSAGED',   'color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35);'],
+      replied:    ['REPLIED',    'color: #00d992; background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35);'],
+      referred:   ['REFERRED',   'color: #2fd6a1; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35);'],
+    };
+    // history
+    const sent = s.jobs.filter(j => j.status === 'sent' && (s.histFilter === 'all' || j.platform === s.histFilter));
+    const histDefs = [{ id: 'all', name: 'All sources' }, ...s.platforms.filter(p => s.jobs.some(j => j.platform === p.id && j.status === 'sent')).map(p => ({ id: p.id, name: p.name }))];
+    // drawer
+    const dJob = s.jobs.find(j => j.id === s.drawerJobId);
+    const dApp = dJob ? s.apps[dJob.id] : null;
+    const dPlat = dJob ? this.plat(dJob.platform) : {};
+    const toneNotes = { linkedin: 'tone: short, conversational (Easy Apply note)', wellfound: 'tone: personal message to founder', wwr: 'tone: formal email + cover letter', remoteok: 'tone: formal email + cover letter', indeed: 'tone: formal email + cover letter' };
+    return {
+      navItems, screenTitle, screenSub, apiHint,
+      sidebarCols: (s.collapsed ? '58px' : '218px') + ' 1fr',
+      expanded: !s.collapsed,
+      toggleSidebar: () => this.setState(st => ({ collapsed: !st.collapsed })),
+      sidebarToggleTitle: s.collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      sidebarToggleIcon: s.collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6',
+      initials: profile.name.split(' ').map(w => w[0]).join('').slice(0, 2), profileName: profile.name,
+      isDashboard: s.nav === 'dashboard', isHistory: s.nav === 'history', isDocuments: s.nav === 'documents', isProfile: s.nav === 'profile', isSettings: s.nav === 'settings', isIntegrations: s.nav === 'integrations',
+      isOrg: s.nav === 'org', isBilling: s.nav === 'billing', isSearch: s.nav === 'search',
+      langToggles: ['en', 'de', 'ro'].map(l => ({
+        label: l.toUpperCase(),
+        style: 'font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; border: none; border-radius: 4px; padding: 4px 9px; cursor: pointer; ' + (s.lang === l ? 'background: #00d992; color: #101010;' : 'background: none; color: #8b949e;'),
+        go: () => this.setState({ lang: l }),
+      })),
+      isLegal: s.nav === 'legal',
+      ...(() => {
+        if (s.nav !== 'legal' || !this.legal) return { legalTabs: [], legalSections: [], legalTitle: '', legalUpdated: '', legalNote: '' };
+        const L = this.legal.LEGAL[s.lang] || this.legal.LEGAL.en;
+        const doc = L[s.legalDoc] || L.terms;
+        return {
+          legalTabs: this.legal.LEGAL_DOCS.map(id => ({
+            label: L[id].title,
+            style: 'text-align: left; font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; border: none; border-radius: 7px; padding: 9px 12px; cursor: pointer; ' + (s.legalDoc === id ? 'background: #1a1a1a; color: #00d992;' : 'background: none; color: #8b949e;'),
+            go: () => this.setState({ legalDoc: id }),
+          })),
+          legalTitle: doc.title, legalUpdated: doc.updated,
+          legalSections: doc.sections.map(([h, p]) => ({ h, p })),
+          legalNote: L._note,
+        };
+      })(),
+      cookieBannerOpen: s.cookieConsent === null,
+      cookieTitle: tr.cookie[0], cookieText: tr.cookie[1], cookieLink: tr.cookie[2], cookieAcceptAll: tr.cookie[3], cookieEssentialOnly: tr.cookie[4],
+      acceptAllCookies: () => this.setState({ cookieConsent: 'all' }),
+      acceptEssentialCookies: () => this.setState({ cookieConsent: 'essential' }),
+      openCookiePolicy: () => this.setState({ nav: 'legal', legalDoc: 'cookies' }),
+      prefLists: [
+        ['titles', 'Job titles', 'e.g. Backend Engineer'],
+        ['locOnsite', 'Locations (on-site)', 'e.g. Berlin, Germany'],
+        ['locRemote', 'Locations (remote)', 'e.g. Europe'],
+      ].map(([key, label, placeholder]) => {
+        const items = s.prefs[key];
+        return {
+          label, placeholder, atMax: items.length >= 5, canAdd: items.length < 5,
+          draft: s.prefDrafts[key] || '',
+          onDraft: e => this.setState(st => ({ prefDrafts: { ...st.prefDrafts, [key]: e.target.value } })),
+          add: () => {
+            const v = (this.state.prefDrafts[key] || '').trim();
+            if (!v || items.length >= 5 || items.includes(v)) return;
+            this.setState(st => ({ prefs: { ...st.prefs, [key]: [...st.prefs[key], v] }, prefDrafts: { ...st.prefDrafts, [key]: '' } }));
+          },
+          chips: items.map(label2 => ({
+            label: label2,
+            remove: () => this.setState(st => ({ prefs: { ...st.prefs, [key]: st.prefs[key].filter(x => x !== label2) } })),
+          })),
+        };
+      }),
+      prefToggles: [
+        ['locTypes', 'Location types', ['On-site', 'Hybrid', 'Remote'], true],
+        ['empTypes', 'Employment types', ['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary'], false],
+      ].map(([key, label, opts, required]) => ({
+        label, required,
+        options: opts.map(o => {
+          const on = s.prefs[key].includes(o);
+          return {
+            label: o, check: on ? '✓' : '',
+            style: 'font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; border-radius: 20px; padding: 6px 15px; cursor: pointer; border: 1px solid ' + (on ? 'rgba(0,217,146,0.35)' : '#3d3a39') + '; ' + (on ? 'background: rgba(0,217,146,0.10); color: #2fd6a1;' : 'background: #101010; color: #8b949e;'),
+            toggle: () => this.setState(st => ({ prefs: { ...st.prefs, [key]: on ? st.prefs[key].filter(x => x !== o) : [...st.prefs[key], o] } })),
+          };
+        }),
+      })),
+      prefRadios: [
+        ['start', 'Start date', false, [
+          ['immediately', 'Immediately, I am actively applying', 'Modules run daily, auto-send enabled where allowed'],
+          ['flexible', 'Flexible, I am casually looking', 'Weekly digest only, no auto-send'],
+        ]],
+        ['visibility', 'Visibility — who can see you\'re open to work', true, [
+          ['recruiters', 'Recruiters only', 'Shared only with recruiter contacts in your Network CRM. We avoid people at your current company, but can\'t guarantee complete privacy.'],
+          ['everyone', 'Everyone', 'Includes recruiters and people at your current company. Adds the #OpenToWork badge to generated documents.'],
+        ]],
+      ].map(([key, label, required, opts]) => ({
+        label, required,
+        options: opts.map(([val, title, desc]) => {
+          const on = s.prefs[key] === val;
+          return {
+            title, desc,
+            style: 'display: flex; align-items: flex-start; gap: 12px; width: 100%; background: ' + (on ? 'rgba(0,217,146,0.06)' : '#101010') + '; border: 1px solid ' + (on ? 'rgba(0,217,146,0.35)' : '#3d3a39') + '; border-radius: 8px; padding: 12px 14px; cursor: pointer;',
+            dotStyle: 'flex-shrink: 0; margin-top: 2px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid ' + (on ? '#00d992' : '#55595f') + '; background: ' + (on ? 'radial-gradient(circle, #00d992 40%, transparent 45%)' : 'transparent') + ';',
+            pick: () => this.setState(st => ({ prefs: { ...st.prefs, [key]: val } })),
+          };
+        }),
+      })),
+      savePrefs: () => {
+        this.setState({ toast: 'Job search preferences saved.' });
+        setTimeout(() => this.setState({ toast: null }), 3200);
+      },
+      orgName: (s.org || {}).name || '', orgInitial: ((s.org || {}).name || 'W')[0],
+      orgPlanLine: (api ? (api.PLANS.find(p => p.id === s.plan) || {}).name : '') + ' plan · ' + s.cycle + ' billing',
+      goBilling: () => this.setState({ nav: 'billing' }),
+      inviteDraft: s.inviteDraft,
+      onInviteDraft: e => this.setState({ inviteDraft: e.target.value }),
+      inviteStyle: 'font-size: 12.5px; font-weight: 600; border: none; border-radius: 6px; padding: 9px 16px; ' + (s.inviteDraft.includes('@') ? 'background: #00d992; color: #101010; cursor: pointer;' : 'background: #2a2a2a; color: #8b949e; cursor: not-allowed;'),
+      sendInvite: () => {
+        if (!s.inviteDraft.includes('@')) return;
+        this.setState(st => ({
+          org: { ...st.org, members: [...st.org.members, { id: Date.now(), name: st.inviteDraft, email: st.inviteDraft, role: 'member', status: 'invited', last_active: '—' }] },
+          inviteDraft: '', toast: 'Invitation sent to ' + st.inviteDraft + '.',
+        }));
+        setTimeout(() => this.setState({ toast: null }), 3200);
+      },
+      seatsLine: ((s.org || { members: [] }).members.length) + ' seats used',
+      memberRows: ((s.org || { members: [] }).members).map(m => {
+        const roleCss = { owner: 'color: #00d992; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35);', admin: 'color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35);', member: 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;' }[m.role];
+        return {
+          name: m.name, email: m.email, status: m.status, lastActive: m.last_active,
+          roleLabel: m.role.toUpperCase(),
+          roleStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; border-radius: 20px; padding: 3px 10px; cursor: ' + (m.role === 'owner' ? 'default' : 'pointer') + '; ' + roleCss,
+          statusColor: m.status === 'active' ? '#2fd6a1' : '#e6b34d',
+          removable: m.role !== 'owner',
+          cycleRole: () => { if (m.role === 'owner') return; this.setState(st => ({ org: { ...st.org, members: st.org.members.map(x => x.id === m.id ? { ...x, role: x.role === 'admin' ? 'member' : 'admin' } : x) } })); },
+          remove: () => this.setState(st => ({ org: { ...st.org, members: st.org.members.filter(x => x.id !== m.id) } })),
+        };
+      }),
+      usageMeters: (() => {
+        const plan = api ? api.PLANS.find(p => p.id === s.plan) : null;
+        const u = api ? api.USAGE : { apps: 0, gens: 0, docs_mb: 0 };
+        if (!plan) return [];
+        const mk = (label, val, max, unit) => ({ label, value: val + ' / ' + (max || '∞') + (unit || ''), width: Math.min(100, Math.round(val / (max || val || 1) * 100)) + '%', color: val / (max || 1) > 0.8 ? '#e6b34d' : '#00d992' });
+        return [mk('Applications this period', u.apps, plan.limits.apps), mk('AI generations', u.gens, plan.limits.gens), mk('Document storage', u.docs_mb, 500, ' MB')];
+      })(),
+      periodEnds: api ? api.USAGE.period_ends : '',
+      cycleToggles: [['monthly', 'Monthly'], ['yearly', 'Yearly']].map(([id, label]) => ({
+        label,
+        style: 'font-family: Inter, sans-serif; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 6px 14px; cursor: pointer; border: 1px solid ' + (s.cycle === id ? '#00d992' : '#3d3a39') + '; ' + (s.cycle === id ? 'background: rgba(0,217,146,0.12); color: #00d992;' : 'background: #101010; color: #8b949e;'),
+        go: () => this.setState({ cycle: id }),
+      })),
+      planCards: (api ? api.PLANS : []).map(p => {
+        const current = p.id === s.plan;
+        const price = p.monthly === null ? 'Custom' : '$' + (s.cycle === 'yearly' ? p.yearly : p.monthly);
+        return {
+          name: p.name, tagline: p.tagline, popular: !!p.popular, features: p.features,
+          price, per: p.monthly === null ? 'contact sales' : '/ mo' + (p.seat ? ' / seat' : '') + (s.cycle === 'yearly' ? ', billed yearly' : ''),
+          cardStyle: 'background: #101010; border: ' + (current ? '2px solid #00d992' : p.popular ? '1px solid rgba(0,217,146,0.35)' : '1px solid #3d3a39') + '; border-radius: 10px; padding: 18px;',
+          btnLabel: current ? 'Current plan' : p.monthly === null ? 'Contact sales' : 'Upgrade',
+          btnStyle: 'width: 100%; font-size: 12.5px; font-weight: 600; border-radius: 6px; padding: 9px 0; cursor: ' + (current ? 'default' : 'pointer') + '; ' + (current ? 'background: #1a1a1a; color: #8b949e; border: 1px solid #3d3a39;' : 'background: #00d992; color: #101010; border: none;'),
+          select: () => {
+            if (current || p.monthly === null) return;
+            this.setState({ plan: p.id, toast: 'Switched to ' + p.name + ' (' + s.cycle + ') — mock checkout.' });
+            setTimeout(() => this.setState({ toast: null }), 3200);
+          },
+        };
+      }),
+      integrationCards: s.integrations.map(ig => ({
+        name: ig.name, category: ig.category, usedBy: ig.used_by, purpose: ig.purpose,
+        initial: ig.name[0], iconBg: ig.connected ? '#00d992' : '#8b949e',
+        borderColor: ig.connected ? 'rgba(0,217,146,0.35)' : '#3d3a39',
+        connected: ig.connected, notConnected: !ig.connected,
+        keyHint: ig.key_hint || '',
+        statusLabel: ig.connected ? 'CONNECTED' : 'NOT CONNECTED',
+        statusStyle: 'margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; border-radius: 20px; padding: 3px 9px; ' + (ig.connected ? 'color: #2fd6a1; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35);' : 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;'),
+        placeholder: 'Paste your ' + ig.name + ' API key…',
+        draft: s.keyDrafts[ig.id] || '',
+        onDraft: e => this.setState(st => ({ keyDrafts: { ...st.keyDrafts, [ig.id]: e.target.value } })),
+        connectStyle: 'font-size: 12px; font-weight: 600; border: none; border-radius: 6px; padding: 9px 16px; white-space: nowrap; ' + ((s.keyDrafts[ig.id] || '').trim().length > 5 ? 'background: #00d992; color: #101010; cursor: pointer;' : 'background: #2a2a2a; color: #8b949e; cursor: not-allowed;'),
+        connect: () => {
+          const k = (this.state.keyDrafts[ig.id] || '').trim();
+          if (k.length <= 5) return;
+          const hint = k.slice(0, 6) + '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' + k.slice(-4);
+          this.setState(st => ({
+            integrations: st.integrations.map(x => x.id === ig.id ? { ...x, connected: true, key_hint: hint } : x),
+            keyDrafts: { ...st.keyDrafts, [ig.id]: '' },
+            toast: ig.name + ' connected — key stored encrypted.',
+          }));
+          setTimeout(() => this.setState({ toast: null }), 3200);
+        },
+        disconnect: () => this.setState(st => ({ integrations: st.integrations.map(x => x.id === ig.id ? { ...x, connected: false, key_hint: null } : x) })),
+      })),
+      kpis, tabs, showSource, gridCols, rows, noRows: rows.length === 0 && s.jobs.length > 0,
+      isTable: s.view === 'table', isBoard: s.view === 'board', boardCols, viewToggles,
+      isNetwork: s.nav === 'network',
+      contactRows: s.contacts.map(c => {
+        const [statusLabel, css] = contactMeta[c.status];
+        return {
+          name: c.name, role: c.role, company: c.company, source: c.source,
+          lastTouch: c.last_touch, nextAction: c.next_action, statusLabel,
+          statusStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; border-radius: 20px; padding: 3px 10px; border: none; cursor: pointer; ' + css,
+          advance: () => this.setState(st => ({ contacts: st.contacts.map(x => x.id === c.id ? { ...x, status: contactStatuses[(contactStatuses.indexOf(x.status) + 1) % contactStatuses.length], last_touch: 'today' } : x) })),
+        };
+      }),
+      extraColLabel: extraLabels[s.tab] || 'Details',
+      tabNote: curPlat && (this.props.showRiskBanners ?? true) ? curPlat.note : null, tabRisk: curPlat ? curPlat.risk : '',
+      tabNoteColor: curPlat ? this.riskColor(curPlat.risk) : '#8b949e',
+      tabNoteBg: curPlat && curPlat.risk === 'high' ? 'rgba(229,83,75,0.12)' : '#1a1a1a',
+      tabNoteBorder: curPlat && curPlat.risk === 'high' ? 'rgba(229,83,75,0.35)' : '#3d3a39',
+      historyFilters: histDefs.map(f => ({
+        label: f.name,
+        style: 'font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; border-radius: 20px; padding: 6px 14px; cursor: pointer; border: 1px solid ' + (s.histFilter === f.id ? '#00d992' : '#3d3a39') + '; ' + (s.histFilter === f.id ? 'background: #00d992; color: #101010;' : 'background: #101010; color: #bdbdbd;'),
+        go: () => this.setState({ histFilter: f.id }),
+      })),
+      historyRows: sent.map(j => ({
+        title: j.title, company: j.company, platformName: this.plat(j.platform).name, ago: this.ago(j.sent_at),
+        mode: j.sent_manually ? 'MANUAL' : 'AUTO', modeColor: j.sent_manually ? '#e6b34d' : '#2fd6a1',
+      })),
+      noHistory: sent.length === 0,
+      onUpload: e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const kind = /cv|resume/i.test(f.name) ? 'cv' : /cert/i.test(f.name) ? 'certificate' : 'other';
+        this.setState(st => ({
+          docs: [{ id: Date.now(), name: f.name, kind, tags: [], size: Math.max(1, Math.round(f.size / 1024)) + ' KB', updated: 'today', ats_score: kind === 'cv' ? 68 : undefined }, ...st.docs],
+          toast: '"' + f.name + '" uploaded.',
+        }));
+        e.target.value = '';
+        setTimeout(() => this.setState({ toast: null }), 3200);
+      },
+      toggleGenPanel: () => this.setState(st => ({ genPanelOpen: !st.genPanelOpen })),
+      genPanelOpen: s.genPanelOpen, genBusy: s.genBusy, genIdle: !s.genBusy,
+      genKinds: [{ id: 'cv', label: 'Tailored CV' }, { id: 'cover', label: 'Cover letter' }, { id: 'brand', label: 'Personal brand one-pager' }].map(k => ({ ...k })),
+      genJobs: s.jobs.filter(j => j.status !== 'sent').map(j => ({ id: String(j.id), label: j.title + ' — ' + j.company })),
+      onGenKind: e => this.setState({ genKind: e.target.value, genTemplate: null }),
+      onGenJob: e => this.setState({ genJobId: Number(e.target.value) }),
+      hasTemplates: s.genKind === 'cv' || s.genKind === 'cover',
+      canvaNotConnected: !canvaConnected,
+      canvaStatusLabel: canvaConnected ? 'connected' : 'not connected',
+      canvaStatusStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10px; ' + (canvaConnected ? 'color: #2fd6a1;' : 'color: #e5534b;'),
+      goToApis: () => this.setState({ nav: 'integrations' }),
+      genTemplates: (api ? (api.CANVA_TEMPLATES[s.genKind] || []) : []).map(t => {
+        const sel = (s.genTemplate || (api.CANVA_TEMPLATES[s.genKind] || [])[0].id) === t.id;
+        const acc = {
+          sidebar:  'position: absolute; left: 8%; top: 8%; bottom: 8%; width: 16%; background: ' + t.accent + '; border-radius: 2px;',
+          band:     'position: absolute; left: 8%; right: 8%; top: 8%; height: 16%; background: ' + t.accent + '; border-radius: 2px;',
+          'two-col':'position: absolute; right: 8%; top: 8%; bottom: 8%; width: 22%; background: ' + t.accent + '; border-radius: 2px; opacity: 0.85;',
+          minimal:  'position: absolute; left: 8%; right: 40%; top: 12%; height: 5px; background: ' + t.accent + '; border-radius: 2px;',
+          centered: 'position: absolute; left: 28%; right: 28%; top: 8%; height: 15%; background: ' + t.accent + '; border-radius: 2px;',
+        }[t.layout];
+        return {
+          name: t.name, accentStyle: acc,
+          style: 'min-width: 0; display: flex; flex-direction: column; align-items: center; background: ' + (sel ? '#0d221b' : '#101010') + '; border: 1.5px solid ' + (sel ? '#00d992' : '#3d3a39') + '; border-radius: 8px; padding: 6px; cursor: pointer; ' + (canvaConnected ? '' : 'opacity: 0.55;'),
+          pick: () => this.setState({ genTemplate: t.id }),
+        };
+      }),
+      runGenerate: () => {
+        const job = s.jobs.find(j => j.id === s.genJobId) || s.jobs.filter(j => j.status !== 'sent')[0];
+        if (!job) return;
+        const needsCanva = s.genKind === 'cv' || s.genKind === 'cover';
+        if (needsCanva && !canvaConnected) {
+          this.setState({ toast: 'Connect your Canva account first (APIs page).' });
+          setTimeout(() => this.setState({ toast: null }), 3200);
+          return;
+        }
+        const tpl = needsCanva ? (api.CANVA_TEMPLATES[s.genKind].find(t => t.id === s.genTemplate) || api.CANVA_TEMPLATES[s.genKind][0]) : null;
+        this.setState({ genBusy: true });
+        setTimeout(() => this.setState(st => ({
+          genBusy: false, genPanelOpen: false,
+          docs: [{
+            id: Date.now(),
+            name: (st.genKind === 'cv' ? 'CV — ' : st.genKind === 'cover' ? 'Cover letter — ' : 'Brand one-pager — ') + job.company + (tpl ? ' · ' + tpl.name : '') + ' (AI).pdf',
+            kind: st.genKind === 'cv' ? 'cv' : 'other',
+            tags: job.tags, size: '178 KB', updated: 'today',
+            ats_score: st.genKind === 'cv' ? 95 : undefined,
+          }, ...st.docs],
+          toast: 'Generated in Canva template "' + (tpl ? tpl.name : '—') + '" — tailored for ' + job.title + '.',
+        })), 1800);
+        setTimeout(() => this.setState({ toast: null }), 5200);
+      },
+      docCards: s.docs.map(d => ({
+        ...d, kindColor: { cv: '#00d992', certificate: '#e6b34d', diploma: '#8b95ff', other: '#8b949e' }[d.kind],
+        hasAts: !!d.ats_score, ats: d.ats_score || 0, atsWidth: (d.ats_score || 0) + '%', atsColor: this.matchColor(d.ats_score || 0),
+      })),
+      profileFields: [
+        ['Full name', 'name'], ['Headline', 'headline'], ['Email', 'email'], ['Location', 'location'],
+      ].map(([label, key]) => ({
+        label, value: profile[key] || '', wrapStyle: '',
+        onChange: e => this.setState(st => ({ profile: { ...st.profile, [key]: e.target.value } })),
+      })),
+      profileSummary: profile.summary,
+      onSummaryChange: e => this.setState(st => ({ profile: { ...st.profile, summary: e.target.value } })),
+      profileSkills: profile.skills,
+      platformCards: s.platforms.map(p => ({
+        name: p.name, risk: p.risk, riskColor: this.riskColor(p.risk), note: p.note,
+        opacity: p.is_active ? '1' : '0.55',
+        sendMode: p.auto_send ? 'auto-send enabled' : 'manual send only',
+        sendColor: p.auto_send ? '#2fd6a1' : '#e6b34d',
+        toggleLabel: p.is_active ? 'Active' : 'Disabled',
+        toggleStyle: 'margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 600; border-radius: 20px; padding: 5px 14px; cursor: pointer; border: none; ' + (p.is_active ? 'background: rgba(0,217,146,0.12); color: #00d992;' : 'background: #2a2a2a; color: #8b949e;'),
+        toggle: () => this.setState(st => ({ platforms: st.platforms.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x) })),
+        contract: [
+          ['connector_type', p.connector_type], ['auth_method', p.auth_method], ['apply_mechanism', p.apply_mechanism], ['rate_limit', p.rate_limit],
+        ].map(([k, v]) => ({ k, v })),
+      })),
+      // drawer
+      drawerOpen: !!dJob && !!dApp,
+      dJob: dJob || {}, dPlatformName: dPlat.name, dRisk: dPlat.risk, dRiskColor: this.riskColor(dPlat.risk),
+      dToneNote: toneNotes[dJob ? dJob.platform : ''] || '',
+      dMatch: dJob && api ? api.skillMatch(dJob, profile).score : 0,
+      dMatchColor: dJob && api ? this.matchColor(api.skillMatch(dJob, profile).score) : '#8b949e',
+      dMatchWidth: (dJob && api ? api.skillMatch(dJob, profile).score : 0) + '%',
+      dMatchChips: dJob && api ? (() => {
+        const sm = api.skillMatch(dJob, profile);
+        return [
+          ...sm.matched.map(t => ({ label: '✓ ' + t, style: 'font-size: 11.5px; font-weight: 500; background: rgba(0,217,146,0.10); color: #00d992; border: 1px solid rgba(0,217,146,0.35); border-radius: 20px; padding: 3px 10px;' })),
+          ...sm.missing.map(t => ({ label: '✕ ' + t, style: 'font-size: 11.5px; font-weight: 500; background: rgba(229,83,75,0.12); color: #e5534b; border: 1px solid rgba(229,83,75,0.35); border-radius: 20px; padding: 3px 10px;' })),
+        ];
+      })() : [],
+      dNotes: dJob ? s.notes[dJob.id] || '' : '',
+      onNotesChange: e => this.setState(st => ({ notes: { ...st.notes, [dJob.id]: e.target.value } })),
+      dMessageLabel: dJob && (dJob.platform === 'wwr' || dJob.platform === 'remoteok' || dJob.platform === 'indeed') ? 'Application email' : 'Message',
+      dMessage: dApp ? dApp.message : '',
+      onMessageChange: e => this.setState(st => ({ apps: { ...st.apps, [dJob.id]: { ...st.apps[dJob.id], message: e.target.value } } })),
+      dHasCover: !!(dApp && dApp.cover_letter),
+      dCover: dApp ? dApp.cover_letter || '' : '',
+      onCoverChange: e => this.setState(st => ({ apps: { ...st.apps, [dJob.id]: { ...st.apps[dJob.id], cover_letter: e.target.value } } })),
+      regenerate: () => {
+        const gen = api.generateContent(dJob, profile);
+        this.setState(st => ({ apps: { ...st.apps, [dJob.id]: { ...st.apps[dJob.id], message: gen.message, cover_letter: gen.cover_letter } } }));
+      },
+      dDocs: dApp ? s.docs.filter(d => d.kind !== 'other' || dApp.docIds.includes(d.id)).map(d => {
+        const on = dApp.docIds.includes(d.id);
+        return {
+          name: d.name, kind: d.kind, check: on ? '☑' : '☐', checkColor: on ? '#00d992' : '#55595f',
+          style: 'display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: ' + (on ? '#0d221b' : '#101010') + '; border: 1px solid ' + (on ? 'rgba(0,217,146,0.35)' : '#f2f2f2') + '; border-radius: 8px; padding: 10px 12px; cursor: pointer;',
+          toggle: () => this.setState(st => {
+            const cur = st.apps[dJob.id].docIds;
+            const docIds = on ? cur.filter(x => x !== d.id) : [...cur, d.id];
+            return { apps: { ...st.apps, [dJob.id]: { ...st.apps[dJob.id], docIds } } };
+          }),
+        };
+      }) : [],
+      dManualWarning: dPlat.auto_send ? null : (dJob && dJob.platform === 'linkedin'
+        ? 'LinkedIn: automation risks account suspension. The message will be copied — you submit it yourself via Easy Apply.'
+        : 'This platform requires manual sending. The message will be copied to your clipboard — you send it yourself.'),
+      dSendLabel: dPlat.auto_send ? 'Approve & send' : 'Copy & mark as sent',
+      dSendBg: '#00d992',
+      confirmSend: () => this.send(dJob.id),
+      closeDrawer: () => this.setState({ drawerJobId: null }),
+      toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

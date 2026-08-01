@@ -1,0 +1,36 @@
+# Traefik dynamic route: findajob.pro -> findajob-web (nginx :80, static UI-first frontend)
+# Deployed to /opt/gethub/traefik/dynamic/findajob.yml on the VPS (macbook-air).
+# Traefik already redirects http -> https globally (verified: http://findajob.pro returns 308).
+http:
+  routers:
+    # www.findajob.pro is DNS-live, so without this it served a bare Traefik 404.
+    # Redirect it to the apex rather than serving the site on two hostnames.
+    findajob-www:
+      rule: "Host(`www.findajob.pro`)"
+      entryPoints: [websecure]
+      service: findajob
+      tls:
+        certResolver: letsencrypt
+      middlewares: [findajob-www-to-apex]
+
+    findajob:
+      rule: "Host(`findajob.pro`)"
+      entryPoints: [websecure]
+      service: findajob
+      tls:
+        certResolver: letsencrypt
+      middlewares: [secure-headers, compress]
+
+  middlewares:
+    findajob-www-to-apex:
+      redirectRegex:
+        regex: "^https://www\\.findajob\\.pro/(.*)"
+        replacement: "https://findajob.pro/${1}"
+        permanent: true
+
+  services:
+    findajob:
+      loadBalancer:
+        servers:
+          - url: "http://findajob-web:80"
+        passHostHeader: true
