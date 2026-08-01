@@ -106,4 +106,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD ["python", "/app/docker/healthcheck.py"]
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
+# gunicorn.conf.py binds 0.0.0.0:8000, sizes the gthread pool and formats the
+# access log so it never contains a query string. Every value in it is
+# overridable through GUNICORN_* environment variables, so tuning the VPS never
+# requires a rebuild. See backend/.env.example.
 CMD ["gunicorn", "config.wsgi:application", "--config", "/app/gunicorn.conf.py"]

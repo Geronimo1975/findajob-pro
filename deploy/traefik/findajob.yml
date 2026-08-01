@@ -66,11 +66,10 @@ http:
         # the api container has no route to the internet-facing hostname
         # otherwise, and SECURE_PROXY_SSL_HEADER depends on X-Forwarded-Proto.
         trustForwardHeader: true
-        # Copy the session cookie to the check request. Without this the check
-        # is always anonymous and would 401 every request.
-        authRequestHeaders:
-          - "Cookie"
-          - "X-CSRFToken"
+        # `authRequestHeaders` is deliberately NOT set. Unset means "copy every
+        # request header", which is what a session check needs — filtering the
+        # list down is how people accidentally drop `Cookie` and get a
+        # middleware that 401s every request including their own.
         # Identity the check hands back to the protected upstream. Nothing
         # consumes these yet; they are here so the contract is explicit.
         authResponseHeaders:

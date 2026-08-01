@@ -51,10 +51,10 @@ import logging
 import secrets
 from datetime import timedelta
 
-from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import get_language
 
 from apps.accounts import ratelimit
 from apps.accounts.mailer import send_login_code
@@ -71,6 +71,7 @@ from apps.accounts.models import (
     normalize_email,
 )
 from apps.common.errors import ApiError, ErrorCode, RateLimited
+from apps.legal import request_meta as legal_request_meta
 
 logger = logging.getLogger("findajob.accounts")
 
@@ -94,23 +95,20 @@ DEAD_CODE_SCAN_LIMIT = 10
 # ---------------------------------------------------------------------------
 
 
-def _strip_port(value: str) -> str:
-    """``"1.2.3.4:5678"`` -> ``"1.2.3.4"``; ``"[::1]:443"`` -> ``"::1"``."""
-    value = value.strip()
-    if value.startswith("["):
-        closing = value.find("]")
-        if closing != -1:
-            return value[1:closing]
-        return value
-    if value.count(":") == 1:  # exactly one colon => IPv4:port, not IPv6
-        return value.split(":", 1)[0]
-    return value
-
-
 def _valid_ip(value: str | None) -> str | None:
+    """Sanitise an address supplied by something other than a request.
+
+    Only used for the ``ip`` argument of :func:`issue_code`, which the
+    break-glass management command passes as ``None``. Request-borne addresses
+    go through :func:`client_ip` instead.
+    """
     if not value:
         return None
-    candidate = _strip_port(str(value))
+    candidate = str(value).strip()
+    if candidate.startswith("[") and "]" in candidate:
+        candidate = candidate[1 : candidate.index("]")]
+    elif candidate.count(":") == 1:  # exactly one colon => IPv4:port
+        candidate = candidate.split(":", 1)[0]
     try:
         ipaddress.ip_address(candidate)
     except ValueError:
@@ -118,47 +116,41 @@ def _valid_ip(value: str | None) -> str | None:
     return candidate
 
 
-def client_ip(request) -> str | None:
-    """The address the *user* is at, not the address of the proxy in front.
+# The client's real address matters twice over here: it selects the 20/hour
+# per-IP budget and the /24 verify-failure budget (spec §5). Getting it wrong in
+# either direction is expensive — read `apps.legal.request_meta` for the full
+# argument. In short: behind Traefik every visitor shares one REMOTE_ADDR, so
+# leaving the budgets keyed on it would throttle the entire site to twenty login
+# codes an hour; and `X-Forwarded-For[0]` is attacker-controlled, so trusting it
+# would let a client pick its own bucket.
+#
+# `apps.legal.request_meta` is declared in `config.settings.base` as *the* one
+# implementation ("anything that records or rate-limits by IP has to use it"),
+# so this imports it rather than carrying a second copy that could drift. It is
+# a pure module — django.conf and two validators, no models — so importing it
+# from a sibling app is free of ordering hazards.
+client_ip = legal_request_meta.client_ip
+user_agent_of = legal_request_meta.client_user_agent
 
-    In production Traefik terminates TLS and forwards to gunicorn, so
-    ``REMOTE_ADDR`` is the proxy and every visitor on earth shares it. Left
-    alone, the 20/hour per-IP budget in spec §5 would throttle the entire site
-    to 20 login codes an hour — a self-inflicted outage.
 
-    ``X-Forwarded-For`` cannot simply be trusted either: a client can send its
-    own, and then it picks its own rate-limit bucket. The resolution is
-    ``settings.TRUSTED_PROXY_COUNT``: with *N* trusted proxies the client is the
-    (N+1)-th entry from the right, because every proxy appends the address it
-    received the connection from. A spoofed value is pushed left, past the
-    index we read, and is ignored. With the default of 0 this returns
-    ``REMOTE_ADDR`` and nothing else.
+def effective_lang(requested: str | None) -> str:
+    """The language to write an email in, or to stamp on a brand-new account.
+
+    ``web/api.js``'s ``verifyCode(email, code, accepts_terms)`` sends no ``lang``
+    — that is the pinned contract (spec §3) and not something to change here —
+    so without a fallback every account created through the real frontend would
+    be stamped ``en``, including a German user who just read a German code.
+    ``LocaleMiddleware`` has already resolved the request's language from the
+    ``findajob_lang`` cookie and ``Accept-Language`` by the time a view runs, so
+    that is the honest default.
+
+    Only used as a *default*. An existing user's stored preference is updated
+    solely when the client sends ``lang`` explicitly — otherwise logging in from
+    a borrowed English browser would silently rewrite it.
     """
-    meta = getattr(request, "META", None) or {}
-    remote = _valid_ip(meta.get("REMOTE_ADDR"))
+    from apps.accounts.serializers import normalise_lang  # noqa: PLC0415
 
-    try:
-        trusted = int(getattr(settings, "TRUSTED_PROXY_COUNT", 0) or 0)
-    except (TypeError, ValueError):  # pragma: no cover - misconfiguration
-        trusted = 0
-
-    if trusted > 0:
-        chain = [
-            part.strip()
-            for part in str(meta.get("HTTP_X_FORWARDED_FOR", "")).split(",")
-            if part.strip()
-        ]
-        if chain:
-            index = max(0, min(len(chain) - trusted, len(chain) - 1))
-            forwarded = _valid_ip(chain[index])
-            if forwarded:
-                return forwarded
-    return remote
-
-
-def user_agent_of(request) -> str:
-    meta = getattr(request, "META", None) or {}
-    return str(meta.get("HTTP_USER_AGENT", ""))[:400]
+    return normalise_lang(requested) if requested else normalise_lang(get_language())
 
 
 def mask_email(email: str) -> str:
@@ -300,7 +292,10 @@ def request_login_code(*, request, email: str, lang: str) -> dict:
 
     try:
         send_login_code(
-            email=address, code=code, lang=lang, expires_in=OTP_TTL_SECONDS
+            email=address,
+            code=code,
+            lang=effective_lang(lang),
+            expires_in=OTP_TTL_SECONDS,
         )
     except Exception:
         # Delivery failed and we are about to answer 503. Undo both side
@@ -405,7 +400,47 @@ def _record_consent(user, *, ip, user_agent, ui_language, client_terms_version):
     return recorder(*bound.args, **bound.kwargs)
 
 
-@transaction.atomic
+def _match_or_charge(address: str, code: str, now) -> tuple[int | None, bool]:
+    """Find the live row matching ``code``; charge a failed attempt if none does.
+
+    Returns ``(matched_pk_or_None, all_live_rows_now_exhausted)``.
+
+    This is its own transaction, and that boundary is the point. A failed
+    attempt has to be **durable**: if the increment shared a transaction with
+    the rejection, raising the ``invalid_code`` error would roll the increment
+    straight back and ``attempts`` would sit at 0 forever — the cap would exist
+    in the schema and do nothing, which is the whole defence against online
+    guessing. So the counter is committed here and the exception is raised by
+    the caller, after this block has closed.
+    """
+    with transaction.atomic():
+        # `of=("self",)` rather than a bare `select_for_update()`: the bare form
+        # next to a nullable join is rejected outright by Postgres, and being
+        # explicit about locking only the driving table is the actual intent.
+        live_rows = list(
+            EmailOTP.objects.live(email=address, now=now)
+            .newest_first()
+            .select_for_update(of=("self",))
+        )
+
+        # Compare against all of them without short-circuiting, so the time
+        # taken depends on how many codes are live and on nothing else.
+        matched: EmailOTP | None = None
+        for row in live_rows:
+            is_match = row.matches(code)
+            if is_match and matched is None:
+                matched = row
+
+        if matched is not None:
+            return matched.pk, False
+
+        _burn_attempts(live_rows)
+        exhausted = bool(live_rows) and all(
+            row.attempts >= MAX_OTP_ATTEMPTS for row in live_rows
+        )
+        return None, exhausted
+
+
 def verify_login_code(
     *,
     request,
@@ -417,9 +452,13 @@ def verify_login_code(
 ) -> tuple[User, bool]:
     """Verify a code, log the session in, and return ``(user, created)``.
 
-    Everything below happens in one transaction, so any failure — a missing
-    consent, stale terms, a deactivated account — rolls the code burn back and
-    leaves the user able to try again.
+    Two transactions, deliberately:
+
+    1. :func:`_match_or_charge` — locks the live rows, compares, and on failure
+       **commits** the attempt increment before anything raises.
+    2. The success path below — burn, create, consent, workspace, session — all
+       or nothing, so a stale-terms 409 or a missing consent rolls the burn back
+       and leaves the user able to retry with the same code.
     """
     address = normalize_email(email)
     ip = client_ip(request)
@@ -431,28 +470,11 @@ def verify_login_code(
     if not budget.allowed:
         raise RateLimited(budget.retry_after)
 
-    # 2. Lock and read every live row, newest first.
-    #    `of=("self",)` and not a bare `select_for_update()`: the bare form
-    #    against a nullable join is rejected outright by Postgres, and being
-    #    explicit about locking only the driving table is the actual intent.
-    live_rows = list(
-        EmailOTP.objects.live(email=address, now=now)
-        .newest_first()
-        .select_for_update(of=("self",))
-    )
+    matched_pk, exhausted = _match_or_charge(address, code, now)
 
-    # 3. Compare against all of them without short-circuiting, so the time taken
-    #    depends on how many codes are live and on nothing else.
-    matched: EmailOTP | None = None
-    for row in live_rows:
-        is_match = row.matches(code)
-        if is_match and matched is None:
-            matched = row
-
-    if matched is None:
-        _burn_attempts(live_rows)
+    if matched_pk is None:
         ratelimit.record_verify_failure(address, ip)
-        if live_rows and all(row.attempts >= MAX_OTP_ATTEMPTS for row in live_rows):
+        if exhausted:
             logger.info("All live login codes exhausted for one address.")
             raise ApiError(
                 ErrorCode.TOO_MANY_ATTEMPTS,
@@ -461,8 +483,47 @@ def verify_login_code(
             )
         raise _classify_failure(address, code, now)
 
-    # 4. The code is right. From here on the caller has proved mailbox control,
-    #    so it is safe to talk about the account.
+    return _complete_login(
+        request=request,
+        address=address,
+        ip=ip,
+        matched_pk=matched_pk,
+        accepts_terms=accepts_terms,
+        lang=lang,
+        terms_version=terms_version,
+        now=now,
+    )
+
+
+@transaction.atomic
+def _complete_login(
+    *,
+    request,
+    address: str,
+    ip: str | None,
+    matched_pk: int,
+    accepts_terms: bool,
+    lang: str,
+    terms_version: str | None,
+    now,
+) -> tuple[User, bool]:
+    """Everything that must happen atomically once the code is known good."""
+    # Re-lock and re-check. The row was unlocked when `_match_or_charge`
+    # committed, so a concurrent request could have burned it in between;
+    # without this, two tabs submitting the same code would both log in and the
+    # "single use" guarantee would be a comment rather than a property.
+    matched = (
+        EmailOTP.objects.filter(pk=matched_pk)
+        .select_for_update(of=("self",))
+        .first()
+    )
+    if matched is None or not matched.is_live(now):
+        raise ApiError(
+            ErrorCode.CODE_EXPIRED, "That code has expired. Request a new one.", 400
+        )
+
+    # The code is right. From here on the caller has proved mailbox control, so
+    # it is safe to talk about the account.
     existing = User.objects.filter(email=address).first()
     created = existing is None
 
@@ -476,12 +537,14 @@ def verify_login_code(
             400,
         )
 
-    # 5. Single-use burn.
+    # Single-use burn.
     matched.consumed_at = now
     matched.save(update_fields=["consumed_at"])
 
     if created:
-        user = User.objects.create_user(email=address, lang=lang, is_verified=True)
+        user = User.objects.create_user(
+            email=address, lang=effective_lang(lang), is_verified=True
+        )
         # Spec §10: consent is written inside the same transaction that creates
         # the user, and `apps.legal` resolves the binding document server-side.
         _record_consent(
@@ -497,6 +560,8 @@ def verify_login_code(
         if not user.is_verified:
             user.is_verified = True
             updates.append("is_verified")
+        # `lang`, not `effective_lang(lang)`: an explicit choice may overwrite a
+        # stored preference, a browser header may not.
         if lang and user.lang != lang:
             user.lang = lang
             updates.append("lang")
@@ -511,16 +576,28 @@ def verify_login_code(
             ErrorCode.PERMISSION_DENIED, "This account cannot sign in.", 403
         )
 
-    # 6. Their own workspace. Idempotent, and the only call this app is allowed
-    #    to make into apps.tenancy (spec §2).
+    # Their own workspace. Idempotent, and the only call this app is allowed to
+    # make into apps.tenancy (spec §2).
     from apps.tenancy.services import bootstrap_workspace  # noqa: PLC0415
 
     bootstrap_workspace(user)
 
-    # 7. Session. `login()` cycles the session key and rotates the CSRF token,
+    # Session. `login()` cycles the session key and rotates the CSRF token,
     #    which is what makes session fixation across the anonymous -> logged-in
     #    boundary a non-issue.
-    auth_login(request, user, backend=AUTH_BACKEND)
+    #
+    #    It MUST be handed the underlying Django request. `rotate_token()` sets
+    #    `request.csrf_cookie_needs_reset = True`, and DRF's Request wrapper
+    #    proxies attribute *reads* to the real request but not writes — so
+    #    passing the DRF Request would park that flag on the wrapper, where
+    #    CsrfViewMiddleware.process_response never looks, and the rotated CSRF
+    #    token would silently never reach the browser.
+    http_request = getattr(request, "_request", request)
+    auth_login(http_request, user, backend=AUTH_BACKEND)
+    if http_request is not request:
+        # Keep the DRF wrapper in sync; its setter writes through to the real
+        # request as well.
+        request.user = user
 
     ratelimit.reset_verify_failures(address, ip)
     logger.info("Login succeeded (new account: %s).", created)

@@ -49,6 +49,15 @@ if not CSRF_TRUSTED_ORIGINS:
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = env.get_bool("USE_X_FORWARDED_HOST", False)
+
+# visitor -> Traefik -> nginx -> gunicorn: two proxies append to
+# X-Forwarded-For, so the visitor's address is the second entry from the right.
+# Left at 0 (the base default) every consent record and every per-IP budget
+# would see nginx's container address instead of a real visitor. Raising it
+# above the true hop count is worse — it lets a visitor forge their own address
+# (nginx uses $proxy_add_x_forwarded_for, which appends rather than replaces).
+# See apps.legal.request_meta.
+TRUSTED_PROXY_COUNT = env.get_int("TRUSTED_PROXY_COUNT", 2)
 SECURE_SSL_REDIRECT = env.get_bool("SECURE_SSL_REDIRECT", True)
 
 SECURE_HSTS_SECONDS = env.get_int("SECURE_HSTS_SECONDS", 31_536_000)  # 1 year

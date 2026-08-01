@@ -34,6 +34,7 @@ Usage::
     python manage.py seed_legal --dry-run        # report, write nothing
     python manage.py seed_legal --path other.js
     python manage.py seed_legal --force          # overwrite drifted versions
+    python manage.py seed_legal --doc-version 2026-08-01
 """
 
 from __future__ import annotations
@@ -95,8 +96,11 @@ class Command(BaseCommand):
                 "existing consent records from their hash — use knowingly."
             ),
         )
+        # NOT `--version`: Django's BaseCommand already owns that flag, and
+        # adding it here makes every invocation die in argparse.
         parser.add_argument(
-            "--version",
+            "--doc-version",
+            dest="doc_version",
             default=None,
             help=(
                 "Override the version for every document instead of deriving "
@@ -128,7 +132,7 @@ class Command(BaseCommand):
         self._validate_shape(legal, doc_ids, path)
 
         languages = self._languages(legal, options["lang"])
-        parsed = self._collect(legal, doc_ids, languages, options["version"])
+        parsed = self._collect(legal, doc_ids, languages, options["doc_version"])
         self._warn_on_version_disagreement(parsed)
 
         stats = {"created": 0, "updated": 0, "unchanged": 0}
@@ -149,7 +153,11 @@ class Command(BaseCommand):
                 if options["dry_run"]:
                     raise _Rollback
         except _Rollback:
-            self.stdout.write(self.style.WARNING("Dry run — nothing was written."))
+            if options["verbosity"]:
+                self.stdout.write(self.style.WARNING("Dry run — nothing was written."))
+
+        if not options["verbosity"]:
+            return
 
         total = LegalDocument.objects.count() if not options["dry_run"] else len(parsed)
         self.stdout.write(

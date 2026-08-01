@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /$
 Disallow: /app.html
+Disallow: /auth.html
 Disallow: /vendor/
 Disallow: /api.js
 Disallow: /legal.js

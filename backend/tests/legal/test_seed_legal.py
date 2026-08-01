@@ -167,8 +167,8 @@ class SeedDriftTests(TestCase):
 
 class SeedCurrentPointerTests(TestCase):
     def test_a_new_version_demotes_the_old_one(self):
-        seed(version="2026-07-01")
-        seed(version="2026-08-01")
+        seed(doc_version="2026-07-01")
+        seed(doc_version="2026-08-01")
         rows = LegalDocument.objects.filter(doc_id="terms", lang="de").order_by(
             "version"
         )
@@ -176,8 +176,8 @@ class SeedCurrentPointerTests(TestCase):
         self.assertEqual([row.is_current for row in rows], [False, True])
 
     def test_exactly_one_current_row_per_document_and_language(self):
-        seed(version="2026-07-01")
-        seed(version="2026-08-01")
+        seed(doc_version="2026-07-01")
+        seed(doc_version="2026-08-01")
         for doc_id in DOC_ID_ORDER:
             for lang in LANG_ORDER:
                 with self.subTest(doc=doc_id, lang=lang):
@@ -190,7 +190,7 @@ class SeedCurrentPointerTests(TestCase):
 
     def test_effective_from_still_comes_from_the_document_date(self):
         """``--version`` overrides the label, not the date the text took effect."""
-        seed(version="hotfix-1")
+        seed(doc_version="hotfix-1")
         document = LegalDocument.objects.get(doc_id="terms", lang="de")
         self.assertEqual(document.version, "hotfix-1")
         self.assertEqual(document.effective_from.date().isoformat(), "2026-08-01")

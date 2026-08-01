@@ -48,6 +48,16 @@ ALLOWED_HOSTS = env.get_list("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
 CSRF_TRUSTED_ORIGINS = env.get_list("CSRF_TRUSTED_ORIGINS", [])
 
+# Number of reverse proxies in front of gunicorn whose X-Forwarded-For entries
+# may be trusted, counted from the RIGHT. Read by
+# `apps.legal.request_meta.client_ip` (the address stamped on a consent record)
+# and, through it, by `apps.accounts.services.client_ip` (the per-IP rate-limit
+# buckets). 0 = trust nothing and use REMOTE_ADDR, which is correct for local
+# development and for any deployment reached directly; `config.settings.prod`
+# raises it to 2 for the Traefik -> nginx chain. Too low is merely useless, too
+# high lets a visitor forge their own address, so the default is the useless one.
+TRUSTED_PROXY_COUNT = env.get_int("TRUSTED_PROXY_COUNT", 0)
+
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
@@ -387,6 +397,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+# NOTE: TRUSTED_PROXY_COUNT is defined once, in the Core block near the top of
+# this file, and overridden in `config.settings.prod`. Both call sites count
+# from the RIGHT of X-Forwarded-For, because nginx proxies with
+# $proxy_add_x_forwarded_for and the left-most entry is therefore whatever the
+# visitor invented.
 
 DEFAULT_EXCEPTION_REPORTER_FILTER = (
     "django.views.debug.SafeExceptionReporterFilter"

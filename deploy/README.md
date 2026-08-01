@@ -90,6 +90,12 @@ docker compose ps            # both must read (healthy) before continuing
 # 4. MIGRATE — an explicit step, see §3
 docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate
 
+# 4b. SEED THE LEGAL DOCUMENTS — required, and idempotent.
+# Registration consent resolves the current German AGB/Datenschutz server-side
+# and fails CLOSED (503) if they are missing, so an unseeded database means
+# nobody can complete a first login. Re-run it after every legal.js change.
+docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py seed_legal
+
 # 5. start the API
 docker compose up -d api
 docker compose logs -f api   # expect the gunicorn boot line, no tracebacks
@@ -133,6 +139,9 @@ Any other management command runs the same way — e.g. the break-glass login co
 ```bash
 docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py issue_login_code --email you@example.com
 docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py createsuperuser
+# legal documents: idempotent, safe to re-run, `--dry-run` reports without writing
+docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py seed_legal --dry-run
+docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py seed_legal
 ```
 
 ---

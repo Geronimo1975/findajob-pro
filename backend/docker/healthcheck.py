@@ -53,18 +53,50 @@ URL = f"http://127.0.0.1:{PORT}/api/v1/me/"
 TIMEOUT = float(os.environ.get("HEALTHCHECK_TIMEOUT", "4"))
 
 
+def host() -> str:
+    """A Host value Django's ``ALLOWED_HOSTS`` will accept.
+
+    Derived from the container's own ``ALLOWED_HOSTS`` so there is no second
+    place to keep in sync; ``HEALTHCHECK_HOST`` overrides it if a deployment
+    ever needs something else.
+    """
+    explicit = os.environ.get("HEALTHCHECK_HOST", "").strip()
+    if explicit:
+        return explicit
+    first = os.environ.get("ALLOWED_HOSTS", "").split(",")[0].strip()
+    return first or "127.0.0.1"
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Treat a 3xx as a terminal response instead of chasing it.
+
+    A redirect already proves gunicorn accepted the socket and Django routed
+    the request, which is the entire contract of this probe. Following one
+    could send it off the box.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def main() -> int:
     request = urllib.request.Request(URL, method="GET")
+    request.add_header("Host", host())
+    # TLS terminates at Traefik; tell Django the same story nginx does, or
+    # SECURE_SSL_REDIRECT answers with a 301 to the public hostname.
+    request.add_header("X-Forwarded-Proto", "https")
     request.add_header("User-Agent", "findajob-healthcheck/1")
     # Ask for the identity encoding so a compressed body cannot confuse anything
     # downstream; we never read the body at all.
     request.add_header("Accept-Encoding", "identity")
 
+    opener = urllib.request.build_opener(_NoRedirect)
+
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        with opener.open(request, timeout=TIMEOUT) as response:
             return 0 if 100 <= response.status < 600 else 1
     except urllib.error.HTTPError:
-        # 4xx/5xx from Django still proves the stack is alive and routing.
+        # 3xx/4xx/5xx from Django still proves the stack is alive and routing.
         return 0
     except (urllib.error.URLError, OSError, ValueError) as exc:
         print(f"healthcheck: {type(exc).__name__}: {exc}", file=sys.stderr)

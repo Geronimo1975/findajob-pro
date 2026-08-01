@@ -7,6 +7,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management import call_command
+from django.middleware.csrf import get_token
+from django.test import RequestFactory
 
 from apps.legal.hashing import compute_content_hash
 from apps.legal.models import LegalDocument
@@ -22,6 +24,18 @@ def seed(**kwargs) -> None:
     kwargs.setdefault("path", str(LEGAL_JS))
     kwargs.setdefault("verbosity", 0)
     call_command("seed_legal", **kwargs)
+
+
+def csrf_pair() -> tuple[str, str]:
+    """A matching ``(cookie_secret, header_token)`` pair.
+
+    The frontend gets these from ``GET /api/v1/auth/csrf/`` (apps.accounts).
+    Minting them here keeps the legal tests independent of that endpoint while
+    still exercising the real ``CsrfViewMiddleware`` comparison.
+    """
+    request = RequestFactory().get("/")
+    token = get_token(request)
+    return request.META["CSRF_COOKIE"], token
 
 
 def make_document(
