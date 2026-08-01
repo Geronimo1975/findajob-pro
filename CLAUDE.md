@@ -14,6 +14,14 @@ the old `.claude/rules/*` describes the DEAD platform; ignore it.
    **`prototype/design_handoff_findjob_pro/` is a STALE snapshot — do not read it.** Its
    `.dc.html` is missing the Advisor and Analytics screens entirely and its `api.js` lacks
    `SUGGEST`, `careerAnalysis` and `funnelAnalysis`. Verified by diff against the deployed files.
+   **The 13-screen file is `Job Tracking Platform Voltagent.dc.html`.** Its sibling
+   `Job Tracking Platform.dc.html` is a SUPERSEDED first generation — historical only, do not
+   read it for design or for a screen inventory. It carries 7 screens (no Advisor, Analytics,
+   Job Search Profile, Organization, Billing, Legal, cookie banner) and a completely different
+   design language: zero `#101010`, zero `#00d992`, warm off-white surfaces (`#ffffff`,
+   `#fdfdfb`, `#f0efe9`) with `#e2e0d8` hairlines, and IBM Plex Sans + IBM Plex Mono +
+   Space Grotesk instead of Inter + JetBrains Mono. Only the information architecture survived
+   into the Voltagent iteration. Verified by declaration counts across both files.
 3. `web/` — what is actually live on findajob.pro. `web/` is authoritative for "what ships";
    `prototype/` is authoritative for design intent. `web/` already carries post-prototype work:
    responsive breakpoints, self-hosted React + fonts, hash deep-links, real Impressum data.

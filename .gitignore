@@ -36,3 +36,6 @@ db.sqlite3
 
 # Superpowers scratch
 .superpowers/
+
+# graphify knowledge-graph output (regenerate with /graphify, do not version)
+graphify-out/
