@@ -14,6 +14,11 @@ psycopg[binary]==3.3.4        # PostgreSQL 16 driver (psycopg 3)
 django-anymail[brevo]==15.1   # transactional email via Brevo
 python-dotenv==1.2.2          # .env loading in config/env.py
 gunicorn==26.0.0              # WSGI server: gunicorn config.wsgi:application
+redis==8.1.0                  # REQUIRED by django.core.cache.backends.redis.RedisCache.
+                              # Django ships the backend but not the client. Without it the
+                              # cache raises at import, the spec §5 verify budget fails CLOSED
+                              # (by design) and EVERY login returns 429. Invisible locally:
+                              # the test settings use LocMemCache.
 
 # --- transitive, pinned for reproducible builds ---------------------------
 asgiref==3.12.1
