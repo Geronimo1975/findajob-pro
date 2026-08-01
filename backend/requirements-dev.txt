@@ -1,0 +1,12 @@
+# Development / CI extras. Never installed in the production image.
+#
+# The test suite is written as plain `django.test.TestCase` classes, so
+# `DJANGO_SETTINGS_MODULE=config.settings.test python manage.py test` works with
+# the runtime dependencies alone and none of this is required to verify the
+# backend. pytest is offered as a convenience (pytest.ini already points at
+# config.settings.test) and adds no runtime surface.
+
+-r requirements.txt
+
+pytest==9.1.1
+pytest-django==4.12.0

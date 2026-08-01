@@ -1,0 +1,36 @@
+# Build context = backend/. Keep it small and keep secrets out of the image.
+
+# Secrets and local state — .env is injected at RUNTIME via compose env_file.
+.env
+.env.*
+!.env.example
+*.pem
+
+# Local database / uploads / collected static (all recreated in the container)
+db.sqlite3
+staticfiles/
+media/
+
+# Python noise
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+.venv/
+env/
+venv/
+
+# Test + tooling artefacts. The production image installs requirements.txt only,
+# never requirements-dev.txt, so the test suite would be dead weight.
+tests/
+pytest.ini
+.pytest_cache/
+.coverage
+htmlcov/
+requirements-dev.txt
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log

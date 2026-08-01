@@ -17,7 +17,7 @@ static frontend served by nginx, same-origin `/api/` proxy · Traefik TLS.
 | Mechanism | 6-digit email OTP, hand-rolled | No new Python dep; cross-device works; magic links break on corporate link-scanners and land the session on the wrong device |
 | Session | Django session cookie, `HttpOnly; Secure; SameSite=Lax` | Frontend and API are same-origin; JWT-in-localStorage is XSS-exfiltratable and buys nothing |
 | Send path | **Synchronous**, inside the request, 5 s timeout | Kills three blockers at once: no plaintext code on a Redis queue, no "worker down = nobody logs in", no green-UI-zero-delivery |
-| Sender | Brevo via `django-anymail` | Already working on this VPS; EU company, DPA available; swapping to Mailgun EU is a settings change |
+| Sender | **Brevo SMTP relay** (`smtp-relay.brevo.com:587`, TLS), Django's built-in SMTP backend | Measured working from this exact VPS (`resume-v2-web` sends this way). **No new dependency** — `django-anymail` is NOT required for the login path. EU company, DPA available |
 | DNS / mailbox | Hostinger | Registrar + DNS (`dns-parking.com` NS). Mailbox is for RECEIVING only — never the OTP sender |
 | App gate | **API-level, in Django** | See §7 — the demo requirement forces the shell to stay public, so the data gate must be the API |
 | Apps created | `apps/tenancy`, `apps/accounts`, `apps/legal` | Build order positions 1, 3, 4. Nothing from positions 5+ may be imported |
@@ -139,6 +139,36 @@ only for the subnet budget. A login outage is worse than a temporarily loosened 
   reason, created_at)` exists from day one: hard bounces and complaints land there via the
   Brevo webhook (`POST /webhooks/email/brevo/`, signature-verified), and `issue_login_code`
   skips suppressed addresses while still returning `202`.
+
+### 6.1 Brevo — operational facts measured 2026-08-01 (do not re-derive)
+
+- The API key in `.env` is **valid**, but Brevo enforces an **IP allowlist** on API calls.
+  Both this laptop and the VPS get `401 unauthorized` with
+  `"unrecognised IP address"`. **The VPS egresses over IPv6** (`2a02:2479:84:3500::1`), not
+  its IPv4 `85.215.69.83` — so authorising the v4 address alone fixes nothing.
+  Add both at <https://app.brevo.com/security/authorised_ips>.
+- This does **not** block login: sending uses the **SMTP relay**, which authenticates by
+  credential, not by source IP, and is already proven from this box. The API key is only needed
+  for the bounce webhook and account calls.
+- SMTP credentials are `EMAIL_HOST_USER` (a Brevo login address) + `EMAIL_HOST_PASSWORD` (an
+  SMTP key generated in the Brevo dashboard — **not** the `xkeysib-…` API key).
+- Sender identity: the From address must be a **verified sender/domain in Brevo**. Use a
+  subdomain, `noreply@mail.findajob.pro`, so OTP reputation is isolated from anything marketing
+  ever does on the root domain.
+
+### 6.2 DNS to add at Hostinger (registrar + DNS for findajob.pro; NS = `dns-parking.com`)
+
+The domain currently has **only an A record** — no MX, SPF, DKIM or DMARC. Required:
+
+```
+mail.findajob.pro.                   TXT    "v=spf1 include:spf.brevo.com ~all"
+<selector>._domainkey.findajob.pro.  TXT    "v=DKIM1; k=rsa; p=…"   ; value from Brevo dashboard
+_dmarc.findajob.pro.                 TXT    "v=DMARC1; p=none; fo=1; rua=mailto:dmarc@findajob.pro"
+```
+
+Plus, separately and only for **receiving** at `@findajob.pro` (Hostinger/Titan mailbox — never
+the OTP sender): the MX records Hostinger provides. Roll DMARC `p=none` → read reports 2–3
+weeks → `p=quarantine; pct=25` → `p=reject`.
 - **Break-glass, shipped in the same commit as `0001_initial`:**
   `python manage.py issue_login_code --email X` writes a real `EmailOTP` row and prints the
   code to stdout, mailing nothing. Without it, a sending-domain suspension locks out

@@ -1,6 +1,11 @@
 # Traefik dynamic route: findajob.pro -> findajob-web (nginx :80, static UI-first frontend)
 # Deployed to /opt/gethub/traefik/dynamic/findajob.yml on the VPS (macbook-air).
 # Traefik already redirects http -> https globally (verified: http://findajob.pro returns 308).
+#
+# There is exactly ONE upstream: nginx. /api/ is proxied to the Django container
+# by nginx itself (deploy/nginx.conf), not by a second Traefik router — that is
+# what keeps the frontend and the API same-origin, which is what lets the
+# session cookie work with no CORS at all (spec §8).
 http:
   routers:
     # www.findajob.pro is DNS-live, so without this it served a bare Traefik 404.
@@ -27,6 +32,50 @@ http:
         regex: "^https://www\\.findajob\\.pro/(.*)"
         replacement: "https://findajob.pro/${1}"
         permanent: true
+
+    # -----------------------------------------------------------------------
+    # DEFINED, DELIBERATELY ATTACHED TO NOTHING.
+    # -----------------------------------------------------------------------
+    # Do not add `findajob-forward-auth` to the `findajob` router's middlewares
+    # list. Spec §7 settles this: forwardAuth gates the SHELL, and the public
+    # demo requires the shell to stay reachable by anyone. index.html and
+    # app.html contain no user data — only the layout and the api.js demo
+    # fixtures — so gating them would break the demo while protecting nothing.
+    #
+    # THE REAL GATE IS THE API. Every /api/v1/* route requires an authenticated
+    # session except auth/*, legal/* and i18n/*, enforced by DRF's default
+    # IsAuthenticated permission in config/settings/base.py. app.html bootstraps
+    # by calling GET /api/v1/me/ and redirects to /auth.html?next=… on 401.
+    #
+    # This block exists so the wiring is written down once and is ready the day
+    # we put a NON-public surface behind Traefik — a staff/admin hostname, a
+    # metrics endpoint, an internal tool. Attaching it then is a one-line
+    # change on that router only.
+    #
+    # The `address` points at findajob-api directly (Traefik and the api
+    # container share the gethub_gethub-network), NOT through nginx: a gate
+    # must not depend on the thing it is gating being able to route to it.
+    # `/api/v1/auth/_check/` is a future endpoint — apps.accounts does not
+    # implement it yet, which is another reason nothing may reference this
+    # middleware today. It is expected to answer 2xx for an authenticated
+    # session and 401/403 otherwise, and to touch no state.
+    findajob-forward-auth:
+      forwardAuth:
+        address: "http://findajob-api:8000/api/v1/auth/_check/"
+        # Pass X-Forwarded-* through so Django sees the real scheme and host;
+        # the api container has no route to the internet-facing hostname
+        # otherwise, and SECURE_PROXY_SSL_HEADER depends on X-Forwarded-Proto.
+        trustForwardHeader: true
+        # Copy the session cookie to the check request. Without this the check
+        # is always anonymous and would 401 every request.
+        authRequestHeaders:
+          - "Cookie"
+          - "X-CSRFToken"
+        # Identity the check hands back to the protected upstream. Nothing
+        # consumes these yet; they are here so the contract is explicit.
+        authResponseHeaders:
+          - "X-Findajob-User"
+          - "X-Findajob-Org"
 
   services:
     findajob:

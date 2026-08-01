@@ -1,0 +1,28 @@
+# findajob.pro backend — runtime dependencies.
+#
+# Pinned exactly. The governing constraint from the implementation spec is
+# `Django>=6.0,<6.2`; 6.0.7 is the resolved patch release inside that window.
+# Upgrade path: 6.1 (Aug 2026, minor bump) -> 6.2 LTS (Apr 2027, long-term home).
+#
+# Nothing may be added here without an explicit decision: the approved list is
+# Django, djangorestframework, psycopg[binary], django-anymail[brevo],
+# python-dotenv, gunicorn. Everything else below is a transitive pin.
+
+Django==6.0.7                 # >=6.0,<6.2
+djangorestframework==3.17.1
+psycopg[binary]==3.3.4        # PostgreSQL 16 driver (psycopg 3)
+django-anymail[brevo]==15.1   # transactional email via Brevo
+python-dotenv==1.2.2          # .env loading in config/env.py
+gunicorn==26.0.0              # WSGI server: gunicorn config.wsgi:application
+
+# --- transitive, pinned for reproducible builds ---------------------------
+asgiref==3.12.1
+sqlparse==0.5.5
+psycopg-binary==3.3.4
+typing_extensions==4.16.0
+requests==2.34.2              # used by django-anymail
+certifi==2026.7.22
+charset-normalizer==3.4.9
+idna==3.18
+urllib3==2.7.0
+packaging==26.2

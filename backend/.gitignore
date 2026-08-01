@@ -1,0 +1,9 @@
+# Build and runtime artefacts produced inside backend/.
+# The repository root .gitignore already covers .env, db.sqlite3, __pycache__
+# and *.pyc; these are the paths its leading-slash rules do not reach.
+/staticfiles/
+/media/
+/db.sqlite3
+.pytest_cache/
+.coverage
+htmlcov/
