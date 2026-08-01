@@ -1,0 +1,326 @@
+/* findajob.pro — read-only n8n admin panel.
+ *
+ * Voltagent tokens (DESIGN-voltagent.md / the voltagent-design skill): near-black
+ * canvas, ONE electric-green accent reserved for status, 1px hairline borders as
+ * the entire elevation system, Inter + a mono face for anything "typed at a
+ * terminal", 6px buttons / 8px cards / 9999px status pills.
+ *
+ * TOKEN SOURCING — read this before adding a colour.
+ * Every value defers to the findajob admin theme's variable if the theme layer
+ * defines one, and otherwise hardcodes the Voltagent token — each hex exactly
+ * once, in this block. The names match what already ships live in `web/`
+ * (--canvas, --surface, --hairline, --ink, --ink-strong, --body, --mute,
+ * --accent, --accent-soft, --on-accent, --danger, --warning), so the theme layer
+ * and this file agree without further coordination.
+ *
+ * Django admin's OWN properties (--body-bg, --body-fg, --border-color, …) are
+ * deliberately NOT in the chain. They flip with `prefers-color-scheme`, and this
+ * design system has no light mode ("Dark canvas only — never introduce a light
+ * mode"). Chaining through them produced white-on-white text the moment the
+ * viewer's OS was in light mode — rendered and measured at 900px, not theorised.
+ * The panel is therefore self-sufficiently dark in any host.
+ *
+ * Add a colour by extending this block — never by writing a hex further down.
+ */
+
+.fj-n8n {
+  --fj-canvas:      var(--canvas,      #101010);
+  --fj-surface:     var(--surface,     #1a1a1a);
+  --fj-surface-2:   var(--surface-2,   #2a2a2a);
+  --fj-hairline:    var(--hairline,    #3d3a39);
+  --fj-ink:         var(--ink,         #f2f2f2);
+  --fj-ink-strong:  var(--ink-strong,  #ffffff);
+  --fj-body:        var(--body,        #bdbdbd);
+  --fj-mute:        var(--mute,        #8b949e);
+  --fj-accent:      var(--accent,      #00d992);
+  --fj-accent-soft: var(--accent-soft, #2fd6a1);
+  --fj-on-accent:   var(--on-accent,   #101010);
+  --fj-danger:      var(--danger,      #e5534b);
+  --fj-warning:     var(--warning,     #e6b34d);
+
+  /* Tinted fills are always an rgba pair over the canvas — the design system has
+     no solid semantic backgrounds. Same deferral rule as the tokens above; the
+     admin theme (apps/common/static/admin/css/voltagent-admin.css) defines all
+     six, so in practice these literals never apply there. */
+  --fj-accent-fill:  var(--accent-fill,  rgba(0, 217, 146, 0.10));
+  --fj-accent-edge:  var(--accent-edge,  rgba(0, 217, 146, 0.35));
+  --fj-danger-fill:  var(--danger-fill,  rgba(229, 83, 75, 0.12));
+  --fj-danger-edge:  var(--danger-edge,  rgba(229, 83, 75, 0.35));
+  --fj-warning-fill: var(--warning-fill, rgba(230, 179, 77, 0.12));
+  --fj-warning-edge: var(--warning-edge, rgba(230, 179, 77, 0.35));
+
+  --fj-mono: var(--font-family-monospace, ui-monospace, "JetBrains Mono",
+              SFMono-Regular, Menlo, Consolas, monospace);
+  --fj-sans: var(--font-family-primary, Inter, system-ui, -apple-system,
+              "Segoe UI", Roboto, sans-serif);
+
+  font-family: var(--fj-sans);
+  color: var(--fj-ink);
+  /* The panel paints its own canvas. On the (dark) findajob admin this is
+     canvas-on-canvas and invisible; on an unthemed light admin it is what keeps
+     the panel legible instead of light-grey-on-white. */
+  background: var(--fj-canvas);
+  border-radius: 10px;
+  max-width: 1400px;
+  /* A grid/flex item defaults to min-width:auto and refuses to shrink below its
+     content — which is how a wide table pushes a whole admin column out of
+     shape. Everything here scrolls inside .fj-table-wrap instead. */
+  min-width: 0;
+}
+
+.fj-n8n *, .fj-n8n *::before, .fj-n8n *::after { box-sizing: border-box; }
+
+/* Full-page panel only — the index card is already a single bordered card and
+   needs no second frame around it. */
+.fj-n8n-page .fj-n8n { padding: 24px 26px; border: 1px solid var(--fj-hairline); }
+
+/* --- header ------------------------------------------------------------- */
+
+.fj-n8n .fj-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--fj-hairline);
+}
+
+.fj-n8n .fj-head-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.fj-n8n .fj-eyebrow {
+  margin: 0 0 6px;
+  font-family: var(--fj-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fj-mute);
+}
+
+/* weight 400, not 700 — the display face is deliberately calm. */
+.fj-n8n .fj-title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 40px;
+  letter-spacing: -0.9px;
+  color: var(--fj-ink-strong);
+}
+
+.fj-n8n .fj-sub { margin: 8px 0 0; font-size: 14px; color: var(--fj-body); }
+
+.fj-n8n .fj-notice {
+  margin: 16px 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--fj-accent-edge);
+  background: var(--fj-accent-fill);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--fj-body);
+}
+
+.fj-n8n .fj-meta { margin: 4px 0 0; font-size: 12px; line-height: 16px; color: var(--fj-mute); }
+.fj-n8n .fj-meta--warn { color: var(--fj-warning); }
+.fj-n8n .fj-body { margin: 8px 0 0; font-size: 14px; line-height: 21px; color: var(--fj-body); }
+.fj-n8n .fj-empty { color: var(--fj-mute); font-style: normal; }
+
+.fj-n8n .fj-code {
+  font-family: var(--fj-mono);
+  font-size: 12.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--fj-surface);
+  color: var(--fj-ink);
+}
+.fj-n8n .fj-code--id { color: var(--fj-mute); }
+
+/* --- pills -------------------------------------------------------------- */
+
+.fj-n8n .fj-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--fj-hairline);
+  font-family: var(--fj-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--fj-mute);
+}
+.fj-n8n .fj-pill--live     { background: var(--fj-accent-fill);  border-color: var(--fj-accent-edge);  color: var(--fj-accent-soft); }
+.fj-n8n .fj-pill--danger   { background: var(--fj-danger-fill);  border-color: var(--fj-danger-edge);  color: var(--fj-danger); }
+.fj-n8n .fj-pill--warn     { background: var(--fj-warning-fill); border-color: var(--fj-warning-edge); color: var(--fj-warning); }
+.fj-n8n .fj-pill--idle     { background: var(--fj-surface); }
+.fj-n8n .fj-pill--readonly { background: var(--fj-surface); border-color: var(--fj-hairline); color: var(--fj-ink); }
+
+/* --- stats -------------------------------------------------------------- */
+
+/* auto-fit, not a fixed 5-up: the same markup is rendered both on the full-width
+   panel and inside the admin index card, whose column is far narrower. A fixed
+   `repeat(5, …)` crushes the tiles there. */
+.fj-n8n .fj-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.fj-n8n .fj-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--fj-hairline);
+  border-radius: 8px;
+  background: var(--fj-surface);
+}
+.fj-n8n .fj-stat--danger { border-color: var(--fj-danger-edge); }
+.fj-n8n .fj-stat--warn   { border-color: var(--fj-warning-edge); }
+
+.fj-n8n .fj-stat-value {
+  font-family: var(--fj-mono);
+  font-size: 26px;
+  line-height: 30px;
+  color: var(--fj-ink-strong);
+}
+.fj-n8n .fj-stat--danger .fj-stat-value { color: var(--fj-danger); }
+.fj-n8n .fj-stat--warn   .fj-stat-value { color: var(--fj-warning); }
+
+.fj-n8n .fj-stat-label {
+  font-family: var(--fj-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  color: var(--fj-mute);
+}
+
+/* --- sections & cards --------------------------------------------------- */
+
+.fj-n8n .fj-section {
+  margin: 32px 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  color: var(--fj-ink-strong);
+}
+
+/* Hairline borders ARE the elevation system — no drop shadows anywhere. */
+.fj-n8n .fj-card {
+  border: 1px solid var(--fj-hairline);
+  border-radius: 10px;
+  background: var(--fj-canvas);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+.fj-n8n .fj-card--warn   { border-color: var(--fj-warning-edge); background: var(--fj-warning-fill); }
+.fj-n8n .fj-card--danger { border-color: var(--fj-danger-edge);  background: var(--fj-danger-fill); }
+.fj-n8n .fj-card-title   { margin: 0; font-size: 16px; font-weight: 600; color: var(--fj-ink-strong); }
+
+.fj-n8n .fj-wf--dead { border-color: var(--fj-danger-edge); }
+
+.fj-n8n .fj-wf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fj-n8n .fj-wf-ident { display: flex; flex-direction: column; gap: 6px; }
+.fj-n8n .fj-wf-name  { margin: 0; font-size: 16px; font-weight: 600; color: var(--fj-ink-strong); }
+.fj-n8n .fj-wf-ident .fj-code { align-self: flex-start; }
+.fj-n8n .fj-wf-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.fj-n8n .fj-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--fj-danger-edge);
+  background: var(--fj-danger-fill);
+  border-radius: 8px;
+  font-size: 13.5px;
+  line-height: 20px;
+  color: var(--fj-body);
+}
+.fj-n8n .fj-alert strong { color: var(--fj-danger); }
+
+.fj-n8n .fj-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 16px 0 0;
+}
+.fj-n8n .fj-facts div { display: flex; flex-direction: column; gap: 2px; }
+.fj-n8n .fj-facts dt {
+  font-family: var(--fj-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fj-mute);
+}
+.fj-n8n .fj-facts dd {
+  margin: 0;
+  font-family: var(--fj-mono);
+  font-size: 13px;
+  color: var(--fj-ink);
+}
+
+/* --- tables ------------------------------------------------------------- */
+
+/* The card is the scroll container; the table never widens the page. */
+.fj-n8n .fj-table-wrap {
+  margin-top: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--fj-hairline);
+  border-radius: 8px;
+}
+
+.fj-n8n .fj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fj-n8n .fj-table--wide { min-width: 760px; }
+
+.fj-n8n .fj-table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--fj-surface);
+  border-bottom: 1px solid var(--fj-hairline);
+  font-family: var(--fj-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  color: var(--fj-mute);
+}
+
+.fj-n8n .fj-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--fj-hairline);
+  color: var(--fj-body);
+  vertical-align: middle;
+}
+.fj-n8n .fj-table tbody tr:last-child td { border-bottom: 0; }
+.fj-n8n .fj-num { font-family: var(--fj-mono); text-align: right; }
+
+/* Green is a status/CTA colour only — links use the softer tint. */
+.fj-n8n a { color: var(--fj-accent-soft); text-decoration: none; }
+.fj-n8n a:hover, .fj-n8n a:focus-visible { text-decoration: underline; }
+.fj-n8n a:focus-visible { outline: 2px solid var(--fj-accent); outline-offset: 2px; }
+
+.fj-n8n .fj-wf-link { margin: 16px 0 0; font-size: 14px; }
+.fj-n8n .fj-foot { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--fj-hairline); }
+
+/* --- responsive --------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  .fj-n8n .fj-title { font-size: 28px; line-height: 34px; }
+  .fj-n8n .fj-head, .fj-n8n .fj-wf-head { flex-direction: column; }
+  .fj-n8n .fj-head-right { align-items: flex-start; }
+}

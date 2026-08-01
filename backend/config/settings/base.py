@@ -81,7 +81,12 @@ MANAGERS = ADMINS
 # ---------------------------------------------------------------------------
 
 DJANGO_APPS = [
-    "django.contrib.admin",
+    # A subclass of django.contrib.admin.apps.AdminConfig whose `name` is still
+    # "django.contrib.admin" — so the app label, templates, static files, URL
+    # namespace and admin system checks are all unchanged. The only thing it
+    # changes is `default_site`, which makes `admin.site` a FindajobAdminSite
+    # (branding + a deliberate index order). See apps/common/admin_config.py.
+    "apps.common.admin_config.FindajobAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -97,14 +102,40 @@ THIRD_PARTY_APPS = [
 # Build order positions 1, 3, 4 (see spec §1). Nothing from position 5+
 # (`org-members`, `billing`, `entitlements-quotas`, …) exists yet and nothing
 # here may import from it.
+#
+# `apps.common` is NOT in this list — it is pinned ahead of the admin in
+# INSTALLED_APPS below. See the note there before moving it back.
 LOCAL_APPS = [
-    "apps.common",
     "apps.tenancy",
     "apps.accounts",
     "apps.legal",
+    # Model-less, read-only visibility into the n8n automation layer. Adds no
+    # migrations and nothing else may import from it.
+    "apps.automation",
 ]
 
-INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+# ORDER IS LOAD-BEARING, in exactly one place: `apps.common` must precede the
+# admin app.
+#
+# django.template.loaders.app_directories walks INSTALLED_APPS in order and
+# returns the FIRST template that matches a name. `apps.common` ships
+# apps/common/templates/admin/base_site.html (the Voltagent brand chrome, and
+# the <link> that loads admin/css/voltagent-admin.css). Listed after the admin
+# entry — which is where it used to sit, inside LOCAL_APPS — Django's own
+# django/contrib/admin/templates/admin/base_site.html wins instead, and the
+# entire theme silently does nothing: no error, no warning, no log line, just a
+# stock blue admin. That is the single most common reason admin overrides
+# appear not to work.
+#
+# Note the admin entry below is `apps.common.admin_config.FindajobAdminConfig`,
+# whose AppConfig.name is still "django.contrib.admin" — so it is the admin
+# app, at the admin's position, and this ordering rule applies to it verbatim.
+#
+# Everything else here is alphabetical-by-convenience and carries no meaning.
+# `apps.common` owns no models and no management commands, so moving it to the
+# front changes nothing but template and staticfiles finder precedence.
+# (config/settings/test.py and .../dev.py import this list unchanged.)
+INSTALLED_APPS = ["apps.common"] + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 
 MIDDLEWARE = [
@@ -277,13 +308,43 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(env.get("MEDIA_ROOT", str(BASE_DIR / "media")))
 
+#: Modes collectstatic must write STATIC_ROOT with. See the note below.
+STATIC_FILE_PERMISSIONS_MODE = 0o644
+STATIC_DIRECTORY_PERMISSIONS_MODE = 0o755
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        # NOT decoration — without these, /static/ is a 403 in production.
+        #
+        # StaticFilesStorage is a FileSystemStorage, so when it is constructed
+        # without explicit modes it falls back to FILE_UPLOAD_PERMISSIONS /
+        # FILE_UPLOAD_DIRECTORY_PERMISSIONS below. Those are 0600/0700 because
+        # they were chosen for uploaded candidate documents, and that is right
+        # for documents and wrong for the admin's stylesheets: collectstatic
+        # then writes STATIC_ROOT as uid 10001, mode 0600, and nginx — a
+        # different uid (101) in a different container, reading the shared
+        # `static_data` volume — cannot open a single file. Measured on the VPS
+        # 2026-08-01: /app/staticfiles/admin was drwx------ and every asset
+        # -rw-------.
+        #
+        # STORAGES[...]["OPTIONS"] is passed straight to the storage class as
+        # keyword arguments (StorageHandler.create_storage), and
+        # FileSystemStorage.__init__ takes exactly these two names.
+        "OPTIONS": {
+            "file_permissions_mode": STATIC_FILE_PERMISSIONS_MODE,
+            "directory_permissions_mode": STATIC_DIRECTORY_PERMISSIONS_MODE,
+        },
+    },
 }
 
 # Uploaded candidate documents are personal data. Keep them off the world-readable
 # default and never serve MEDIA_ROOT directly from nginx.
+#
+# These are the GLOBAL FileSystemStorage fallback, which is why STORAGES above
+# has to override them for staticfiles: STATIC_ROOT holds nothing but Django's
+# own admin/DRF assets and is read by a second container.
 FILE_UPLOAD_PERMISSIONS = 0o600
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o700
 DATA_UPLOAD_MAX_MEMORY_SIZE = env.get_int("DATA_UPLOAD_MAX_MEMORY_SIZE", 5 * 1024 * 1024)
@@ -423,3 +484,55 @@ X_FRAME_OPTIONS = "DENY"
 DEFAULT_EXCEPTION_REPORTER_FILTER = (
     "django.views.debug.SafeExceptionReporterFilter"
 )
+
+
+# ---------------------------------------------------------------------------
+# n8n — the automation layer (apps.automation, READ-ONLY)
+# ---------------------------------------------------------------------------
+# The instance is the PERSONAL n8n account (app.n8n-studio.com). `apps.automation`
+# only ever issues GET /api/v1/workflows and GET /api/v1/executions against it —
+# there is no write path in this codebase.
+#
+# The canonical names are N8N_URL / N8N_API_TOKEN. The N8N_PERSONAL_* fallbacks
+# exist because the repository-root .env (which config/env.py already loads) has
+# carried those two names since before the backend existed; spelling them here
+# means a working developer checkout needs no .env edit, and production can set
+# the canonical names without touching anything else.
+#
+# An EMPTY token is a supported state: the admin panel renders a "not configured"
+# card and makes no request. It must never be a 500 and never a boot failure —
+# n8n is observability, not a dependency.
+
+N8N_URL = env.get("N8N_URL", "") or env.get("N8N_PERSONAL_URL", "")
+
+#: Full-privilege n8n API key. Never logged (apps.common.logging.RedactingFilter
+#: already matches `api-key: …`), never rendered, never put in a cache key in the
+#: clear (apps.automation.client hashes it into the key instead).
+N8N_API_TOKEN = env.get("N8N_API_TOKEN", "") or env.get(
+    "N8N_PERSONAL_ACCESS_TOKEN", ""
+)
+
+#: Hard wall-clock budget for ONE n8n request, seconds. Bounds connect and read.
+N8N_TIMEOUT = env.get_int("N8N_TIMEOUT", 5)
+
+#: How long a successful response is reused. Keeps repeated admin loads off the
+#: n8n API entirely.
+N8N_CACHE_TTL = env.get_int("N8N_CACHE_TTL", 60)
+
+#: Failures are cached too, for much less time. Without this, a dead n8n costs
+#: every single admin page load a full N8N_TIMEOUT stall.
+N8N_CACHE_ERROR_TTL = env.get_int("N8N_CACHE_ERROR_TTL", 15)
+
+#: Workflows requested in one page (the instance currently has 39).
+N8N_WORKFLOW_LIMIT = env.get_int("N8N_WORKFLOW_LIMIT", 100)
+
+#: Recent executions listed per workflow.
+N8N_EXECUTION_LIMIT = env.get_int("N8N_EXECUTION_LIMIT", 5)
+
+#: How many workflows get an executions lookup at all — one HTTP round trip
+#: each, and only findajob's own workflows are ever candidates.
+N8N_EXECUTION_WORKFLOW_LIMIT = env.get_int("N8N_EXECUTION_WORKFLOW_LIMIT", 8)
+
+#: Wall-clock ceiling for the whole execution-fetch loop, seconds. Reached =>
+#: the remaining workflows render without executions instead of hanging.
+N8N_PANEL_BUDGET = env.get_int("N8N_PANEL_BUDGET", 12)

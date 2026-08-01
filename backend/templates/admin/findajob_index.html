@@ -1,0 +1,35 @@
+{% extends "admin/index.html" %}{% comment %}
+  A *wrapper* around the admin index, not a replacement for it.
+
+  apps.automation.apps.AutomationConfig.ready() points admin.site.index_template
+  here — but only if nothing else has already claimed the slot. Because this
+  template `{% extends "admin/index.html" %}` by name, a project-level override
+  of admin/index.html (the theme layer's job) is picked up automatically and this
+  file keeps working with zero changes.
+
+  If the theme layer ends up including admin/_n8n_panel.html from its own
+  admin/index.html, DELETE this file and drop the index_template assignment in
+  apps.py — otherwise the card renders twice.
+{% endcomment %}
+
+{% block content %}
+  {{ block.super }}
+  {% comment %}
+    `block.super` ends by CLOSING #content-main, so this div is a SIBLING of two
+    floats: #content-main (float:left, width:100%) and #content-related
+    (float:right, the Recent actions column). Left unstyled it renders squeezed
+    into the float gutter; with a bare `clear:both` it instead shoves Recent
+    actions down the page. Reproducing #content-main's own box —
+    float:left + clear:left + width:100% — puts the card directly underneath the
+    app list and leaves the right-hand column exactly where it was. All three
+    behaviours were rendered and compared, not reasoned about.
+
+    NOTE for whoever owns admin/index.html: `{# … #}` in a Django template is
+    matched by `{#.*?#}` WITHOUT re.DOTALL, so a MULTI-LINE `{# … #}` is not a
+    comment at all — it renders as literal text on the page. Use
+    `{% comment %}` (as here) for anything spanning a newline.
+  {% endcomment %}
+  <div id="fj-n8n-index-card" style="float:left; clear:left; width:100%; padding-top:24px">
+    {% include "admin/_n8n_panel.html" %}
+  </div>
+{% endblock %}

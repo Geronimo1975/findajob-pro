@@ -1,0 +1,264 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% comment %}
+  Read-only n8n panel. Every value below comes from apps.automation.panel.PanelData,
+  which is built to always be renderable — there is no code path here that can 500
+  because n8n is slow, down, or unconfigured.
+
+  Multi-line notes MUST use {% comment %}: Django matches `{#.*?#}` without
+  re.DOTALL, so a `{# … #}` spanning a newline renders as literal page text.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/automation/n8n-panel.css' %}">
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} fj-n8n-page{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate "Home" %}</a>
+    &rsaquo; {% translate "Automation — n8n" %}
+  </div>
+{% endblock %}
+
+{% comment %}
+  The panel's own header carries the title; Django's <h1>{{ title }}</h1> would
+  render it a second time, immediately above.
+{% endcomment %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="fj-n8n">
+
+  <header class="fj-head">
+    <div>
+      <p class="fj-eyebrow">{% translate "AUTOMATION LAYER" %}</p>
+      <h1 class="fj-title">n8n</h1>
+      <p class="fj-sub">
+        {% if panel.base_url %}
+          {% translate "Instance" %}
+          <code class="fj-code">{{ panel.base_url }}</code>
+        {% else %}
+          {% translate "No instance configured." %}
+        {% endif %}
+      </p>
+    </div>
+    <div class="fj-head-right">
+      <span class="fj-pill fj-pill--readonly" title="{{ read_only_notice }}">{% translate "READ-ONLY" %}</span>
+      {% if panel.fetched_at %}
+        <p class="fj-meta">
+          {% blocktranslate with when=panel.fetched_at|date:"Y-m-d H:i:s T" %}Fetched {{ when }}{% endblocktranslate %}
+          {% if panel.from_cache %} · {% translate "from cache" %}{% endif %}
+        </p>
+      {% endif %}
+    </div>
+  </header>
+
+  <p class="fj-notice">{{ read_only_notice }}</p>
+
+  {# ---------------------------------------------------------------- #}
+  {# Degraded states. Never a 500 — always an explanation.             #}
+  {# ---------------------------------------------------------------- #}
+  {% if not panel.configured %}
+    <section class="fj-card fj-card--warn">
+      <h2 class="fj-card-title">{% translate "n8n is not configured" %}</h2>
+      <p class="fj-body">{{ panel.error }}</p>
+      <p class="fj-body">
+        {% blocktranslate trimmed %}
+          Set <code>N8N_URL</code> and <code>N8N_API_TOKEN</code> in the environment
+          (see <code>backend/.env.example</code>) and reload. Until then this panel
+          simply shows nothing — no request is made and nothing else is affected.
+        {% endblocktranslate %}
+      </p>
+    </section>
+  {% elif panel.error %}
+    <section class="fj-card fj-card--danger">
+      <h2 class="fj-card-title">{% translate "Could not read from n8n" %}</h2>
+      <p class="fj-body">{{ panel.error }}</p>
+      <p class="fj-meta">
+        {% blocktranslate with kind=panel.error_kind %}Failure kind: {{ kind }}{% endblocktranslate %}
+        {% if panel.status_code %} · HTTP {{ panel.status_code }}{% endif %}
+      </p>
+    </section>
+  {% else %}
+
+    {# ------------------------------------------------------------ #}
+    {# Summary counters                                              #}
+    {# ------------------------------------------------------------ #}
+    <section class="fj-stats">
+      <div class="fj-stat">
+        <span class="fj-stat-value">{{ panel.total }}</span>
+        <span class="fj-stat-label">{% translate "WORKFLOWS" %}</span>
+      </div>
+      <div class="fj-stat">
+        <span class="fj-stat-value">{{ panel.active_total }}</span>
+        <span class="fj-stat-label">{% translate "ACTIVE" %}</span>
+      </div>
+      <div class="fj-stat">
+        <span class="fj-stat-value">{{ panel.related|length }}</span>
+        <span class="fj-stat-label">{% translate "FINDAJOB" %}</span>
+      </div>
+      <div class="fj-stat {% if panel.dead_rows %}fj-stat--danger{% endif %}">
+        <span class="fj-stat-value">{{ panel.dead_rows|length }}</span>
+        <span class="fj-stat-label">{% translate "DEAD WEBHOOKS" %}</span>
+      </div>
+      <div class="fj-stat {% if panel.failing_rows %}fj-stat--warn{% endif %}">
+        <span class="fj-stat-value">{{ panel.failing_rows|length }}</span>
+        <span class="fj-stat-label">{% translate "LAST RUN FAILED" %}</span>
+      </div>
+    </section>
+
+    {# ------------------------------------------------------------ #}
+    {# findajob workflows, dead ones first                           #}
+    {# ------------------------------------------------------------ #}
+    <h2 class="fj-section">{% translate "findajob workflows" %}</h2>
+    {% if not panel.related %}
+      <p class="fj-body fj-empty">{% translate "No workflow on this instance matches findajob." %}</p>
+    {% endif %}
+
+    {% for row in panel.related %}
+      <section class="fj-card fj-wf {% if row.is_dead %}fj-wf--dead{% endif %}">
+        <div class="fj-wf-head">
+          <div class="fj-wf-ident">
+            <h3 class="fj-wf-name">{{ row.workflow.name }}</h3>
+            <code class="fj-code fj-code--id">{{ row.workflow.id }}</code>
+          </div>
+          <div class="fj-wf-flags">
+            {% if row.workflow.active %}
+              <span class="fj-pill fj-pill--live">{% translate "ACTIVE" %}</span>
+            {% else %}
+              <span class="fj-pill fj-pill--idle">{% translate "INACTIVE" %}</span>
+            {% endif %}
+            {% if row.workflow.is_archived %}
+              <span class="fj-pill fj-pill--idle">{% translate "ARCHIVED" %}</span>
+            {% endif %}
+            {% if row.is_dead %}
+              <span class="fj-pill fj-pill--danger">{% translate "DEAD WEBHOOK" %}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if row.is_dead %}
+          <div class="fj-alert" role="alert">
+            <strong>{% translate "This workflow points at endpoints that no longer exist." %}</strong>
+            <span>{{ row.dead_reason }}</span>
+          </div>
+        {% endif %}
+
+        <dl class="fj-facts">
+          <div><dt>{% translate "Nodes" %}</dt><dd>{{ row.workflow.node_count }}</dd></div>
+          <div><dt>{% translate "Triggers" %}</dt><dd>{{ row.workflow.trigger_count }}</dd></div>
+          <div><dt>{% translate "Updated" %}</dt><dd>{{ row.workflow.updated_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+          <div><dt>{% translate "Created" %}</dt><dd>{{ row.workflow.created_at|date:"Y-m-d"|default:"—" }}</dd></div>
+          {% if row.workflow.tags %}
+            <div><dt>{% translate "Tags" %}</dt><dd>{{ row.workflow.tags|join:", " }}</dd></div>
+          {% endif %}
+        </dl>
+
+        {% if row.executions_error %}
+          <p class="fj-meta fj-meta--warn">
+            {% blocktranslate with detail=row.executions_error %}Executions unavailable: {{ detail }}{% endblocktranslate %}
+          </p>
+        {% elif not row.executions_fetched %}
+          <p class="fj-meta">{% translate "Executions not fetched — per-render budget reached." %}</p>
+        {% elif not row.executions %}
+          <p class="fj-meta">{% translate "No executions recorded." %}</p>
+        {% else %}
+          <div class="fj-table-wrap">
+            <table class="fj-table">
+              <thead>
+                <tr>
+                  <th>{% translate "RUN" %}</th>
+                  <th>{% translate "STATUS" %}</th>
+                  <th>{% translate "MODE" %}</th>
+                  <th>{% translate "STARTED" %}</th>
+                  <th>{% translate "STOPPED" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for execution in row.executions %}
+                  <tr>
+                    <td><code class="fj-code">{{ execution.id }}</code></td>
+                    <td>
+                      <span class="fj-pill {% if execution.is_failure %}fj-pill--danger{% elif execution.is_success %}fj-pill--live{% else %}fj-pill--idle{% endif %}">
+                        {{ execution.status|upper }}
+                      </span>
+                    </td>
+                    <td>{{ execution.mode|default:"—" }}</td>
+                    <td>{{ execution.started_at|date:"Y-m-d H:i:s"|default:"—" }}</td>
+                    <td>{{ execution.stopped_at|date:"Y-m-d H:i:s"|default:"—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        {% if row.external_url %}
+          <p class="fj-wf-link">
+            <a href="{{ row.external_url }}" target="_blank" rel="noopener noreferrer">
+              {% translate "Open in n8n" %} &rarr;
+            </a>
+          </p>
+        {% endif %}
+      </section>
+    {% endfor %}
+
+    {# ------------------------------------------------------------ #}
+    {# Everything else on the instance                               #}
+    {# ------------------------------------------------------------ #}
+    <h2 class="fj-section">
+      {% blocktranslate with count=panel.others|length %}Other workflows on this instance ({{ count }}){% endblocktranslate %}
+    </h2>
+    <p class="fj-meta">
+      {% translate "Not findajob's. Listed for completeness — this is a shared personal n8n account." %}
+    </p>
+
+    <div class="fj-table-wrap">
+      <table class="fj-table fj-table--wide">
+        <thead>
+          <tr>
+            <th>{% translate "NAME" %}</th>
+            <th>{% translate "ID" %}</th>
+            <th>{% translate "STATE" %}</th>
+            <th>{% translate "NODES" %}</th>
+            <th>{% translate "UPDATED" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in panel.others %}
+            <tr>
+              <td>
+                {% if row.external_url %}
+                  <a href="{{ row.external_url }}" target="_blank" rel="noopener noreferrer">{{ row.workflow.name }}</a>
+                {% else %}{{ row.workflow.name }}{% endif %}
+              </td>
+              <td><code class="fj-code">{{ row.workflow.id }}</code></td>
+              <td>
+                <span class="fj-pill {% if row.workflow.active %}fj-pill--live{% else %}fj-pill--idle{% endif %}">
+                  {% if row.workflow.active %}{% translate "ACTIVE" %}{% else %}{% translate "INACTIVE" %}{% endif %}
+                </span>
+              </td>
+              <td class="fj-num">{{ row.workflow.node_count }}</td>
+              <td>{{ row.workflow.updated_at|date:"Y-m-d H:i"|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="fj-empty">{% translate "Nothing else on this instance." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <footer class="fj-foot">
+    <p class="fj-meta">
+      {% blocktranslate trimmed %}
+        Responses are cached for 60 seconds. Executions are fetched only for
+        findajob's own workflows, newest first.
+      {% endblocktranslate %}
+    </p>
+  </footer>
+</div>
+{% endblock %}

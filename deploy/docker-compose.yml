@@ -68,6 +68,15 @@ services:
     volumes:
       - ./web:/usr/share/nginx/html:ro
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Django admin + DRF assets, served as /static/ (deploy/nginx.conf).
+      # STATIC_ROOT only ever exists inside the api image, so the two containers
+      # share it through a named volume rather than a host path — nothing on the
+      # VPS filesystem holds a copy and nothing has to be rsynced.
+      #
+      # `:ro` because nginx has no business rewriting the admin's own
+      # JavaScript, and STILL no `depends_on`: if the api has never started, the
+      # volume is empty, /static/ 404s and findajob.pro keeps serving. UI-first.
+      - static_data:/srv/static:ro
     networks:
       - edge
     logging: *default-logging
@@ -115,6 +124,26 @@ services:
       # volume from it, ownership included. nginx never serves this path — it
       # is delivered through an owner-checked Django view only.
       - media_data:/app/media
+      # collectstatic output — Django admin + DRF assets ONLY; the product UI is
+      # served by nginx straight from web/. Shared with the `web` container
+      # (read-only there) so /admin/ renders styled instead of as raw HTML.
+      #
+      # Two behaviours make this self-maintaining. Docker seeds a NEW named
+      # volume from the image directory, ownership included (uid 10001), and the
+      # entrypoint re-runs collectstatic on every start with
+      # DJANGO_COLLECTSTATIC=1 — so a rebuilt image refreshes the volume with no
+      # manual step. collectstatic overwrites but never deletes, so the
+      # content-hashed file a browser loaded seconds before a deploy is still
+      # there afterwards.
+      #
+      # The api process runs as uid 10001 and nginx's workers as uid 101, so the
+      # collected files have to be world-readable. They are not by default:
+      # FILE_UPLOAD_PERMISSIONS=0o600 / FILE_UPLOAD_DIRECTORY_PERMISSIONS=0o700
+      # (correct for uploaded documents) are what FileSystemStorage falls back
+      # to, and collectstatic used them until STORAGES['staticfiles']['OPTIONS']
+      # in config/settings pinned 0644/0755. Measured: without that, every
+      # /static/ request is a 403 and the admin renders unstyled.
+      - static_data:/app/staticfiles
       # `manage.py seed_legal` deliberately reads the SAME legal.js that nginx
       # serves, so the hashed consent text can never drift from the rendered
       # text. settings.REPO_ROOT is BASE_DIR.parent = "/" in this image, hence
@@ -248,3 +277,8 @@ volumes:
     name: findajob_pg_data
   media_data:
     name: findajob_media_data
+  # Rebuildable by definition — `collectstatic` regenerates it on every api
+  # start — so unlike pg_data and media_data this one may safely be removed and
+  # recreated: `docker volume rm findajob_static_data` then restart the api.
+  static_data:
+    name: findajob_static_data

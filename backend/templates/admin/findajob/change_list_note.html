@@ -1,0 +1,17 @@
+{% extends "admin/change_list.html" %}
+{# Renders ModelAdmin.admin_note directly above the result list.
+
+   It hooks `search` rather than `object-tools` on purpose: `object-tools` is a
+   floated <ul> whose layout the admin CSS owns, while the `search` block sits in
+   the full-width column immediately above the table — which is where somebody
+   hunting for a missing "Add" button is actually looking.
+
+   `{{ block.super }}` keeps the real search form; extending
+   "admin/change_list.html" (rather than copying it) keeps every other block,
+   including a theme's overrides, intact. #}
+{% block search %}
+  {% if cl.model_admin.admin_note %}
+    <p class="help findajob-admin-note" style="margin:0 0 .75rem">{{ cl.model_admin.admin_note }}</p>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

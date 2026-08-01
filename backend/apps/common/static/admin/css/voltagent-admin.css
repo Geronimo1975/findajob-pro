@@ -1,0 +1,2275 @@
+/* ==========================================================================
+   findajob.pro — Voltagent theme for the Django 6.0 admin
+   --------------------------------------------------------------------------
+   A THEME, not a rewrite. Every rule below either (a) repoints one of Django's
+   own custom properties, or (b) hand-styles a surface those properties do not
+   reach. No admin template is forked to make this work except base_site.html,
+   which exists to carry the brand lockup and to load this file last.
+
+   Binding source: DESIGN-voltagent.md + the `voltagent-design` skill.
+     canvas #101010 (the ONLY page surface — there is no light mode)
+     surface #1a1a1a · surface-2 #2a2a2a · hairline #3d3a39 (1px, everywhere)
+     accent  #00d992 — CTA / active / status ONLY, never body text
+     ink #f2f2f2 · ink-strong #ffffff · body #bdbdbd · mute #8b949e
+     Inter for UI, JetBrains Mono for anything "typed at a terminal"
+     radius: 6px buttons · 8-10px cards · 9999px status pills
+     hairlines ARE the elevation system — no drop shadows except modals
+
+   --------------------------------------------------------------------------
+   FOUR THINGS THAT WILL BITE YOU IF YOU EDIT THIS FILE
+   --------------------------------------------------------------------------
+   1. LOAD ORDER. This stylesheet is linked from `{% block responsive %}` in
+      apps/common/templates/admin/base_site.html, via `{{ block.super }}`, so it
+      lands AFTER base.css, changelists.css, forms.css, login.css, widgets.css,
+      nav_sidebar.css AND responsive.css. Moving it into `{% block extrastyle %}`
+      breaks it: change_list.html and change_form.html append their own
+      stylesheets after `block.super`, and those would then win.
+
+   2. BECAUSE it loads after responsive.css, an unqualified rule here also wins
+      inside responsive.css's media queries. Every property this file sets that
+      responsive.css also sets is therefore re-asserted at the SAME breakpoints
+      (1024px / 767px) in section 21. If you add a rule touching #header,
+      #content, .submit-row, .login #container or .calendarbox padding/margin/
+      width, mirror it there or you will silently break the mobile layout.
+
+   3. FORCED DARK. base.css opens with `html[data-theme="light"], :root { … }`
+      and Django ships dark_mode.css with `@media (prefers-color-scheme: dark)`
+      plus `html[data-theme="dark"]`. base_site.html drops dark_mode.css and
+      theme.js outright (the toggle is a no-op under a dark-only brand and is
+      hidden in section 3), but this file still defends against all four states
+      on its own, so it stays correct if it is ever loaded next to stock
+      base.html. The selector list in section 2 covers:
+        :root                        (0,1,0) — ties base.css, wins on order
+        html[data-theme="light"]     (0,1,1) — ties base.css, wins on order
+        html[data-theme="dark"]      (0,1,1) — ties dark_mode.css, wins on order
+        html[data-theme="auto"]      (0,1,1) — beats dark_mode.css's media :root
+      Media queries add no specificity, which is why (0,1,1) beats a `:root`
+      inside `@media (prefers-color-scheme: dark)`. Section 2b re-asserts the
+      exact subset dark_mode.css touches, from the same tokens, as belt-and-
+      braces — it hardcodes no second copy of any hex.
+
+   4. TOKEN NAMES ARE AN INTERFACE. `--canvas`, `--surface`, `--surface-2`,
+      `--hairline`, `--ink`, `--ink-strong`, `--body`, `--mute`, `--accent`,
+      `--accent-soft`, `--on-accent`, `--danger`, `--warning` are the same names
+      `web/auth.html` ships and the same names
+      apps/automation/static/admin/automation/n8n-panel.css resolves first (see
+      its "TOKEN SOURCING" header). Renaming one here silently degrades the n8n
+      panel to its literal fallbacks. Django's own `--accent` is deliberately
+      one of them: Django uses it for #site-name and the calendar caption, which
+      is exactly where the brand green belongs.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1 · Brand faces — self-hosted, same files the product UI uses
+   --------------------------------------------------------------------------
+   Served by nginx from `web/fonts/` at /fonts/*.woff2, i.e. the same origin as
+   /admin/. NO font CDN: `legal.js` promises no third-party fonts and the nginx
+   CSP is `default-src 'self'; font-src 'self'` (cf. LG Muenchen I, 3 O 17493/20).
+
+   The paths are absolute on purpose. Production uses
+   ManifestStaticFilesStorage, whose post-processor rewrites every CSS asset
+   reference and HARD-FAILS collectstatic on a missing target — but
+   `HashedFilesMixin.url_converter` returns any URL starting with "/" that does
+   not start with STATIC_URL unchanged. /fonts/… is outside /static/, so it is
+   never rewritten and never has to exist inside the static tree. A relative
+   ../fonts/… reference here would instead break `collectstatic` unless the
+   four .woff2 files were duplicated into this app.
+
+   WARNING, measured: that post-processor regex scans the raw file and does NOT
+   skip comments. Writing a relative asset reference inside a CSS comment in
+   this file — even as an illustration — fails `collectstatic` with
+   "The file '…' could not be found". Describe paths in prose; never spell one
+   as a real CSS function outside a live declaration.
+
+   Consequence to know: under `runserver` (no nginx) /fonts/ 404s and the stack
+   below falls back to the system UI font. That is cosmetic and local-only.
+
+   All four files are genuine variable fonts (verified: `fvar` table present),
+   so one @font-face per family per unicode-range covers the whole weight axis
+   instead of pinning seven static instances the way web/fonts/fonts.css does.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/fonts/inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/fonts/inter-latin-ext.woff2) format('woff2');
+  /* Romanian ă â î ș ț and the rest of latin-ext live here — the admin holds
+     real Romanian names and organisation data. */
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(/fonts/jetbrains-mono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url(/fonts/jetbrains-mono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+
+/* ==========================================================================
+   2 · Tokens, and the remap of every Django admin variable
+   ========================================================================== */
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"],
+html[data-theme="auto"] {
+
+  /* --- findajob tokens (the interface — see note 4 in the file header) ---- */
+  --canvas:      #101010;
+  --surface:     #1a1a1a;
+  --surface-2:   #2a2a2a;
+  --hairline:    #3d3a39;
+
+  --accent:      #00d992;
+  --accent-soft: #2fd6a1;
+  --accent-deep: #10b981;
+  --on-accent:   #101010;
+
+  --ink:         #f2f2f2;
+  --ink-strong:  #ffffff;
+  --body:        #bdbdbd;
+  --mute:        #8b949e;
+
+  --danger:      #e5534b;
+  --warning:     #e6b34d;
+
+  /* Tinted fills are always an rgba pair over the canvas. The design system
+     has no solid semantic backgrounds. */
+  --accent-fill:  rgba(0, 217, 146, 0.10);
+  --accent-edge:  rgba(0, 217, 146, 0.35);
+  --danger-fill:  rgba(229, 83, 75, 0.12);
+  --danger-edge:  rgba(229, 83, 75, 0.35);
+  --warning-fill: rgba(230, 179, 77, 0.12);
+  --warning-edge: rgba(230, 179, 77, 0.35);
+  --mute-fill:    rgba(139, 148, 158, 0.12);
+  --mute-edge:    rgba(139, 148, 158, 0.30);
+
+  /* The one shadow the brand allows: modal surfaces. */
+  --modal-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+
+  /* --- Django admin variables, mapped from the tokens above -------------- */
+  --primary:      var(--accent);
+  --secondary:    var(--surface);
+  --primary-fg:   var(--on-accent);
+
+  --body-fg:            var(--ink);
+  --body-bg:            var(--canvas);
+  --body-quiet-color:   var(--mute);
+  --body-medium-color:  var(--body);
+  --body-loud-color:    var(--ink-strong);
+
+  --header-color:          var(--body);
+  --header-branding-color: var(--ink-strong);
+  --header-bg:             var(--canvas);
+  --header-link-color:     var(--ink);
+
+  --breadcrumbs-fg:      var(--mute);
+  --breadcrumbs-link-fg: var(--body);
+  --breadcrumbs-bg:      var(--canvas);
+
+  /* Links are the one sanctioned non-CTA use of green (DESIGN-voltagent.md:
+     "primary-deep … the darker green used for inline link colour"; auth.html
+     ships `a { color: var(--accent-soft) }`). Body copy stays --ink/--body.
+     Contrast on #101010: #2fd6a1 = 10.2:1, #00d992 = 10.3:1 — both AAA. */
+  --link-fg:          var(--accent-soft);
+  --link-hover-color: var(--accent);
+  --link-selected-fg: var(--accent);
+
+  --hairline-color: var(--hairline);
+  --border-color:   var(--hairline);
+
+  --error-fg: var(--danger);
+
+  --message-debug-bg:   var(--mute-fill);
+  --message-debug-icon: url(../img/icon-debug-dark.svg);
+  --message-info-bg:    var(--mute-fill);
+  --message-info-icon:  url(../img/icon-info-dark.svg);
+  --message-success-bg:   var(--accent-fill);
+  --message-success-icon: url(../img/icon-yes-dark.svg);
+  --message-warning-bg:   var(--warning-fill);
+  --message-warning-icon: url(../img/icon-alert-dark.svg);
+  --message-error-bg:     var(--danger-fill);
+  --message-error-icon:   url(../img/icon-no-dark.svg);
+
+  --darkened-bg: var(--surface);
+  --selected-bg: var(--surface-2);
+  --selected-row: var(--accent-fill);
+
+  --button-fg:               var(--ink);
+  --button-bg:               var(--surface);
+  --button-hover-bg:         var(--surface-2);
+  --default-button-bg:       var(--accent);
+  --default-button-hover-bg: var(--accent-soft);
+  --close-button-bg:         var(--surface);
+  --close-button-hover-bg:   var(--surface-2);
+  --delete-button-bg:        var(--danger-fill);
+  --delete-button-hover-bg:  rgba(229, 83, 75, 0.24);
+
+  --object-tools-fg:       var(--ink);
+  --object-tools-bg:       var(--surface);
+  --object-tools-hover-bg: var(--surface-2);
+
+  --font-family-primary:
+    Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --font-family-monospace:
+    "JetBrains Mono",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+  color-scheme: dark;
+}
+
+/* 2b · Defensive re-assertion.
+   Exactly the set dark_mode.css redefines, re-mapped from the same tokens so
+   there is no second copy of any hex to drift. Only reachable if this file is
+   ever loaded next to a stock base.html that still ships dark_mode.css. */
+@media (prefers-color-scheme: dark) {
+  :root,
+  html[data-theme="light"],
+  html[data-theme="dark"],
+  html[data-theme="auto"] {
+    --primary: var(--accent);
+    --primary-fg: var(--on-accent);
+    --body-fg: var(--ink);
+    --body-bg: var(--canvas);
+    --body-quiet-color: var(--mute);
+    --body-medium-color: var(--body);
+    --body-loud-color: var(--ink-strong);
+    --breadcrumbs-link-fg: var(--body);
+    --breadcrumbs-bg: var(--canvas);
+    --link-fg: var(--accent-soft);
+    --link-hover-color: var(--accent);
+    --link-selected-fg: var(--accent);
+    --hairline-color: var(--hairline);
+    --border-color: var(--hairline);
+    --error-fg: var(--danger);
+    --message-debug-bg: var(--mute-fill);
+    --message-info-bg: var(--mute-fill);
+    --message-success-bg: var(--accent-fill);
+    --message-warning-bg: var(--warning-fill);
+    --message-error-bg: var(--danger-fill);
+    --darkened-bg: var(--surface);
+    --selected-bg: var(--surface-2);
+    --selected-row: var(--accent-fill);
+    --close-button-bg: var(--surface);
+    --close-button-hover-bg: var(--surface-2);
+    color-scheme: dark;
+  }
+}
+
+
+/* ==========================================================================
+   3 · Canvas & typography
+   ========================================================================== */
+
+html,
+body {
+  background: var(--canvas);
+}
+
+body {
+  font-family: var(--font-family-primary);
+  /* Inter's contextual alternates and required ligatures, per the brand doc. */
+  font-feature-settings: "calt" 1, "rlig" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--ink);
+}
+
+/* Sentence-case Inter, calm weights. Django's h1 is 1.25rem/300 by default. */
+#content h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--ink-strong);
+}
+
+#content h2,
+#content-main > h2 {
+  color: var(--ink);
+}
+
+/* The brand's signature label: JetBrains Mono, 10.5px, +0.07em, mute. */
+.module h2,
+.module caption,
+.inline-group h2,
+#changelist-filter h2,
+fieldset .fieldset-heading,
+fieldset .inline-heading,
+:not(.inline-related) .collapse summary,
+.selector-available-title,
+.selector-chosen-title,
+thead th,
+tfoot td {
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+code,
+pre,
+.monospace,
+fieldset.monospace textarea,
+.readonly .vUUIDField,
+td.field-id {
+  font-family: var(--font-family-monospace);
+}
+
+code strong {
+  /* base.css hardcodes #930 here. */
+  color: var(--accent-soft);
+}
+
+.small,
+.help,
+p.help,
+form p.help,
+div.help,
+form div.help,
+div.help li,
+.quiet,
+a.quiet:link,
+a.quiet:visited {
+  color: var(--mute);
+}
+
+.help,
+p.help,
+form p.help,
+div.help,
+form div.help,
+div.help li {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The brand is dark-only, so the OS-theme cycle button is a control that can
+   never do anything. base_site.html already drops theme.js and dark_mode.css;
+   this hides the button base.html still emits inside {% block userlinks %}
+   (and, without dark_mode.css, would otherwise show all three of its icons at
+   once). */
+.theme-toggle {
+  display: none !important;
+}
+
+
+/* ==========================================================================
+   4 · Header & brand lockup
+   ========================================================================== */
+
+#header {
+  background: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+  padding: 14px 32px;
+  color: var(--body);
+}
+
+#branding {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+#site-name {
+  margin-inline-end: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+#site-name a:link,
+#site-name a:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-strong);
+  text-decoration: none;
+}
+
+/* The lightning mark, matching web/favicon.svg. Green is the brand's centre of
+   gravity — this and the CTAs are where it belongs. */
+#site-name .fj-mark {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--accent);
+}
+
+#site-name .fj-dot {
+  color: var(--accent);
+}
+
+/* "admin" tag next to the wordmark: this is the staff console, not the product. */
+#branding .fj-console-tag {
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mute);
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+#user-tools,
+#logout-form button {
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+#header a:link,
+#header a:visited,
+#logout-form button {
+  color: var(--body);
+}
+
+#user-tools a,
+#logout-form button {
+  /* base.css uses rgba(255,255,255,.25) here, which reads as a stray light
+     line on the canvas. */
+  border-bottom: 1px solid var(--hairline);
+}
+
+#header a:focus,
+#header a:hover,
+#logout-form button:hover {
+  color: var(--ink-strong);
+  text-decoration: none;
+}
+
+#user-tools strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.skip-to-content-link {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+
+/* ==========================================================================
+   5 · Breadcrumbs
+   ========================================================================== */
+
+div.breadcrumbs {
+  background: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+  padding: 11px 32px;
+  font-family: var(--font-family-monospace);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+
+div.breadcrumbs a {
+  color: var(--body);
+  text-decoration: none;
+}
+
+div.breadcrumbs a:focus,
+div.breadcrumbs a:hover {
+  color: var(--accent-soft);
+}
+
+
+/* ==========================================================================
+   6 · Nav sidebar
+   ========================================================================== */
+
+#nav-sidebar {
+  background: var(--canvas);
+  border-right: 1px solid var(--hairline);
+}
+
+.toggle-nav-sidebar {
+  background: var(--canvas);
+  border-right: 1px solid var(--hairline);
+  color: var(--mute);
+}
+
+.toggle-nav-sidebar:hover,
+.toggle-nav-sidebar:focus {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+/* The sidebar and the "Recent actions" rail reuse .module markup, so the card
+   chrome from section 7 has to be switched back off inside them. */
+#nav-sidebar .module,
+#content-related .module {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  margin-bottom: 8px;
+  overflow: visible;
+}
+
+#nav-sidebar .module caption,
+#nav-sidebar .module caption a.section {
+  background: none;
+  border: 0;
+  padding: 14px 16px 6px;
+  color: var(--mute);
+}
+
+#nav-sidebar .module th,
+#nav-sidebar .module td {
+  border-bottom: 0;
+  padding: 2px 8px;
+}
+
+#nav-sidebar .module th a:link,
+#nav-sidebar .module th a:visited {
+  display: block;
+  padding: 8px 16px;
+  border-radius: 6px;
+  color: var(--body);
+  text-decoration: none;
+}
+
+#nav-sidebar .module th a:focus,
+#nav-sidebar .module th a:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+#nav-sidebar .current-app .section:link,
+#nav-sidebar .current-app .section:visited {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Active nav row: the primary indicator, exactly as the app shell does it. */
+#nav-sidebar .current-model {
+  background: var(--accent-fill);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+#nav-sidebar .current-model th a:link,
+#nav-sidebar .current-model th a:visited {
+  color: var(--accent-soft);
+  font-weight: 600;
+}
+
+#nav-filter {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 9px 10px;
+  margin: 12px 0;
+  font-family: var(--font-family-primary);
+  font-size: 13px;
+}
+
+#nav-filter::placeholder {
+  color: var(--mute);
+}
+
+#nav-filter:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+#nav-filter.no-results {
+  background: var(--danger-fill);
+  border-color: var(--danger-edge);
+}
+
+
+/* ==========================================================================
+   7 · Content shell, modules, the index card grid
+   ========================================================================== */
+
+#content {
+  padding: 24px 32px 40px;
+}
+
+/* Hairline-bordered cards on the same canvas — the brand's only elevation. */
+.module {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: var(--surface);
+  color: var(--mute);
+  border-bottom: 1px solid var(--hairline);
+  padding: 12px 16px;
+}
+
+.module caption a.section:link,
+.module caption a.section:visited {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.module caption a.section:focus,
+.module caption a.section:hover {
+  color: var(--accent-soft);
+}
+
+/* The admin index: "a precise grid of dark feature cards". Django pins
+   .dashboard #content to 600px, which is why the stock index is a narrow
+   column; responsive.css already releases it below 1024px. */
+.dashboard #content {
+  width: auto;
+  max-width: none;
+}
+
+#content-main.app-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+#content-main.app-list .module {
+  margin-bottom: 0;
+}
+
+#content-main.app-list .module table {
+  width: 100%;
+}
+
+.app-list .module th a:link,
+.app-list .module th a:visited {
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.app-list .module th a:focus,
+.app-list .module th a:hover {
+  color: var(--accent-soft);
+}
+
+/* Django hangs a four-colour Font Awesome icon set on these links: #5fa225 for
+   add, #b48c08 for change, #2b70bf for view. That is three accents the brand
+   does not have plus a green that is NOT #00d992 — next to the real accent it
+   reads as a rendering bug. Every one of these links already carries the words
+   "Add" / "Change" / "View", so the icon is pure decoration and the brand's
+   rule is typographic moments, not an illustration suite.
+   Removed only where the text label exists. The icon-only affordances —
+   .related-widget-wrapper-link next to a foreign-key select, and the inline
+   delete control — keep theirs, because there the icon IS the label. */
+.app-list a.addlink,
+.app-list a.changelink,
+.app-list a.viewlink,
+#nav-sidebar a.addlink,
+#nav-sidebar a.changelink,
+#nav-sidebar a.viewlink,
+.inline-group div.add-row a.addlink,
+.inline-group .tabular tr.add-row td a.addlink {
+  background-image: none;
+  padding-left: 0;
+}
+
+/* Django's dashboard is a float layout: #content-main is `float: left;
+   width: 100%` and the "Recent actions" rail is a later `float: right` pulled
+   back into the gutter with `margin-right: -300px`. That works only while
+   #content-main is the LAST in-flow box — apps.automation appends the n8n card
+   after it, and per CSS 2.1 float rule 5 a right float may not sit higher than
+   the top of any earlier box, so the rail gets shoved ~270px down the page
+   (measured: rail top 397 vs content top 127). Clearing the n8n card avoids the
+   overlap but not the shove.
+   Two columns instead of two floats fixes both: the rail sits at the top of
+   column 2 and everything else auto-flows down column 1. The `span 99` is the
+   idiom for "span every implicit row" — `-1` resolves against explicit rows
+   only, and the child count here is not knowable (pretitle and messagelist come
+   and go). Empty implicit rows are 0-height, so it costs nothing. */
+.dashboard #content.colMS {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  column-gap: 30px;
+  align-items: start;
+  margin-right: 0;
+}
+
+.dashboard #content.colMS > * {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.dashboard #content.colMS > #content-main {
+  float: none;
+}
+
+.dashboard #content.colMS > #content-related {
+  grid-column: 2;
+  grid-row: 1 / span 99;
+  float: none;
+  width: auto;
+  margin: 0;
+}
+
+.dashboard #content.colMS > br.clear {
+  display: none;
+}
+
+/* "Recent actions" rail. */
+#content-related {
+  background: transparent;
+}
+
+#content-related > .module {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#content-related .module h2 {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 10.5px;
+  color: var(--mute);
+}
+
+#content-related h3 {
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+#content-related .actionlist li {
+  color: var(--body);
+}
+
+
+/* ==========================================================================
+   8 · Links, buttons, object tools
+   ========================================================================== */
+
+a:link,
+a:visited {
+  color: var(--link-fg);
+}
+
+a:focus,
+a:hover {
+  color: var(--link-hover-color);
+}
+
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.15;
+  /* 44px touch target for primary actions and form submits, per the design
+     system. Dense inline controls (the changelist actions bar, the search
+     "Go") get 36-40px further down — forcing 44px there makes a data-dense
+     toolbar unusable, and neither is a primary CTA. */
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.button:active,
+input[type=submit]:active,
+input[type=button]:active,
+.button:focus,
+input[type=submit]:focus,
+input[type=button]:focus,
+.button:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+a.button:hover {
+  background: var(--surface-2);
+  color: var(--ink-strong);
+  border-color: var(--hairline);
+}
+
+a.button {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+/* The one green CTA per page. */
+.button.default,
+input[type=submit].default,
+.submit-row input.default {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
+  /* base.css/forms.css uppercase this; the brand's buttons are sentence-case
+     Inter. */
+  text-transform: none;
+}
+
+.button.default:active,
+input[type=submit].default:active,
+.button.default:focus,
+input[type=submit].default:focus,
+.button.default:hover,
+input[type=submit].default:hover,
+.submit-row input.default:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  opacity: 0.9;
+}
+
+.button[disabled],
+input[type=submit][disabled],
+input[type=button][disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Object tools: "Add", "History", "View on site". */
+.object-tools a:link,
+.object-tools a:visited {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 11px 14px;
+  font-family: var(--font-family-primary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.15;
+  min-height: 44px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  text-transform: none;
+}
+
+.object-tools a:focus,
+.object-tools a:hover {
+  background: var(--surface-2);
+  color: var(--ink-strong);
+}
+
+/* "Add <model>" is the page's primary action. */
+.object-tools a.addlink:link,
+.object-tools a.addlink:visited {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.object-tools a.addlink:focus,
+.object-tools a.addlink:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+  opacity: 0.9;
+}
+
+/* Django hangs white +/-> glyphs on these. On a green button a white glyph is
+   ~1.9:1, and the brand's rule is typographic moments, not icon furniture. */
+.object-tools a.addlink,
+.object-tools a.viewsitelink {
+  background-image: none;
+  padding-right: 14px;
+}
+
+.object-tools li + li {
+  margin-left: 10px;
+}
+
+
+/* ==========================================================================
+   9 · Tables & the changelist
+   ========================================================================== */
+
+table {
+  border-color: var(--hairline);
+}
+
+td,
+th {
+  border-bottom: 1px solid var(--hairline);
+  padding: 11px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--body);
+}
+
+th {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* Zebra striping is not part of this system — hairline row borders are.
+   base.css sets nth-child backgrounds; neutralise them and use a hover cue. */
+tr:nth-child(odd),
+tr:nth-child(even),
+tr:nth-child(even) .errorlist,
+tr:nth-child(odd) + .row-form-errors,
+tr:nth-child(odd) + .row-form-errors .errorlist,
+.row-form-errors {
+  background: transparent;
+}
+
+#changelist tbody tr:hover,
+#change-history tbody tr:hover {
+  background: var(--surface);
+}
+
+thead th,
+tfoot td {
+  background: var(--surface);
+  color: var(--mute);
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 0;
+}
+
+table thead th .text span,
+table thead th .text a {
+  padding: 11px 12px;
+}
+
+thead th a:link,
+thead th a:visited {
+  color: var(--mute);
+  text-decoration: none;
+}
+
+thead th a:focus,
+thead th a:hover {
+  color: var(--ink);
+}
+
+thead th.sorted {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+table thead th .text a:focus,
+table thead th .text a:hover {
+  background: var(--surface-2);
+}
+
+/* Django 6.0 ships no sticky changelist header. These declarations cost
+   nothing today (the results box grows to fit, so there is no vertical
+   scrollport to stick to) and guarantee the header paints opaque rather than
+   letting rows show through the moment anything does scroll it. */
+#changelist table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+#changelist table tbody th,
+#changelist table tbody td {
+  vertical-align: middle;
+}
+
+#changelist table tbody th a:link,
+#changelist table tbody th a:visited {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+#changelist table tbody th a:focus,
+#changelist table tbody th a:hover {
+  color: var(--accent-soft);
+}
+
+/* Selected rows: the green tinted pair. */
+#changelist tbody tr.selected,
+#changelist tbody tr:has(.action-select:checked) {
+  background: var(--accent-fill);
+}
+
+/* Measured on a 1440px viewport: the user changelist is 1007px of table inside
+   an 803px box. Django already makes .results an `overflow-x: auto` scroller,
+   but with no edge the overflow just looks like a broken table. Giving it the
+   card chrome makes it read as the design system's "wide grid inside an
+   overflow-x scroll container" — and the radius clips the cut column cleanly. */
+#changelist-form .results {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+/* When the actions bar is rendered on top, the two stack into one card. */
+#changelist .actions + .results,
+#changelist .actions + * > .results {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+#changelist .changelist-footer,
+#changelist .toplinks {
+  border-color: var(--hairline);
+}
+
+.change-list .toplinks a {
+  font-family: var(--font-family-monospace);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+
+.change-list .toplinks .date-back {
+  color: var(--mute);
+}
+
+/* Search bar. #toolbar's own box geometry is left to Django on purpose — it is
+   already a --darkened-bg band with hairline edges once the variables are
+   repointed, and responsive.css re-pads it at both breakpoints. */
+#toolbar {
+  color: var(--mute);
+}
+
+#toolbar form input {
+  color: var(--ink);
+}
+
+#toolbar #searchbar {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--ink);
+  height: auto;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-family: var(--font-family-primary);
+  font-size: 13px;
+}
+
+#toolbar #searchbar::placeholder {
+  color: var(--mute);
+}
+
+#toolbar #searchbar:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+#toolbar form input[type=submit] {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--ink);
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+#toolbar form input[type=submit]:focus,
+#toolbar form input[type=submit]:hover {
+  background: var(--hairline);
+  border-color: var(--hairline);
+  color: var(--ink-strong);
+}
+
+#changelist-search .search-label-icon {
+  filter: invert(1) opacity(0.7);
+}
+
+/* Actions bar ("0 of 12 selected" + the action select + Go). */
+#changelist .actions {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px 10px 0 0;
+  color: var(--mute);
+}
+
+#changelist .actions select {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--ink);
+  height: auto;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+#changelist .actions select:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+#changelist .actions .button {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--ink);
+  height: auto;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+#changelist .actions .button:focus,
+#changelist .actions .button:hover {
+  background: var(--hairline);
+  border-color: var(--hairline);
+  color: var(--ink-strong);
+}
+
+#changelist .actions span.all,
+#changelist .actions span.action-counter,
+#changelist .actions span.clear,
+#changelist .actions span.question {
+  font-family: var(--font-family-monospace);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+}
+
+
+/* ==========================================================================
+   10 · Filter sidebar
+   --------------------------------------------------------------------------
+   Geometry (flex-basis, margins) is deliberately left to Django: responsive.css
+   rewrites #changelist-filter's margin-left and width at 767px, and an
+   unqualified margin here would win inside that media query.
+   ========================================================================== */
+
+#changelist-filter {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  align-self: flex-start;
+}
+
+#changelist-filter h2 {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--mute);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  font-size: 10.5px;
+}
+
+#changelist-filter h3,
+#changelist-filter details summary {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+#changelist-filter details > summary::before {
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+#changelist-filter ul {
+  border-bottom: 1px solid var(--hairline);
+  padding: 0 16px 12px;
+}
+
+/* padding-block, NOT the `padding` shorthand: `.viewlink` / `.addlink` hang
+   their icon in the left padding, and a shorthand here resets padding-left to 0
+   and drops the glyph underneath the label. Measured on "Show counts". */
+#changelist-filter a:link,
+#changelist-filter a:visited {
+  color: var(--mute);
+  padding-block: 5px;
+  text-decoration: none;
+}
+
+#changelist-filter a:focus,
+#changelist-filter a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* base.css underlines every link outside the chrome selectors. In a filter list
+   every single item is a link, so the underline distinguishes nothing and just
+   adds noise — and WCAG 1.4.1 is about telling a link apart from surrounding
+   TEXT, of which there is none here. The selected state still carries three
+   non-colour channels (green rule, weight, and the hover underline above). */
+#changelist-filter ul li a:link,
+#changelist-filter ul li a:visited {
+  text-decoration: none;
+}
+
+/* Off-palette #2b70bf eye glyph, redundant next to the words "Show counts". */
+#changelist-filter #changelist-filter-extra-actions a {
+  background-image: none;
+  padding-left: 0;
+}
+
+#changelist-filter li.selected {
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin-left: -16px;
+}
+
+#changelist-filter li.selected a:link,
+#changelist-filter li.selected a:visited {
+  color: var(--accent-soft);
+  font-weight: 600;
+}
+
+#changelist-filter #changelist-filter-extra-actions {
+  border-bottom: 1px solid var(--hairline);
+}
+
+
+/* ==========================================================================
+   11 · Paginator
+   ========================================================================== */
+
+.paginator {
+  border-top: 1px solid var(--hairline);
+  color: var(--mute);
+  font-family: var(--font-family-monospace);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  gap: 6px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+#changelist .paginator,
+#change-history .paginator {
+  background: var(--canvas);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.paginator a:not(.showall) {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--body);
+  padding: 6px 11px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.paginator a:not([aria-current="page"], .showall):focus,
+.paginator a:not([aria-current="page"], .showall):hover {
+  background: var(--surface-2);
+  color: var(--ink-strong);
+}
+
+/* Active page = the primary indicator. */
+.paginator a[aria-current="page"] {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--on-accent);
+  font-weight: 700;
+  padding: 6px 11px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.paginator a.showall {
+  color: var(--accent-soft);
+}
+
+
+/* ==========================================================================
+   12 · Forms, fieldsets, inlines
+   --------------------------------------------------------------------------
+   Input padding/min-height/font-size are set unqualified here; responsive.css
+   scopes its own versions to `.form-row input[type=…]` (0,2,1), which beats
+   this file's (0,1,1) and therefore still wins at <=1024px. That is desired —
+   its 16px font size is what stops iOS Safari zooming on focus.
+   ========================================================================== */
+
+input:not([type]),
+input[type=text],
+input[type=password],
+input[type=email],
+input[type=url],
+input[type=number],
+input[type=tel],
+input[type=search],
+input[type=date],
+input[type=time],
+input[type=datetime-local],
+textarea,
+select,
+.vTextField {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 10px 12px;
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  /* Both declarations are load-bearing and must stay together.
+
+     min-height: measured, a bare <select> renders 30px tall against a text
+     input's 39px and crops its own label — 20px of vertical padding leaves a
+     native select's intrinsic content box too little room and Chrome clips
+     rather than growing. min-height (not height) keeps responsive.css's
+     `.form-row select[multiple] { height: auto }` and the selector widget's
+     17.2em lists working.
+
+     box-sizing: Django's admin leaves form fields at the initial content-box
+     (only `.login #id_username/#id_password` and responsive.css's <=1024
+     `.form-row input` opt in). Under content-box the min-height above ADDS to
+     the padding and border — measured 62px, not 40px. border-box makes every
+     control exactly 40px and stops width:20em fields overflowing their column. */
+  box-sizing: border-box;
+  min-height: 40px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--mute);
+}
+
+input:not([type]):focus,
+input[type=text]:focus,
+input[type=password]:focus,
+input[type=email]:focus,
+input[type=url]:focus,
+input[type=number]:focus,
+input[type=tel]:focus,
+input[type=search]:focus,
+input[type=date]:focus,
+input[type=time]:focus,
+input[type=datetime-local]:focus,
+textarea:focus,
+select:focus,
+.vTextField:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+input[type=checkbox],
+input[type=radio] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+input[type=file] {
+  color: var(--body);
+  font-size: 13px;
+}
+
+.form-row {
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+.form-row:last-child {
+  border-bottom: 0;
+}
+
+.aligned legend,
+.aligned label {
+  color: var(--body);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.aligned label.required,
+.required > label,
+label.required {
+  color: var(--ink);
+}
+
+.aligned .form-row div.readonly,
+.form-row .readonly {
+  color: var(--ink);
+}
+
+fieldset {
+  border-top: 1px solid var(--hairline);
+}
+
+fieldset.module {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+}
+
+fieldset .fieldset-heading,
+fieldset .inline-heading,
+:not(.inline-related) .collapse summary {
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--mute);
+  padding: 12px 16px;
+}
+
+.collapse summary .fieldset-heading,
+.collapse summary .inline-heading {
+  color: currentColor;
+}
+
+/* Inlines */
+.inline-group {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.inline-group > fieldset.module,
+.inline-group .tabular fieldset.module {
+  border: 0;
+  border-radius: 0;
+}
+
+.inline-related h4,
+.inline-related:not(.tabular) .collapse summary {
+  background: var(--surface);
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--body);
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+}
+
+.inline-related fieldset {
+  background: var(--canvas);
+}
+
+.inline-group div.add-row,
+.inline-group .tabular tr.add-row td {
+  background: var(--surface);
+  border-bottom: 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--mute);
+}
+
+.inline-group div.add-row a:link,
+.inline-group .tabular tr.add-row td a:link,
+.inline-group div.add-row a:visited,
+.inline-group .tabular tr.add-row td a:visited {
+  color: var(--accent-soft);
+  font-weight: 600;
+}
+
+.inline-group .tabular td.original p {
+  color: var(--mute);
+}
+
+/* Related-object add/change/delete/view controls next to a FK / M2M widget.
+   These are icon-only, so unlike the app-list links they cannot lose their
+   glyph — but Django's set is #5fa225 / #b48c08 / #dd4646 / #2b70bf, and a
+   lime "+" floating beside a #00d992 selector reads as a rendering fault.
+   Neutralising to grey keeps them legible, keeps shape + title as the meaning
+   carriers, and leaves exactly one green on the page. Safe to filter here
+   because the anchor contains nothing but an <img>.
+
+   The `:link, :visited` qualification is required, not stylistic: base.css
+   dims these with `.related-widget-wrapper-link { filter: grayscale(1) }` and
+   then re-enables the live ones with `.related-widget-wrapper-link:link
+   { filter: grayscale(0) }` — (0,2,0), which out-specifies a bare class
+   selector no matter how late it loads. Measured: the unqualified rule left
+   the "+" lime. Matching the pseudo-class also preserves Django's own
+   distinction, since a wrapper link with no href stays dimmed by its rule. */
+.related-widget-wrapper-link:link,
+.related-widget-wrapper-link:visited {
+  filter: grayscale(1) brightness(2.4);
+  opacity: 0.75;
+}
+
+.related-widget-wrapper-link:hover,
+.related-widget-wrapper-link:focus {
+  opacity: 1;
+}
+
+
+/* ==========================================================================
+   13 · Submit row, delete confirmation
+   ========================================================================== */
+
+.submit-row {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.submit-row input {
+  height: auto;
+  line-height: 1.15;
+}
+
+/* Destructive actions get the danger tinted pair, never a solid red slab. */
+.submit-row a.deletelink,
+.delete-confirmation form input[type="submit"] {
+  background: var(--danger-fill);
+  border: 1px solid var(--danger-edge);
+  border-radius: 6px;
+  color: var(--danger);
+  font-family: var(--font-family-primary);
+  font-size: 14px;
+  font-weight: 600;
+  height: auto;
+  line-height: 1.15;
+  min-height: 44px;
+  padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.submit-row a.deletelink:focus,
+.submit-row a.deletelink:hover,
+.submit-row a.deletelink:active,
+.delete-confirmation form input[type="submit"]:focus,
+.delete-confirmation form input[type="submit"]:hover,
+.delete-confirmation form input[type="submit"]:active {
+  background: rgba(229, 83, 75, 0.24);
+  border-color: var(--danger);
+  color: var(--danger);
+  text-decoration: none;
+}
+
+.submit-row a.closelink,
+.delete-confirmation form .cancel-link {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--ink);
+  height: auto;
+  line-height: 1.15;
+  min-height: 44px;
+  padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.submit-row a.closelink:focus,
+.submit-row a.closelink:hover,
+.delete-confirmation form .cancel-link:focus,
+.delete-confirmation form .cancel-link:hover {
+  background: var(--hairline);
+  color: var(--ink-strong);
+  text-decoration: none;
+}
+
+/* base.css hardcodes #CC3434 / #993333 for inline delete links. */
+a.deletelink:link,
+a.deletelink:visited {
+  color: var(--danger);
+}
+
+a.deletelink:focus,
+a.deletelink:hover {
+  color: var(--danger);
+  opacity: 0.85;
+}
+
+.delete-confirmation .summary,
+.delete-confirmation ul {
+  color: var(--body);
+}
+
+
+/* ==========================================================================
+   14 · Selector widget (filter_horizontal — UserAdmin's groups/permissions)
+   ========================================================================== */
+
+.selector-available-title,
+.selector-chosen-title {
+  border: 1px solid var(--hairline);
+  border-radius: 6px 6px 0 0;
+  padding: 10px 12px;
+}
+
+.selector-available-title {
+  background: var(--surface);
+  color: var(--mute);
+}
+
+/* "Chosen" is the active side — the tinted green pair. */
+.selector-chosen-title {
+  background: var(--accent-fill);
+  border-color: var(--accent-edge);
+  color: var(--accent-soft);
+}
+
+.selector-chosen-title label {
+  color: var(--accent-soft);
+}
+
+.selector .selector-filter {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-width: 0 1px;
+  color: var(--mute);
+}
+
+.selector select {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 0 0 6px 6px;
+  color: var(--ink);
+  padding: 6px;
+}
+
+.selector select option {
+  background: var(--canvas);
+  color: var(--ink);
+  padding: 4px 6px;
+}
+
+.selector select option:checked {
+  background: var(--accent-fill);
+  color: var(--accent-soft);
+}
+
+.selector ul.selector-chooser,
+.stacked ul.selector-chooser {
+  /* widgets.css hardcodes #eee on the stacked variant. */
+  background-color: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 9999px;
+}
+
+.selector-chosen .list-footer-display {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  color: var(--body);
+}
+
+.selector-chosen .list-footer-display__clear {
+  color: var(--accent-soft);
+}
+
+.selector-chooseall,
+.selector-clearall {
+  background-color: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--body);
+  padding: 8px 12px;
+}
+
+:enabled.selector-chooseall:focus,
+:enabled.selector-clearall:focus,
+:enabled.selector-chooseall:hover,
+:enabled.selector-clearall:hover {
+  background-color: var(--surface-2);
+  color: var(--ink-strong);
+}
+
+/* Vendor sprites authored for a light canvas. search.svg is #555555 and
+   icon-unknown.svg is #666666 — both effectively invisible on #101010.
+   Lifting them beats shipping a second icon set. icon-unknown-alt.svg (the
+   chosen side) is already white, hence the reset. */
+.selector .search-label-icon,
+.selector .help-icon {
+  filter: invert(1) opacity(0.75);
+}
+
+.selector .selector-chosen .help-icon {
+  filter: none;
+}
+
+
+/* ==========================================================================
+   15 · Calendar & clock popups — the one place a shadow is allowed
+   ========================================================================== */
+
+.calendarbox,
+.clockbox {
+  background: var(--canvas);
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  box-shadow: var(--modal-shadow);
+}
+
+.calendar table {
+  /* widgets.css hardcodes `background: white` here. */
+  background: transparent;
+}
+
+.calendar caption,
+.calendarbox h2,
+.clockbox h2 {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink);
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 10px 0;
+}
+
+.calendar th {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--mute);
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+
+.calendar td {
+  border-top: 1px solid var(--hairline);
+}
+
+.calendar td a,
+.timelist a {
+  color: var(--body);
+}
+
+.calendar td a:focus,
+.timelist a:focus,
+.calendar td a:hover,
+.timelist a:hover {
+  background: var(--accent-fill);
+  color: var(--accent-soft);
+}
+
+.calendar td a:active,
+.timelist a:active,
+.calendar td.selected a {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.calendar td.nonday {
+  background: var(--surface);
+}
+
+.calendar td.today a {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.calendarnav {
+  /* widgets.css hardcodes #ccc. */
+  color: var(--mute);
+}
+
+.calendarnav a:link,
+.calendarnav a:visited,
+#calendarnav a:link,
+#calendarnav a:visited {
+  color: var(--body);
+}
+
+.calendar-shortcuts {
+  background: var(--canvas);
+  border-top: 1px solid var(--hairline);
+  color: var(--mute);
+}
+
+.calendar-shortcuts a {
+  color: var(--accent-soft);
+}
+
+.calendar-cancel {
+  background: var(--surface);
+  border-top: 1px solid var(--hairline);
+}
+
+.calendar-cancel a {
+  color: var(--body);
+}
+
+.calendar-cancel:focus,
+.calendar-cancel:hover {
+  background: var(--surface-2);
+}
+
+/* calendar-icons.svg is #000000 / #333333 — literally invisible on the canvas. */
+.calendarbox .calendarnav-previous,
+.calendarbox .calendarnav-next {
+  filter: invert(1);
+}
+
+/* icon-calendar.svg / icon-clock.svg are #447e9b, and their hover frame is
+   #003366 — the hover state disappears without this lift. */
+.datetimeshortcuts .date-icon,
+.datetimeshortcuts .clock-icon {
+  filter: brightness(1.45);
+}
+
+.datetimeshortcuts a:focus .date-icon,
+.datetimeshortcuts a:hover .date-icon,
+.datetimeshortcuts a:focus .clock-icon,
+.datetimeshortcuts a:hover .clock-icon {
+  filter: brightness(3.4) saturate(0.5);
+}
+
+.datetimeshortcuts a:link,
+.datetimeshortcuts a:visited {
+  color: var(--accent-soft);
+}
+
+
+/* ==========================================================================
+   16 · Messages, errors
+   ========================================================================== */
+
+ul.messagelist li {
+  background-color: var(--mute-fill);
+  border: 1px solid var(--mute-edge);
+  border-radius: 6px;
+  color: var(--body);
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 12px 14px 12px 42px;
+  background-position: 14px center;
+  margin-bottom: 10px;
+}
+
+ul.messagelist li.success {
+  background-color: var(--accent-fill);
+  border-color: var(--accent-edge);
+  color: var(--accent-soft);
+}
+
+ul.messagelist li.warning {
+  background-color: var(--warning-fill);
+  border-color: var(--warning-edge);
+  color: var(--warning);
+}
+
+ul.messagelist li.error {
+  background-color: var(--danger-fill);
+  border-color: var(--danger-edge);
+  color: var(--danger);
+}
+
+ul.messagelist li.info,
+ul.messagelist li.debug {
+  background-color: var(--mute-fill);
+  border-color: var(--mute-edge);
+  color: var(--body);
+}
+
+.errornote {
+  background-color: var(--danger-fill);
+  border: 1px solid var(--danger-edge);
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 14px;
+}
+
+ul.errorlist {
+  background: transparent;
+  color: var(--danger);
+}
+
+ul.errorlist li {
+  font-size: 12.5px;
+}
+
+.errors input,
+.errors select,
+.errors textarea,
+td ul.errorlist + input,
+td ul.errorlist + select,
+td ul.errorlist + textarea {
+  border: 1px solid var(--danger-edge);
+}
+
+.form-row.errors {
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+
+/* ==========================================================================
+   17 · Login
+   --------------------------------------------------------------------------
+   Structural markup is untouched: base_site.html's {% block pretitle %} was a
+   sufficient hook for the staff-console note, so admin/login.html is NOT
+   forked and stays whatever the installed Django ships.
+   ========================================================================== */
+
+body.login {
+  background: var(--canvas);
+}
+
+.login #container {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 440px;
+  min-width: 0;
+  margin: 72px auto;
+}
+
+.login #header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  padding: 16px 26px;
+  justify-content: center;
+}
+
+.login #content {
+  padding: 26px;
+}
+
+.login #content-main {
+  float: none;
+  width: 100%;
+}
+
+.login .form-row {
+  border-bottom: 0;
+  padding: 0;
+}
+
+.login .form-row + .form-row {
+  margin-top: 16px;
+}
+
+.login .form-row label {
+  color: var(--body);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.login .form-row #id_username,
+.login .form-row #id_password {
+  /* 16px is a floor, not a taste call: iOS Safari zooms the viewport on focus
+     for anything smaller and never zooms back out. Same reasoning as
+     web/auth.html. */
+  font-size: 16px;
+  padding: 12px 14px;
+  min-height: 44px;
+}
+
+.login .submit-row {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 20px 0 0;
+  margin: 0;
+}
+
+.login .submit-row input {
+  width: 100%;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-size: 15px;
+  min-height: 44px;
+  text-transform: none;
+}
+
+.login .submit-row input:hover,
+.login .submit-row input:focus {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  opacity: 0.9;
+}
+
+.login .password-reset-link {
+  margin-top: 14px;
+}
+
+.login .password-reset-link a {
+  color: var(--mute);
+  font-size: 12.5px;
+}
+
+.login .password-reset-link a:hover {
+  color: var(--ink);
+}
+
+.login .errornote {
+  margin-bottom: 16px;
+}
+
+/* The staff-console note, emitted from base_site.html's pretitle block. */
+.fj-login-note {
+  margin: 0 0 18px;
+}
+
+.fj-login-note .fj-eyebrow {
+  display: block;
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 8px;
+}
+
+.fj-login-note .fj-note {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--mute);
+}
+
+.fj-login-note .fj-note a {
+  color: var(--accent-soft);
+}
+
+
+/* ==========================================================================
+   18 · Footer
+   ========================================================================== */
+
+#footer:not(:empty) {
+  border-top: 1px solid var(--hairline);
+  padding: 18px 32px;
+  color: var(--mute);
+  font-family: var(--font-family-monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#footer a {
+  color: var(--mute);
+}
+
+#footer a:hover {
+  color: var(--ink);
+}
+
+
+/* ==========================================================================
+   19 · Focus, motion, popups
+   ========================================================================== */
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.popup #header {
+  padding: 12px 20px;
+}
+
+.popup #content {
+  padding: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ==========================================================================
+   20 · n8n panel integration
+   --------------------------------------------------------------------------
+   apps/automation/static/admin/automation/n8n-panel.css resolves the findajob
+   tokens defined in section 2 first (see its "TOKEN SOURCING" header), so the
+   panel inherits this theme with no work. Only the seam needs help.
+   ========================================================================== */
+
+.fj-n8n-page #content {
+  padding-top: 24px;
+}
+
+#fj-n8n-index-card {
+  margin-top: 24px;
+}
+
+
+/* ==========================================================================
+   21 · Responsive re-assertions
+   --------------------------------------------------------------------------
+   This file loads AFTER responsive.css, so every property above that
+   responsive.css also sets has to be repeated at its breakpoints. See note 2
+   in the file header. Anything NOT listed here is either untouched above or is
+   scoped more tightly by responsive.css and still wins on specificity.
+
+   Button padding is deliberately NOT reverted to responsive.css's 7px: a
+   larger touch target matters more on a small screen, not less.
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  #header {
+    padding: 15px 24px;
+  }
+
+  div.breadcrumbs {
+    padding: 11px 24px;
+  }
+
+  #content {
+    padding: 16px 24px 32px;
+  }
+
+  #footer:not(:empty) {
+    padding: 16px 24px;
+  }
+
+  .submit-row {
+    padding: 12px;
+  }
+
+  .login #header {
+    padding: 15px 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  #header {
+    padding: 15px 16px;
+  }
+
+  div.breadcrumbs {
+    padding: 10px 16px;
+  }
+
+  #content {
+    padding: 15px 16px 32px;
+  }
+
+  #footer:not(:empty) {
+    padding: 16px;
+  }
+
+  #content-main.app-list {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* One column: the rail drops under the app cards, matching responsive.css's
+     own `#content-related { width: 100% }` intent. */
+  .dashboard #content.colMS {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard #content.colMS > #content-related {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 16px;
+  }
+
+  .submit-row {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .login #container {
+    width: auto;
+    max-width: 480px;
+    margin: 50px auto;
+  }
+
+  .login #header,
+  .login #content {
+    padding: 16px;
+  }
+
+  /* responsive.css turns the picker into a fixed, scrim-backed modal with
+     `overflow: visible`, so the rounded corners have to move to the children. */
+  .calendarbox .calendar,
+  .clockbox h2 {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .calendarbox .calendar-cancel,
+  .clockbox .calendar-cancel {
+    border-radius: 0 0 10px 10px;
+  }
+}

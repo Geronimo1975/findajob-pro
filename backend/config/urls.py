@@ -74,6 +74,12 @@ api_v1_patterns = [
 
 urlpatterns = [
     path("api/v1/", include(api_v1_patterns)),
+    # Read-only n8n panel. MUST be listed BEFORE `admin.site.urls`:
+    # `AdminSite.get_urls` ends in a catch-all, so anything mounted after it is
+    # unreachable. The view itself is wrapped in `admin.site.admin_view`, so it
+    # carries the identical staff check and admin-login redirect as every other
+    # admin page — see apps/automation/admin.py for why it is not a ModelAdmin.
+    path("admin/automation/", include("apps.automation.urls")),
     path("admin/", admin.site.urls),
     # Email service provider callbacks (Brevo hard bounces / complaints ->
     # accounts.SuppressedAddress). Mounted outside /api/ because they are

@@ -1,0 +1,81 @@
+{% load i18n n8n_panel %}{% comment %}
+  ===========================================================================
+  admin/_n8n_panel.html — the n8n card on the Django admin index.
+
+  THIS FILE IS THE SINGLE COORDINATION POINT between the admin theme layer and
+  apps.automation. Whoever owns admin/index.html only has to do one thing:
+
+      {% include "admin/_n8n_panel.html" %}
+
+  It is deliberately self-sufficient — it takes nothing from the surrounding
+  context. The `n8n_panel_summary` tag (apps/automation/templatetags/n8n_panel.py)
+  reads the 60-second response cache and NEVER touches the network, so including
+  it can neither slow the admin index down nor break it when n8n is unreachable.
+
+  Styling reuses the same token chain as the panel itself; the stylesheet is
+  admin/automation/n8n-panel.css and is linked here in case the card is rendered
+  on a page that does not already load it (a duplicate <link> is a no-op).
+  ===========================================================================
+{% endcomment %}{% load static %}
+{% n8n_panel_summary as n8n %}
+
+<link rel="stylesheet" href="{% static 'admin/automation/n8n-panel.css' %}">
+
+<div class="fj-n8n">
+  <section class="fj-card" style="margin-bottom:0">
+    <div class="fj-wf-head">
+      <div class="fj-wf-ident">
+        <p class="fj-eyebrow">{% translate "AUTOMATION LAYER" %}</p>
+        <h3 class="fj-wf-name">{% translate "n8n workflows" %}</h3>
+      </div>
+      <div class="fj-wf-flags">
+        <span class="fj-pill fj-pill--readonly">{% translate "READ-ONLY" %}</span>
+      </div>
+    </div>
+
+    {% if not n8n.configured %}
+      <p class="fj-body">
+        {% blocktranslate trimmed %}
+          n8n is not configured. Set <code>N8N_URL</code> and <code>N8N_API_TOKEN</code>
+          to see the automation layer here.
+        {% endblocktranslate %}
+      </p>
+    {% elif not n8n.warm %}
+      <p class="fj-body">
+        {% translate "The scraping and generation workflows that feed this database run on n8n." %}
+      </p>
+    {% else %}
+      <div class="fj-stats" style="margin:16px 0 0">
+        <div class="fj-stat">
+          <span class="fj-stat-value">{{ n8n.total }}</span>
+          <span class="fj-stat-label">{% translate "WORKFLOWS" %}</span>
+        </div>
+        <div class="fj-stat">
+          <span class="fj-stat-value">{{ n8n.active }}</span>
+          <span class="fj-stat-label">{% translate "ACTIVE" %}</span>
+        </div>
+        <div class="fj-stat">
+          <span class="fj-stat-value">{{ n8n.related }}</span>
+          <span class="fj-stat-label">{% translate "FINDAJOB" %}</span>
+        </div>
+        <div class="fj-stat {% if n8n.dead %}fj-stat--danger{% endif %}">
+          <span class="fj-stat-value">{{ n8n.dead }}</span>
+          <span class="fj-stat-label">{% translate "DEAD WEBHOOKS" %}</span>
+        </div>
+      </div>
+      {% if n8n.dead %}
+        <p class="fj-meta fj-meta--warn" style="margin-top:12px">
+          {% blocktranslate count counter=n8n.dead trimmed %}
+            {{ counter }} findajob workflow still points at a webhook that no longer exists.
+          {% plural %}
+            {{ counter }} findajob workflows still point at webhooks that no longer exist.
+          {% endblocktranslate %}
+        </p>
+      {% endif %}
+    {% endif %}
+
+    <p class="fj-wf-link">
+      <a href="{% url 'automation:n8n-panel' %}">{% translate "Open the n8n panel" %} &rarr;</a>
+    </p>
+  </section>
+</div>

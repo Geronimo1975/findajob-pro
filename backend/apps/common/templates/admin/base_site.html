@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+{% comment %}
+  ===========================================================================
+  findajob.pro — brand chrome for the Django 6.0 admin.
+
+  This is the ONLY admin template this theme overrides. Everything else is
+  reached through CSS (admin/css/voltagent-admin.css). In particular:
+
+    * admin/login.html is NOT forked — the staff-console note it needed goes in
+      {% block pretitle %} below, guarded on the resolved URL name. Forking a
+      60-line vendor template for two sentences is not worth the upgrade drift.
+    * admin/index.html is NOT overridden. apps.automation already owns that
+      slot: its AppConfig.ready() points admin.site.index_template at
+      backend/templates/admin/findajob_index.html, which extends
+      "admin/index.html" and includes "admin/_n8n_panel.html". Adding a second
+      include here would render the n8n card twice — see the warning in that
+      file. The include is the agreed hand-off point between the two streams;
+      the theme's job is only to make it look right, which section 20 of the
+      stylesheet does.
+
+  Ordering requirement: `apps.common` must sit BEFORE the admin app in
+  INSTALLED_APPS or the APP_DIRS loader returns Django's own base_site.html and
+  this file never renders. config/settings/base.py pins that with a comment.
+  ===========================================================================
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('findajob.pro admin') }}{% endblock %}
+
+{% comment %}
+  Drop dark_mode.css and theme.js entirely.
+
+  The brand is dark-canvas only and has no light-mode counterpart, so the OS
+  theme cycle button is a control that can never do anything. dark_mode.css also
+  ships `@media (prefers-color-scheme: dark) :root { … }`, which is the block
+  that fights a forced-dark theme. Removing both here is cheaper than
+  out-specifying them on every page — though voltagent-admin.css §2 still does
+  out-specify them, so it stays correct if it is ever loaded next to a stock
+  base.html. theme.js's only other job is stamping data-theme on <html>; with it
+  gone the attribute is simply never set and the plain `:root` block applies.
+
+  base.html still emits admin/color_theme_toggle.html inside {% block userlinks %};
+  the stylesheet hides it (without dark_mode.css it would otherwise show all
+  three of its state icons at once).
+{% endcomment %}
+{% block dark-mode-vars %}{% endblock %}
+
+{% comment %}
+  The theme stylesheet is loaded HERE, from the responsive block, and not from
+  {% block extrastyle %}. change_list.html / change_form.html / login.html all
+  append their own stylesheets after `{{ block.super }}` in extrastyle, so a
+  link placed there would be overridden by changelists.css and forms.css.
+  Riding on `{{ block.super }}` in `responsive` puts this file after every
+  stylesheet Django loads, including responsive.css itself.
+{% endcomment %}
+{% block responsive %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/voltagent-admin.css' %}">
+{% endblock %}
+
+{% comment %}
+  The lockup is mark + live text, matching the app shell rather than the landing
+  page: this is inline SVG in a document that already loads Inter, so real text
+  is better for screen readers and for translation. The glyph is the same
+  lightning path as web/favicon.svg; the green ".pro" repeats web/auth.html's
+  `.brand span { color: var(--accent) }`.
+
+  The wordmark is NOT `{{ site_header }}`. FindajobAdminSite sets that to
+  "findajob.pro administration", which is right for <title> (it is used there,
+  in the title block above, via site_title) but is a sentence, not a lockup.
+  It is kept as the link's accessible name so the configured value still
+  reaches assistive tech.
+
+  Spelling note: web/auth.html and web/app.html currently ship the wordmark as
+  "Findjob.pro" (no "a"). The domain, CLAUDE.md and apps/common/admin_site.py
+  all say findajob.pro, so that is what is used here. Flagged in the handover —
+  if web/ is authoritative, this is the one string to change.
+{% endcomment %}
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}" title="{{ site_header }}">
+    <svg class="fj-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M17.5 4 8 18h6l-1.5 10L22 14h-6l1.5-10z" fill="currentColor"/>
+    </svg>
+    <span class="fj-word">findajob<span class="fj-dot">.pro</span></span>
+  </a>
+</div>
+<span class="fj-console-tag">{% translate "admin" %}</span>
+{% endblock %}
+
+{% comment %}
+  pretitle sits inside #content, above the title, on every page — and login.html
+  leaves it alone, which makes it the hook that avoids forking that template.
+  Guarding on the resolved URL name keeps it to the login screen only.
+
+  The note matters: findajob candidates sign in at /auth.html with a six-digit
+  e-mail OTP and have no password at all. Somebody landing on /admin/ needs to
+  know immediately that this asks for a different, staff-only credential —
+  otherwise the failure mode is a person typing their product e-mail here,
+  getting "please enter a correct e-mail and password", and filing a bug.
+{% endcomment %}
+{% block pretitle %}
+  {% if request.resolver_match.url_name == 'login' %}
+    <p class="fj-login-note">
+      <span class="fj-eyebrow">{% translate "Staff console" %}</span>
+      <span class="fj-note">{% blocktranslate trimmed %}
+        Staff credentials only. Candidates have no password — they sign in with
+        a six-digit e-mail code on the
+        <a href="/auth.html">findajob.pro sign-in page</a>.
+      {% endblocktranslate %}</span>
+    </p>
+  {% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block footer %}findajob.pro &middot; {% translate "staff console" %}{% endblock %}

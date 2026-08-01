@@ -15,6 +15,8 @@ from config.settings.base import (
     BASE_DIR,
     INSECURE_DEV_SECRET_KEY,
     SECRET_KEY,
+    STATIC_DIRECTORY_PERMISSIONS_MODE,
+    STATIC_FILE_PERMISSIONS_MODE,
     STORAGES,
 )
 
@@ -100,11 +102,30 @@ EMAIL_BACKEND = env.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBa
 # ---------------------------------------------------------------------------
 # Only Django admin/DRF assets are served from here; the product UI is static
 # files served directly by nginx from `web/`.
+#
+# STATIC_ROOT is the `static_data` named volume, shared read-only with the nginx
+# container, which serves it as /static/ (deploy/nginx.conf, deploy/README.md
+# §2a). That is what makes https://findajob.pro/admin/ render styled.
+#
+# ManifestStaticFilesStorage is what earns the 30-day cache nginx puts on
+# /static/: every URL the admin emits is content-hashed, so the filename changes
+# whenever the bytes do. The manifest itself (staticfiles.json) is written by
+# this same storage instance in Django 6.0, i.e. with the modes below; nginx
+# returns 404 for it explicitly rather than serving Django's internal map.
+#
+# The OPTIONS are NOT inherited from base: this dict replaces the whole
+# `staticfiles` entry. Dropping them puts collectstatic back on
+# FILE_UPLOAD_PERMISSIONS (0600) and every /static/ request becomes a 403 from
+# nginx, which runs as a different uid in a different container.
 
 STORAGES = {
     **STORAGES,
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+        "OPTIONS": {
+            "file_permissions_mode": STATIC_FILE_PERMISSIONS_MODE,
+            "directory_permissions_mode": STATIC_DIRECTORY_PERMISSIONS_MODE,
+        },
     },
 }
 
