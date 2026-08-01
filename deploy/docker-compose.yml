@@ -91,16 +91,20 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
-      # In-network service names. Overriding them means a stale POSTGRES_HOST
-      # left over from a laptop .env cannot break the container.
-      POSTGRES_HOST: db
+      # CONTAINER names, not the compose aliases `db` / `redis`. The api sits on
+      # the shared `edge` network too, and a bare alias resolves there as well:
+      # `redis` resolved to gethub-redis (172.29.0.6), another stack's cache, so
+      # every rate-limit call failed AUTH and verify-code fell closed — a
+      # permanent 429 on login. `db` happens not to collide today, which is
+      # exactly why it must not be left to luck either. Measured 2026-08-01.
+      POSTGRES_HOST: findajob-db
       POSTGRES_PORT: "5432"
       # Built from REDIS_PASSWORD so the password has exactly one home. The
       # `:?` form makes `docker compose up` fail loudly instead of silently
       # starting an unauthenticated cache.
       # NOTE: the password is used inside a URL — generate it with
       # `openssl rand -hex 32` so it needs no percent-encoding.
-      REDIS_URL: "redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in /root/findajob/.env}@redis:6379/0"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in /root/findajob/.env}@findajob-redis:6379/0"
       # collectstatic (and therefore Django's system checks, including the
       # boot-time mail check) runs on every container start. Set to 0 only for
       # one-off `docker compose run` management commands.
@@ -111,6 +115,11 @@ services:
       # volume from it, ownership included. nginx never serves this path — it
       # is delivered through an owner-checked Django view only.
       - media_data:/app/media
+      # `manage.py seed_legal` deliberately reads the SAME legal.js that nginx
+      # serves, so the hashed consent text can never drift from the rendered
+      # text. settings.REPO_ROOT is BASE_DIR.parent = "/" in this image, hence
+      # /web. Read-only: the API must never be able to rewrite the contract.
+      - ./web:/web:ro
     depends_on:
       db:
         condition: service_healthy
