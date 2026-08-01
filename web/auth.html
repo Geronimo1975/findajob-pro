@@ -313,6 +313,21 @@ const els = {
 };
 
 let lang = pickLang();
+let csrfReady = false;
+
+// Both primary buttons stay inert until the csrftoken cookie exists. Without
+// this a fast typist submits before bootstrapCsrf() resolves and is told
+// "connection problem" for what is really a missing cookie.
+function setSubmitEnabled(on) {
+  csrfReady = on;
+  for (const b of [els.btnSend, els.btnVerify]) {
+    if (!b) continue;
+    b.disabled = !on || submitting;
+    b.style.opacity = b.disabled ? '0.55' : '';
+    b.style.cursor = b.disabled ? 'not-allowed' : '';
+  }
+}
+
 let pending = null;    // {email, step:'code', sentAt, expiresAt, cooldownUntil}
 let ticker = null;
 let submitting = false;
@@ -541,7 +556,12 @@ async function withCsrfRetry(send) {
   try {
     return await send();
   } catch (err) {
-    if (err instanceof ApiError && err.status === 403 && err.code === 'http_error') {
+    // The backend's CSRF_FAILURE_VIEW returns the shared envelope with
+    // code 'csrf_failed'; 'http_error' only appears for a non-JSON 403.
+    // Both must re-prime, or a token that rotated while this page sat open
+    // rejects a perfectly valid code with no way back.
+    if (err instanceof ApiError && err.status === 403 &&
+        (err.code === 'csrf_failed' || err.code === 'http_error')) {
       await bootstrapCsrf();
       return await send();
     }
@@ -697,7 +717,13 @@ function mount() {
 
   // Prime the csrftoken cookie before any form can submit — the very first POST
   // is otherwise rejected for a token the browser was never given (spec §8).
-  bootstrapCsrf();
+  // Not awaited on purpose (mount() must stay synchronous for the bfcache
+  // re-entry path), so the buttons stay disabled until the cookie is in hand;
+  // a fast typist would otherwise beat the round trip and eat a 403.
+  setSubmitEnabled(false);
+  bootstrapCsrf()
+    .catch(() => {})            // withCsrfRetry is the second line of defence
+    .finally(() => setSubmitEnabled(true));
 
   if (new URLSearchParams(location.search).get('signedout') === '1') {
     clearPending();

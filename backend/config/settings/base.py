@@ -291,18 +291,34 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 200
 
 
 # ---------------------------------------------------------------------------
-# Email — Brevo through django-anymail
+# Email — Brevo SMTP relay (spec §1, §6.1)
 # ---------------------------------------------------------------------------
 # The OTP send path is synchronous inside the request with a hard timeout
 # (spec §1): no queue means no plaintext code sitting on Redis and no
 # "worker down = nobody can log in".
+#
+# Transport is the Brevo SMTP RELAY with Django's built-in SMTP backend, NOT the
+# Brevo HTTP API. Measured 2026-08-01: the API key is valid but Brevo enforces an
+# IP allowlist and rejects both this VPS and the developer laptop
+# ("unrecognised IP address"); the VPS egresses over IPv6, so allowlisting its
+# IPv4 alone fixes nothing. SMTP authenticates by credential, not source IP, and
+# is already proven from this host. The API key stays configured below for the
+# bounce/complaint webhook only — never for the login path.
 
 EMAIL_BACKEND = env.get(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
 
-#: Hard wall-clock budget for one send, in seconds. Anymail passes this through
-#: to `requests`; the console/locmem backends ignore it.
+EMAIL_HOST = env.get("EMAIL_HOST", "smtp-relay.brevo.com")
+EMAIL_PORT = env.get_int("EMAIL_PORT", 587)
+EMAIL_USE_TLS = env.get_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env.get_bool("EMAIL_USE_SSL", False)
+#: Brevo SMTP key — generated in the dashboard, NOT the `xkeysib-…` API key.
+EMAIL_HOST_USER = env.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env.get("EMAIL_HOST_PASSWORD", "")
+
+#: Hard wall-clock budget for one send, in seconds. Django's SMTP backend passes
+#: this to the socket; the console/locmem backends ignore it.
 EMAIL_TIMEOUT = env.get_int("EMAIL_TIMEOUT", 5)
 
 DEFAULT_FROM_EMAIL = env.get("DEFAULT_FROM_EMAIL", "findajob.pro <noreply@findajob.pro>")

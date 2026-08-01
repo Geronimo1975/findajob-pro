@@ -92,7 +92,7 @@ LANGUAGE_COOKIE_SECURE = True
 # empty Brevo key into a boot-time ERROR (spec §6).
 # ---------------------------------------------------------------------------
 
-EMAIL_BACKEND = env.get("EMAIL_BACKEND", "anymail.backends.brevo.EmailBackend")
+EMAIL_BACKEND = env.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 
 
 # ---------------------------------------------------------------------------
