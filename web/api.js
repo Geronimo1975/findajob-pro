@@ -116,6 +116,17 @@ export const logout = () => request(ENDPOINTS.authLogout, { method: 'POST' });
 
 export const getMe = () => request(ENDPOINTS.me);
 
+// --- account data (M2) — the dashboard reads. Same shapes as the fixtures
+// below; a brand-new account legitimately gets [] from /jobs/.
+export const getPlatforms = () => request(ENDPOINTS.platforms);
+
+export const getJobs = (params = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== '')
+  ).toString();
+  return request(ENDPOINTS.jobs + (qs ? '?' + qs : ''));
+};
+
 // SaaS plans — Claude.ai-style tier structure (per-seat for Team/Enterprise)
 export const PLANS = [
   { id: 'free',       name: 'Free',       monthly: 0,   yearly: 0,   seat: false, tagline: 'Try the tracker',
@@ -209,9 +220,11 @@ export const CONTACTS = [
 
 // Skill match — % of job tags covered by profile skills (mirrors GET /jobs/:id/skill-match/)
 export function skillMatch(job, profile) {
-  const matched = job.tags.filter(t => profile.skills.includes(t));
-  const missing = job.tags.filter(t => !profile.skills.includes(t));
-  return { score: Math.round((matched.length / job.tags.length) * 100), matched, missing };
+  const tags = job.tags || [];
+  const matched = tags.filter(t => profile.skills.includes(t));
+  const missing = tags.filter(t => !profile.skills.includes(t));
+  // Zero-guard: a real scraped job can arrive with no tags — 0%, never NaN%.
+  return { score: tags.length ? Math.round((matched.length / tags.length) * 100) : 0, matched, missing };
 }
 
 // Typeahead datasets — LinkedIn-style exact-term suggestions (GET /api/v1/suggest/?type=&q=)

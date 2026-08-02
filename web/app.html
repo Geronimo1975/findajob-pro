@@ -957,8 +957,52 @@ class Component extends DCLogic {
       }
     }
 
+    // A session upgrades the page from fixture data to the account's real
+    // data — and a brand-new account is genuinely EMPTY. Sample rows are for
+    // the anonymous demo only; showing another persona's jobs, documents or
+    // teammates to a signed-in user reads as a data leak, not a demo.
+    let live = null;
+    if (session) {
+      try {
+        const [jobs, platforms] = await Promise.all([
+          this.api.getJobs(), this.api.getPlatforms(),
+        ]);
+        live = { jobs, platforms };
+      } catch (err) {
+        // /jobs/ not deployed yet or unreachable: degrade to the demo below
+        // (UI-first) rather than a blank shell the user cannot interpret.
+        live = null;
+      }
+    }
+
     this.legal = await import('./legal.js');
     if (m) this.setState({ nav: 'legal', legalDoc: m[1] });
+    if (live) {
+      const email = (session.user && session.user.email) || '';
+      this.setState({
+        session,
+        jobs: live.jobs,
+        platforms: live.platforms,
+        docs: [],
+        contacts: [],
+        profile: {
+          name: '', headline: '', email, location: '',
+          years: 0, tone: 'direct', skills: [], summary: '',
+        },
+        integrations: this.api.INTEGRATIONS.map(i => ({ ...i, connected: false, key_hint: null })),
+        org: {
+          name: (session.org && session.org.name) || 'My workspace',
+          plan: 'free', cycle: 'monthly', seats_included: 1,
+          members: [{
+            id: (session.user && session.user.id) || 1,
+            name: email, email,
+            role: session.membership_role || 'owner',
+            status: 'active', last_active: 'now',
+          }],
+        },
+      });
+      return;
+    }
     this.setState({
       session,
       jobs: this.api.JOBS.map(j => ({ ...j })),
@@ -1466,10 +1510,17 @@ class Component extends DCLogic {
         },
         disconnect: () => this.setState(st => ({ integrations: st.integrations.map(x => x.id === ig.id ? { ...x, connected: false, key_hint: null } : x) })),
       })),
-      kpis, tabs, showSource, gridCols, rows, noRows: rows.length === 0 && s.jobs.length > 0,
+      // `profile` is only set once boot() resolves, so gating on it keeps the
+      // empty-state welcome from flashing while data is still loading.
+      kpis, tabs, showSource, gridCols, rows, noRows: rows.length === 0 && !!s.profile,
       q: s.q, onQ: e => this.setState({ q: e.target.value }),
-      noRowsMsg: q ? 'No jobs match "' + s.q + '".' : 'No jobs in this module yet.',
-      noRowsCtaLabel: q ? 'Clear search' : 'Check module settings →',
+      // Three distinct empty states: a search with no hits, a filtered module
+      // with no rows, and — for a signed-in account with nothing ingested yet —
+      // a welcome, never sample data.
+      noRowsMsg: q ? 'No jobs match "' + s.q + '".'
+        : s.jobs.length > 0 ? 'No jobs in this module yet.'
+        : 'Your workspace is ready. Job modules will start filling this list as soon as ingestion runs — configure your sources to begin.',
+      noRowsCtaLabel: q ? 'Clear search' : s.jobs.length > 0 ? 'Check module settings →' : 'Configure job modules →',
       noRowsCta: () => q ? this.setState({ q: '' }) : this.setState({ nav: 'settings' }),
       notifToggles: [
         ['digest', 'Daily digest', 'One morning email with new matches across all modules'],

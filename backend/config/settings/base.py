@@ -126,6 +126,10 @@ LOCAL_APPS = [
     # Model-less, read-only visibility into the n8n automation layer. Adds no
     # migrations and nothing else may import from it.
     "apps.automation",
+    # Send-as-user mailbox connections; see docs/2026-08-02-outbox-spec.md.
+    "apps.outbox",
+    # Platform catalog, scraped listings, applications, documents.
+    "apps.jobs",
 ]
 
 # ORDER IS LOAD-BEARING, in exactly one place: `apps.common` must precede the

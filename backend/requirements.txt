@@ -26,6 +26,13 @@ redis==8.1.0                  # REQUIRED by django.core.cache.backends.redis.Red
                               # (by design) and EVERY login returns 429. Invisible locally:
                               # the test settings use LocMemCache.
 
+cryptography==46.0.5          # Fernet encryption of MailboxConnection
+                              # credentials (apps/outbox/crypto.py). Added
+                              # 2026-08-02 by explicit decision with the outbox
+                              # spec: send-as-user requires storing the user's
+                              # SMTP/OAuth secrets, and they are never stored
+                              # in the clear. Key: OUTBOX_FERNET_KEY.
+
 # --- admin-only ------------------------------------------------------------
 django-import-export==4.4.1   # CSV/JSON export of the two evidence tables
                               # (legal.ConsentRecord, tenancy.AuditLog). Both are

@@ -182,6 +182,51 @@ class AdminTestCase(TestCase):
         )
         cls.group = Group.objects.create(name="Support")
 
+        from apps.outbox import crypto as outbox_crypto
+        from apps.outbox.models import MailboxConnection
+
+        cls.mailbox = MailboxConnection.objects.create(
+            org=cls.org,
+            user=cls.member,
+            provider="smtp",
+            email_address=cls.member.email,
+            display_name="Member One",
+            credentials_encrypted=outbox_crypto.encrypt_credentials(
+                {"host": "mail.example.de", "port": 587,
+                 "username": cls.member.email, "password": "fixture-secret",
+                 "use_tls": True}
+            ),
+        )
+
+        from django.core.files.base import ContentFile
+        from django.core.management import call_command
+
+        from apps.jobs.models import Application, Document as JobDocument, JobListing
+
+        call_command("seed_platforms", verbosity=0)
+        cls.job_listing = JobListing.objects.create(
+            platform_id="remoteok",
+            title="Senior Django Engineer",
+            company="Loftware",
+            url="https://remoteok.com/jobs/101",
+            tags=["Django", "DRF"],
+            platform_specific_data={"apply_email": "jobs@loftware.io"},
+            scraped_at=timezone.now(),
+        )
+        cls.job_document = JobDocument.objects.create(
+            org=cls.org,
+            user=cls.member,
+            name="CV — Backend (EN).pdf",
+            kind="cv",
+            file=ContentFile(b"%PDF-1.4", name="cv-backend-en.pdf"),
+        )
+        cls.application = Application.objects.create(
+            org=cls.org, user=cls.member, job_listing=cls.job_listing
+        )
+        cls.application.documents.add(
+            cls.job_document, through_defaults={"position": 0}
+        )
+
     def setUp(self) -> None:
         super().setUp()
         self.client.force_login(self.superuser)
