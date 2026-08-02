@@ -45,7 +45,6 @@
     h1 { font-size: 32px !important; line-height: 1.14 !important; letter-spacing: -0.4px !important; }
     h2 { font-size: 26px !important; }
     [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
-    [style*="repeat(4, 1fr)"][style*="text-align: center"] { grid-template-columns: repeat(2, 1fr) !important; }
   }
 </style>
 </helmet>
@@ -168,7 +167,12 @@
       <sc-if value="{{ obIsAccount }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; flex-direction: column; gap: 10px;">
           <input placeholder="{{ tEmail }}" value="{{ obEmail }}" onChange="{{ onObEmail }}" style="font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 13px; background: #1a1a1a;">
-          <input type="password" placeholder="{{ tPassword }}" value="{{ obPass }}" onChange="{{ onObPass }}" style="font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 13px; background: #1a1a1a;">
+          <!-- No password field. Sign-in is a six-digit e-mail code
+               (apps/accounts: request-code / verify-code), and end-user rows are
+               created with set_unusable_password(). A password box here asked for
+               a credential the product cannot use, most likely one reused from
+               somewhere else, and then dropped it on the floor — obFinishHref only
+               ever carried lang and e-mail. Do not re-add it. -->
           <div style="font-size: 11px; color: #8b949e; line-height: 1.5;">{{ tGdprNote }}</div>
         </div>
       </sc-if>
@@ -204,16 +208,16 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { lang: 'en', onboardingOpen: false, obStep: 0, obEmail: '', obPass: '', obCvName: '', obTitleDraft: 'Django Developer', obLocTypes: ['Remote'] };
+  state = { lang: 'en', onboardingOpen: false, obStep: 0, obEmail: '', obCvName: '', obTitleDraft: 'Django Developer', obLocTypes: ['Remote'] };
   renderVals() {
     const s = this.state;
     const T = {
       en: {
         eyebrow: 'AI-ASSISTED JOB APPLICATION PLATFORM', heroTitle: 'Every job board. One tracker. Applications that write themselves.',
-        heroSub: 'findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, made in Hamburg.',
+        heroSub: 'findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, hosted in Germany.',
         cta: 'Start free', demo: 'View live demo', noCard: 'Free plan · no credit card required', login: 'Log in', signup: 'Sign up',
         features: 'Features', pricing: 'Pricing', featuresTitle: 'Built like an engineering tool', pricingTitle: 'Simple pricing', choose: 'Choose plan',
-        email: 'E-mail address', password: 'Password (min. 8 characters)', continue: 'Continue', finish: 'Go to dashboard →',
+        email: 'E-mail address', continue: 'Continue', finish: 'Go to dashboard →',
         gdprNote: 'By signing up you accept our Terms and Privacy Policy (GDPR). Your data stays on EU servers.',
         titlePh: 'Desired job title, e.g. Django Developer',
         obTitles: [['Create your account', 'One account, all your applications.'], ['Upload your CV', 'We parse it into your master profile — skills, experience, languages. You can edit everything later.'], ['What are you looking for?', 'This drives the scraping filters and skill matching from day one.']],
@@ -230,10 +234,10 @@ class Component extends DCLogic {
       },
       de: {
         eyebrow: 'KI-GESTÜTZTE BEWERBUNGSPLATTFORM', heroTitle: 'Alle Jobbörsen. Ein Tracker. Bewerbungen, die sich selbst schreiben.',
-        heroSub: 'findajob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, aus Hamburg.',
+        heroSub: 'findajob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, gehostet in Deutschland.',
         cta: 'Kostenlos starten', demo: 'Live-Demo ansehen', noCard: 'Free-Tarif · keine Kreditkarte nötig', login: 'Anmelden', signup: 'Registrieren',
         features: 'Funktionen', pricing: 'Preise', featuresTitle: 'Gebaut wie ein Engineering-Tool', pricingTitle: 'Einfache Preise', choose: 'Tarif wählen',
-        email: 'E-Mail-Adresse', password: 'Passwort (mind. 8 Zeichen)', continue: 'Weiter', finish: 'Zum Dashboard →',
+        email: 'E-Mail-Adresse', continue: 'Weiter', finish: 'Zum Dashboard →',
         gdprNote: 'Mit der Registrierung akzeptieren Sie AGB und Datenschutzerklärung (DSGVO). Ihre Daten bleiben auf EU-Servern.',
         titlePh: 'Wunsch-Jobtitel, z. B. Django Developer',
         obTitles: [['Konto erstellen', 'Ein Konto, alle Ihre Bewerbungen.'], ['Lebenslauf hochladen', 'Wir lesen ihn in Ihr Master-Profil ein — Skills, Erfahrung, Sprachen. Alles später editierbar.'], ['Wonach suchen Sie?', 'Steuert Scraping-Filter und Skill-Matching vom ersten Tag an.']],
@@ -250,10 +254,10 @@ class Component extends DCLogic {
       },
       ro: {
         eyebrow: 'PLATFORMĂ DE APLICARE ASISTATĂ DE AI', heroTitle: 'Toate site-urile de joburi. Un singur tracker. Aplicări care se scriu singure.',
-        heroSub: 'findajob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, făcut în Hamburg.',
+        heroSub: 'findajob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, găzduit în Germania.',
         cta: 'Începe gratuit', demo: 'Vezi demo live', noCard: 'Plan gratuit · fără card', login: 'Autentificare', signup: 'Înregistrare',
         features: 'Funcții', pricing: 'Prețuri', featuresTitle: 'Construit ca un tool de inginerie', pricingTitle: 'Prețuri simple', choose: 'Alege planul',
-        email: 'Adresă de e-mail', password: 'Parolă (min. 8 caractere)', continue: 'Continuă', finish: 'Spre dashboard →',
+        email: 'Adresă de e-mail', continue: 'Continuă', finish: 'Spre dashboard →',
         gdprNote: 'Prin înregistrare accepți Termenii și Politica de confidențialitate (GDPR). Datele tale rămân pe servere din UE.',
         titlePh: 'Titlul dorit, ex. Django Developer',
         obTitles: [['Creează-ți contul', 'Un cont, toate aplicările tale.'], ['Încarcă CV-ul', 'Îl transformăm în profilul tău master — skill-uri, experiență, limbi. Editezi totul ulterior.'], ['Ce cauți?', 'Setează filtrele de scraping și skill matching din prima zi.']],
@@ -280,7 +284,7 @@ class Component extends DCLogic {
     return {
       tEyebrow: tr.eyebrow, tHeroTitle: tr.heroTitle, tHeroSub: tr.heroSub, tCta: tr.cta, tDemo: tr.demo, tNoCard: tr.noCard,
       tLogin: tr.login, tSignup: tr.signup, tFeatures: tr.features, tPricing: tr.pricing, tFeaturesTitle: tr.featuresTitle,
-      tPricingTitle: tr.pricingTitle, tChoose: tr.choose, tEmail: tr.email, tPassword: tr.password, tContinue: tr.continue,
+      tPricingTitle: tr.pricingTitle, tChoose: tr.choose, tEmail: tr.email, tContinue: tr.continue,
       tFinish: tr.finish, tGdprNote: tr.gdprNote, tTitlePh: tr.titlePh,
       langToggles: ['en', 'de', 'ro'].map(l => ({
         label: l.toUpperCase(),
@@ -321,9 +325,8 @@ class Component extends DCLogic {
       obTitle: ob[0], obSub: ob[1],
       obIsAccount: s.obStep === 0, obIsCv: s.obStep === 1, obIsPrefs: s.obStep === 2,
       obIsLast: s.obStep === 2, obNotLast: s.obStep < 2,
-      obEmail: s.obEmail, obPass: s.obPass,
+      obEmail: s.obEmail,
       onObEmail: e => this.setState({ obEmail: e.target.value }),
-      onObPass: e => this.setState({ obPass: e.target.value }),
       obCvLabel: s.obCvName || tr.cvLabel,
       onObCv: e => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ obCvName: '✓ ' + f.name, obStep: 2 }); },
       obTitleDraft: s.obTitleDraft,
