@@ -1,6 +1,7 @@
 """Unit tests for the verify_platform framework. No live network."""
 from __future__ import annotations
 
+import email as email_lib
 import json
 from io import StringIO
 from unittest import mock
@@ -137,3 +138,42 @@ class TestErrorShape:
         assert not is_error_shape({"detail": "Not found."})
         assert not is_error_shape({"error": "nope"})
         assert not is_error_shape(None)
+
+
+class TestOtpExtraction:
+    def test_extracts_leading_six_digits(self):
+        from apps.common.verify.gmail import extract_otp
+
+        assert extract_otp("482913 is your findajob.pro login code") == "482913"
+
+    def test_german_subject(self):
+        from apps.common.verify.gmail import extract_otp
+
+        assert extract_otp("482913 ist Ihr Anmeldecode für findajob.pro") == "482913"
+
+    def test_no_code(self):
+        from apps.common.verify.gmail import extract_otp
+
+        assert extract_otp("Welcome to findajob.pro") is None
+
+
+class TestAuthResults:
+    def test_parses_pass_verdicts(self):
+        from apps.common.verify.gmail import auth_results
+
+        raw = (
+            "Authentication-Results: mx.google.com;\n"
+            " spf=pass (google.com: domain of x designates y) smtp.mailfrom=x;\n"
+            " dkim=pass header.i=@mail.findajob.pro;\n"
+            " dmarc=pass (p=NONE) header.from=findajob.pro\n"
+            "From: findajob.pro <noreply@findajob.pro>\n"
+            "Subject: t\n\nbody\n"
+        )
+        msg = email_lib.message_from_string(raw)
+        assert auth_results(msg) == {"spf": "pass", "dkim": "pass", "dmarc": "pass"}
+
+    def test_missing_header(self):
+        from apps.common.verify.gmail import auth_results
+
+        msg = email_lib.message_from_string("Subject: t\n\nbody\n")
+        assert auth_results(msg) == {}
