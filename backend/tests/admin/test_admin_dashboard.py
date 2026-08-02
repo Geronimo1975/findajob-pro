@@ -68,6 +68,30 @@ class KpiEmptyDatabaseTests(AdminTestCase):
         self.assertEqual(kpis["mailboxes"], 0)
         self.assertEqual(kpis["suppressed"], 0)
 
+    def test_users_and_organizations_at_zero(self):
+        """Drive users and organizations down to their true floor.
+
+        ``users`` can never reach 0 in this test: the request itself is made
+        by a logged-in superuser (see ``AdminTestCase``), and a superuser row
+        always exists once one has authenticated. So the honest floor for
+        "users" is 1 — just the operator making the request — not 0. Deleting
+        every other user and every organization (memberships cascade off
+        Organization) still exercises the zero-count path for
+        "organizations" and confirms "users" bottoms out at exactly 1 rather
+        than silently hiding a broken query behind a nonzero fixture count.
+        """
+        from apps.accounts.models import User
+        from apps.tenancy.models import Organization
+
+        User.objects.exclude(pk=self.superuser.pk).delete()
+        Organization.objects.all().delete()
+
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 200)
+        kpis = {k["key"]: k["value"] for k in response.context["fj_kpis"]}
+        self.assertEqual(kpis["users"], 1)
+        self.assertEqual(kpis["organizations"], 0)
+
 
 class SidebarTests(AdminTestCase):
     def test_sidebar_on_index_and_changelist(self):

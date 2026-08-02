@@ -146,7 +146,9 @@ class FindajobAdminSite(admin.AdminSite):
         Deliberately cross-tenant: this is the operator's console. Org-scoped
         models are read through the greppable ``.unscoped()``; the rest through
         their plain managers. Each count is independent so one broken app never
-        blanks the whole row.
+        blanks the whole row: every count runs through :meth:`_fj_count`, which
+        swallows any exception from that one query and reports "—" for that
+        card only, leaving the rest of the row intact.
         """
         from django.utils import timezone
 
@@ -158,18 +160,36 @@ class FindajobAdminSite(admin.AdminSite):
         today = timezone.localdate()
         return [
             {"key": "users", "label": _("Users"),
-             "value": User.objects.count()},
+             "value": self._fj_count(lambda: User.objects.count())},
             {"key": "organizations", "label": _("Organizations"),
-             "value": Organization.objects.count()},
+             "value": self._fj_count(lambda: Organization.objects.count())},
             {"key": "job_listings", "label": _("Job listings"),
-             "value": JobListing.objects.count()},
+             "value": self._fj_count(lambda: JobListing.objects.count())},
             {"key": "otps_today", "label": _("OTP codes today"),
-             "value": EmailOTP.objects.filter(created_at__date=today).count()},
+             "value": self._fj_count(
+                 lambda: EmailOTP.objects.filter(created_at__date=today).count()
+             )},
             {"key": "mailboxes", "label": _("Mailbox connections"),
-             "value": MailboxConnection.objects.unscoped().count()},
+             "value": self._fj_count(
+                 lambda: MailboxConnection.objects.unscoped().count()
+             )},
             {"key": "suppressed", "label": _("Suppressed addresses"),
-             "value": SuppressedAddress.objects.count()},
+             "value": self._fj_count(lambda: SuppressedAddress.objects.count())},
         ]
+
+    @staticmethod
+    def _fj_count(query) -> int | str:
+        """Run one KPI query, returning "—" instead of raising.
+
+        A broken migration, a dropped table, or a bad query on one model must
+        not blank the whole dashboard row for the others. Caught broadly on
+        purpose — a KPI card has no business surfacing a stack trace to the
+        operator; the em dash is the honest "unavailable" signal.
+        """
+        try:
+            return query()
+        except Exception:  # noqa: BLE001 - deliberately broad, see docstring
+            return "—"
 
     def each_context(self, request):
         """Sidebar visibility/active-state context, shared by every page.
@@ -191,12 +211,13 @@ class FindajobAdminSite(admin.AdminSite):
         context["fj_app_labels"] = labels
 
         path = request.path
+        admin_index = reverse("admin:index")
         active = ""
-        if path == reverse("admin:index"):
+        if path == admin_index:
             active = "dashboard"
         else:
             for key, app_label, _d, _label in SIDEBAR_ITEMS:
-                if app_label and path.startswith(f"/admin/{app_label}/"):
+                if app_label and path.startswith(f"{admin_index}{app_label}/"):
                     active = key
                     break
         context["fj_active"] = active

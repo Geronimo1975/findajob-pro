@@ -12,8 +12,10 @@
         <a class="fj-nav-item" data-nav="dashboard"{% if fj_active == "dashboard" %} aria-current="page"{% endif %}
            href="{% url 'admin:index' %}" title="{{ item.label }}">
       {% elif item.key == "automation" %}
+        {# apps.automation.urls declares app_name="automation" and a named #}
+        {# "n8n-panel" url, so it is reversible even though it has no models. #}
         <a class="fj-nav-item" data-nav="automation"{% if fj_active == "automation" %} aria-current="page"{% endif %}
-           href="/admin/automation/" title="{{ item.label }}">
+           href="{% url 'automation:n8n-panel' %}" title="{{ item.label }}">
       {% else %}
         <a class="fj-nav-item" data-nav="{{ item.key }}"{% if fj_active == item.key %} aria-current="page"{% endif %}
            href="{% url 'admin:app_list' app_label=item.app_label %}"
@@ -29,7 +31,9 @@
     {% endif %}
   {% endfor %}
   <button type="button" class="fj-sidebar-toggle" id="fj-sidebar-toggle"
-          aria-controls="fj-sidebar"
+          aria-controls="fj-sidebar" aria-expanded="true"
+          data-label-expand="{% translate 'Expand sidebar' %}"
+          data-label-collapse="{% translate 'Collapse sidebar' %}"
           title="{% translate 'Collapse sidebar' %}">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
