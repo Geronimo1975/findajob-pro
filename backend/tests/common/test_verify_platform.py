@@ -349,3 +349,107 @@ class TestOutbox:
         report = outbox_mod.run(ctx)
         assert session.post.call_args_list == []
         assert any(r.status == "SKIP" and "differs" in r.detail for r in report.results)
+
+
+class TestAutomation:
+    def test_gated_is_pass(self):
+        from apps.common.verify import automation as automation_mod
+
+        # anonymous hit: Traefik basicAuth 401, or Django admin login redirect
+        resp = mock.Mock(status_code=401, url="https://x/admin/automation/")
+        with mock.patch("apps.common.verify.automation.requests.get", return_value=resp):
+            ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+            report = automation_mod.run(ctx)
+        assert report.failed is False
+        assert any(r.status == "PASS" and "gated" in r.name for r in report.results)
+
+    def test_open_panel_is_fail(self):
+        from apps.common.verify import automation as automation_mod
+
+        resp = mock.Mock(status_code=200, url="https://x/admin/automation/",
+                         text="<h1>n8n panel</h1>")
+        with mock.patch("apps.common.verify.automation.requests.get", return_value=resp):
+            ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+            assert automation_mod.run(ctx).failed is True
+
+
+class TestN8n:
+    def test_skips_without_creds(self):
+        from apps.common.verify import n8n as n8n_mod
+
+        ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+        report = n8n_mod.run(ctx)
+        assert report.failed is False
+        assert all(r.status == "SKIP" for r in report.results)
+
+    def test_inactive_workflow_fails(self):
+        from apps.common.verify import n8n as n8n_mod
+
+        session = mock.Mock()
+        wf_resp = mock.Mock(status_code=200)
+        wf_resp.json.return_value = {"data": [
+            {"id": "1", "name": "findajob scrape", "active": False}]}
+        exec_resp = mock.Mock(status_code=200)
+        exec_resp.json.return_value = {"data": []}
+        with mock.patch("apps.common.verify.n8n.requests.get",
+                        side_effect=[wf_resp, exec_resp]):
+            ctx = VerifyContext(target="https://x", session=session,
+                                env={"N8N_VERIFY_URL": "https://n8n.example",
+                                     "N8N_VERIFY_API_KEY": "k"})
+            report = n8n_mod.run(ctx)
+        assert report.failed is True
+
+    def test_success_execution_passes(self):
+        from apps.common.verify import n8n as n8n_mod
+
+        session = mock.Mock()
+        wf_resp = mock.Mock(status_code=200)
+        wf_resp.json.return_value = {"data": [
+            {"id": "1", "name": "findajob scrape", "active": True}]}
+        exec_resp = mock.Mock(status_code=200)
+        exec_resp.json.return_value = {"data": [{"status": "success"}]}
+        with mock.patch("apps.common.verify.n8n.requests.get",
+                        side_effect=[wf_resp, exec_resp]):
+            ctx = VerifyContext(target="https://x", session=session,
+                                env={"N8N_VERIFY_URL": "https://n8n.example",
+                                     "N8N_VERIFY_API_KEY": "k"})
+            report = n8n_mod.run(ctx)
+        assert report.failed is False
+        by_name = {r.name: r.status for r in report.results}
+        assert by_name["workflow 'findajob scrape' last execution"] == "PASS"
+
+    def test_crashed_execution_fails(self):
+        from apps.common.verify import n8n as n8n_mod
+
+        session = mock.Mock()
+        wf_resp = mock.Mock(status_code=200)
+        wf_resp.json.return_value = {"data": [
+            {"id": "1", "name": "findajob scrape", "active": True}]}
+        exec_resp = mock.Mock(status_code=200)
+        exec_resp.json.return_value = {"data": [{"status": "crashed"}]}
+        with mock.patch("apps.common.verify.n8n.requests.get",
+                        side_effect=[wf_resp, exec_resp]):
+            ctx = VerifyContext(target="https://x", session=session,
+                                env={"N8N_VERIFY_URL": "https://n8n.example",
+                                     "N8N_VERIFY_API_KEY": "k"})
+            report = n8n_mod.run(ctx)
+        assert report.failed is True
+
+    def test_unknown_status_skips(self):
+        from apps.common.verify import n8n as n8n_mod
+
+        session = mock.Mock()
+        wf_resp = mock.Mock(status_code=200)
+        wf_resp.json.return_value = {"data": [
+            {"id": "1", "name": "findajob scrape", "active": True}]}
+        exec_resp = mock.Mock(status_code=200)
+        exec_resp.json.return_value = {"data": [{"status": "waiting"}]}
+        with mock.patch("apps.common.verify.n8n.requests.get",
+                        side_effect=[wf_resp, exec_resp]):
+            ctx = VerifyContext(target="https://x", session=session,
+                                env={"N8N_VERIFY_URL": "https://n8n.example",
+                                     "N8N_VERIFY_API_KEY": "k"})
+            report = n8n_mod.run(ctx)
+        assert report.failed is False
+        by_name = {r.name: r.status for r in report.results}
+        assert by_name["workflow 'findajob scrape' last execution"] == "SKIP"
