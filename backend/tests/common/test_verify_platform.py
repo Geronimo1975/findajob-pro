@@ -314,6 +314,21 @@ class TestOutbox:
         report = outbox_mod.run(self._ctx(resp))
         assert any(r.status == "SKIP" and "not deployed" in r.detail for r in report.results)
 
+    def test_skip_when_not_deployed_canonical_404(self):
+        """Any canonical-shaped 404 other than mailbox_not_connected is also
+        "not deployed" — handler404 (apps/common/errors.py::api_page_not_found)
+        wraps every unmatched /api/ route in the same error shape as a real
+        view's 404, so an unmounted apps.outbox.urls looks identical to a
+        genuinely-missing sub-path.
+        """
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=404)
+        resp.json.return_value = {"error": {"code": "not_found", "detail": "Not found."}}
+        report = outbox_mod.run(self._ctx(resp))
+        assert report.failed is False
+        assert any(r.status == "SKIP" and "not deployed" in r.detail for r in report.results)
+
     def test_skip_when_no_mailbox_connected(self):
         from apps.common.verify import outbox as outbox_mod
 
