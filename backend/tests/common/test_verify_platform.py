@@ -123,3 +123,17 @@ class TestFrontendHelpers:
         calls = [c for c in session.get.call_args_list if "vendor" in str(c)]
         assert len(calls) == 1
         assert calls[0][0][0] == "https://findajob.pro/vendor/react.production.min.js"
+
+
+class TestErrorShape:
+    def test_canonical_shape(self):
+        from apps.common.verify.api_gate import is_error_shape
+
+        assert is_error_shape({"error": {"code": "not_authenticated", "detail": "x"}})
+
+    def test_rejects_drf_default(self):
+        from apps.common.verify.api_gate import is_error_shape
+
+        assert not is_error_shape({"detail": "Not found."})
+        assert not is_error_shape({"error": "nope"})
+        assert not is_error_shape(None)
