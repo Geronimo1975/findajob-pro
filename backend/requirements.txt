@@ -6,7 +6,13 @@
 #
 # Nothing may be added here without an explicit decision: the approved list is
 # Django, djangorestframework, psycopg[binary], django-anymail[brevo],
-# python-dotenv, gunicorn. Everything else below is a transitive pin.
+# python-dotenv, gunicorn, django-import-export, django-object-actions.
+# Everything else below is a transitive pin.
+#
+# The two admin packages were added 2026-08-02 by explicit decision. They are
+# admin-only: no model, no migration, no API surface, and nothing under
+# `apps/*/views.py` or `web/` imports either of them. If both were removed, the
+# only breakage would be two admin actions and one button.
 
 Django==6.0.7                 # >=6.0,<6.2
 djangorestframework==3.17.1
@@ -20,7 +26,28 @@ redis==8.1.0                  # REQUIRED by django.core.cache.backends.redis.Red
                               # (by design) and EVERY login returns 429. Invisible locally:
                               # the test settings use LocMemCache.
 
+# --- admin-only ------------------------------------------------------------
+django-import-export==4.4.1   # CSV/JSON export of the two evidence tables
+                              # (legal.ConsentRecord, tenancy.AuditLog). Both are
+                              # append-only records somebody eventually has to
+                              # hand to a lawyer or an auditor, and the
+                              # alternative is a `manage.py shell` one-liner run
+                              # by whoever is awake. Export only: `ImportMixin`
+                              # is deliberately never used — an import path into
+                              # an append-only ledger would defeat its purpose.
+django-object-actions==5.1.2  # Per-object buttons on the change form. First
+                              # user: "un-suppress" on accounts.SuppressedAddress,
+                              # which was previously "delete the row and hope the
+                              # operator knew that was the supported gesture".
+
 # --- transitive, pinned for reproducible builds ---------------------------
+tablib==3.10.0                # django-import-export's serialisation layer.
+                              # openpyxl is NOT installed, so XLS/XLSX/ODS are
+                              # absent from tablib's format list — see the
+                              # IMPORT_EXPORT_FORMATS note in settings/base.py.
+diff-match-patch==20241021    # django-import-export dependency; used only by
+                              # its import-preview diff, which this project
+                              # never renders.
 asgiref==3.12.1
 sqlparse==0.5.5
 psycopg-binary==3.3.4

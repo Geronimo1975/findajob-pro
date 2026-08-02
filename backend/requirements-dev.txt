@@ -10,3 +10,17 @@
 
 pytest==9.1.1
 pytest-django==4.12.0
+
+# Query profiler for the admin. It is here rather than in requirements.txt on
+# purpose: it injects middleware and a `__debug__/` URL tree, and its own docs
+# call running it with DEBUG=False a security problem. `config.settings.dev`
+# wires it, `config.settings.prod` never imports it, and both the settings hook
+# and the URL mount are guarded by `try: import debug_toolbar` so a checkout
+# with only requirements.txt installed still boots.
+#
+# Why it earns a slot at all: the expensive things in a Django admin — the
+# per-row FK query, the two COUNT(*) per changelist, an unbounded SELECT
+# DISTINCT behind a filter — are all invisible from the page. This is the only
+# way to see them without guessing, and `apps.common.admin_support` exists to
+# fix exactly what it reports.
+django-debug-toolbar==7.0.0

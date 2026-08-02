@@ -33,12 +33,57 @@ from django.contrib import admin
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 
-from apps.common.admin_support import EMPTY, ReadOnlyAdminMixin, scrollable_block
+from apps.common.admin_integrations import EvidenceExportAdminMixin, ModelResource
+from apps.common.admin_support import (
+    EMPTY,
+    LargeTableAdminMixin,
+    ReadOnlyAdminMixin,
+    scrollable_block,
+)
 from apps.legal.models import ConsentRecord, LegalDocument
 
 #: Characters of ``content_hash`` shown in list columns. Twelve is unambiguous
 #: in practice and short enough to scan a column of them.
 HASH_PREFIX_LENGTH = 12
+
+
+class ConsentRecordResource(ModelResource):
+    """Column list for the CSV/JSON export of the consent ledger.
+
+    Enumerated rather than left to the library's default ("every concrete
+    field"), for two reasons that pull in opposite directions and both matter:
+
+    * **Nothing may go missing.** This is the Art. 7(1) *Nachweis*: the export
+      has to carry the whole evidentiary chain — who, when, which decision,
+      and against which document version and content hash — or it proves
+      nothing. Hence ``content_hash`` in full, matching the changelist.
+    * **Nothing may appear by accident.** A field added to the model later
+      would otherwise land in every future export with no review. Adding it
+      here is a one-line, deliberate act.
+
+    ``user`` is exported as the email address rather than the primary key: the
+    reader of this file is a human comparing it against a support ticket, and
+    an integer that only resolves against a table they do not have is not
+    evidence of anything. The traversal costs no extra query — the changelist's
+    ``list_select_related`` is already in force on the exported queryset.
+    """
+
+    class Meta:
+        model = ConsentRecord
+        fields = (
+            "id",
+            "created_at",
+            "user__email",
+            "type",
+            "granted",
+            "doc_version",
+            "doc_lang",
+            "content_hash",
+            "ui_language",
+            "ip",
+            "user_agent",
+        )
+        export_order = fields
 
 
 @admin.register(LegalDocument)
@@ -183,15 +228,32 @@ class LegalDocumentAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(ConsentRecord)
-class ConsentRecordAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
-    """The GDPR consent ledger. Append-only, therefore view-only."""
+class ConsentRecordAdmin(
+    EvidenceExportAdminMixin,
+    LargeTableAdminMixin,
+    ReadOnlyAdminMixin,
+    admin.ModelAdmin,
+):
+    """The GDPR consent ledger. Append-only, therefore view-only.
+
+    Grows with logins, not with the code base — one row per consent decision,
+    forever, and nothing prunes it — so it takes ``LargeTableAdminMixin``:
+    no second ``COUNT(*)`` for the "(N total)" hint, and an estimated first one
+    on the unfiltered page. Filtered and searched views still count exactly,
+    which is what an operator answering a question is looking at.
+    """
 
     admin_note = _(
         "Append-only evidence (Art. 7(1) GDPR): the model refuses an UPDATE, so "
         "this admin offers no form at all. A consent decision is corrected by "
         "appending a new record — granted=False to revoke — never by editing "
-        "history. Records are erased only by deleting the user (Art. 17)."
+        "history. Records are erased only by deleting the user (Art. 17). "
+        "Select rows and use the export action to hand a copy to a lawyer or "
+        "an auditor. Every completed export is itself recorded in the audit "
+        "log, as admin.export."
     )
+
+    resource_classes = [ConsentRecordResource]
 
     list_display = (
         "created_at",
@@ -209,7 +271,7 @@ class ConsentRecordAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
     search_fields = ("user__email", "type", "doc_version", "content_hash")
     date_hierarchy = "created_at"
     ordering = ("-created_at", "-id")
-    list_per_page = 50
+    # `list_per_page` comes from LargeTableAdminMixin.
     # `user` is the only FK and it is rendered in every row. `list_select_related`
     # replaces the hand-written get_queryset override this file used to carry.
     # There is no raw_id/autocomplete widget to configure: the change form is

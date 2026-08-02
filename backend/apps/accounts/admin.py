@@ -35,11 +35,15 @@ from __future__ import annotations
 
 from django.apps import apps as django_apps
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, Q
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.timesince import timesince
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
+from django_object_actions import action as object_action
 
 from apps.accounts.models import (
     MAX_OTP_ATTEMPTS,
@@ -47,9 +51,11 @@ from apps.accounts.models import (
     SuppressedAddress,
     User,
 )
+from apps.common.admin_integrations import ObjectActionsAdminMixin
 from apps.common.admin_support import (
     EMPTY,
     AdminNoteMixin,
+    LargeTableAdminMixin,
     short_digest,
 )
 
@@ -335,13 +341,17 @@ class OTPStateFilter(admin.SimpleListFilter):
 
 
 @admin.register(EmailOTP)
-class EmailOTPAdmin(AdminNoteMixin, admin.ModelAdmin):
+class EmailOTPAdmin(LargeTableAdminMixin, AdminNoteMixin, admin.ModelAdmin):
     """Read-only + delete. Answers "did the code go out, and what happened to it?"
 
     Add and change are off: a staff user who could write ``code_hash`` could
     mint a working code for any address, which is a complete authentication
     bypass. Delete stays on — deleting a row is indistinguishable from the code
     expiring, and it is the mechanism behind :meth:`purge_expired`.
+
+    Up to three live codes per address per login attempt (spec §5) and nothing
+    deletes them but :meth:`purge_expired`, so this table grows with traffic
+    rather than with the number of accounts — hence ``LargeTableAdminMixin``.
     """
 
     #: ``code_hash`` is deliberately absent from ``search_fields`` so the
@@ -384,7 +394,7 @@ class EmailOTPAdmin(AdminNoteMixin, admin.ModelAdmin):
     search_fields = ("email", "request_ip")
     date_hierarchy = "created_at"
     ordering = ("-created_at", "-id")
-    list_per_page = 50
+    # `list_per_page` comes from LargeTableAdminMixin.
     actions = ("purge_expired",)
     # No FK on this model at all — deliberately, so that `request-code` cannot
     # look a user up and is therefore branch-free (spec §6). Nothing to
@@ -495,7 +505,9 @@ class EmailOTPAdmin(AdminNoteMixin, admin.ModelAdmin):
 
 
 @admin.register(SuppressedAddress)
-class SuppressedAddressAdmin(AdminNoteMixin, admin.ModelAdmin):
+class SuppressedAddressAdmin(
+    ObjectActionsAdminMixin, AdminNoteMixin, admin.ModelAdmin
+):
     """The one place a wrongly-suppressed address can be released.
 
     Deleting a row here is the supported un-suppress: the next
@@ -507,12 +519,19 @@ class SuppressedAddressAdmin(AdminNoteMixin, admin.ModelAdmin):
     webhook (or by ``SuppressedAddress.suppress()``); a hand-typed address here
     would be a login lockout created by a typo. Change stays on so a row can be
     re-classified — that is how ``manual`` is reachable.
+
+    The **Un-suppress** button is that delete, named for what it means. The
+    gesture was previously "delete the row", which is correct and completely
+    unguessable: an operator holding a ticket that says *"I never get the login
+    email"* has no reason to believe the fix is to delete a record they did not
+    know existed. The button does exactly what the delete does — same row, same
+    effect — and says what it is for.
     """
 
     admin_note = _(
-        "Written by the Brevo bounce/complaint webhook. Deleting a row is the "
-        "supported way to un-suppress an address: the next login request for it "
-        "will be mailed again."
+        "Written by the Brevo bounce/complaint webhook. Open a row and use "
+        "Un-suppress to release an address: the next login request for it will "
+        "be mailed again. (Deleting the row does the same thing.)"
     )
 
     list_display = ("email", "reason", "suppressed_for", "created_at", "updated_at")
@@ -522,6 +541,12 @@ class SuppressedAddressAdmin(AdminNoteMixin, admin.ModelAdmin):
     ordering = ("-created_at", "-id")
     date_hierarchy = "created_at"
     list_per_page = 50
+    # Buttons on the change form only. There is deliberately no changelist
+    # equivalent: un-suppressing is a per-address decision made while reading
+    # the reason and the age, and a bulk button over a filtered selection is a
+    # way to undo a whole morning of bounce handling with one click.
+    change_actions = ("unsuppress",)
+    changelist_actions = ()
     # No FK: a suppression is about an address, not an account — spec §6 keeps
     # the mail path branch-free, so it must work for addresses with no user.
     # Nothing to `list_select_related`.
@@ -556,3 +581,42 @@ class SuppressedAddressAdmin(AdminNoteMixin, admin.ModelAdmin):
 
     def has_add_permission(self, request) -> bool:
         return False
+
+    @object_action(
+        label=_("Un-suppress"),
+        description=_(
+            "Delete this suppression so the address can be mailed again. "
+            "It will be re-suppressed automatically if it bounces again."
+        ),
+        attrs={"class": "deletelink"},
+    )
+    def unsuppress(self, request, obj: SuppressedAddress):
+        """Release the address by deleting its suppression row.
+
+        Deliberately identical in effect to the delete button next to it —
+        there is no second mechanism, and no "unsuppressed" flag on the model,
+        because ``SuppressedAddress.is_suppressed`` asks whether a row exists.
+        A flag would mean two ways to be suppressed and a new way to be wrong.
+
+        Guarded by ``has_delete_permission`` rather than by nothing:
+        django-object-actions does not apply admin permissions to its buttons
+        (there is no ``allowed_permissions`` equivalent), so a staff user with
+        view-only access to this model would otherwise get a working delete
+        button that the delete button itself refuses them.
+        """
+        if not self.has_delete_permission(request, obj):
+            raise PermissionDenied
+
+        email = obj.email
+        obj.delete()
+        self.message_user(
+            request,
+            _("%(email)s is no longer suppressed. The next login request for it "
+              "will be mailed.") % {"email": email},
+            messages.SUCCESS,
+        )
+        # The object this button lives on no longer exists, so the default
+        # "re-render the change form" would 404.
+        return HttpResponseRedirect(
+            reverse("admin:accounts_suppressedaddress_changelist")
+        )

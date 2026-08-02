@@ -1,5 +1,11 @@
-{% extends "admin/change_list.html" %}
+{% extends admin_note_base_template|default:"admin/change_list.html" %}
 {# Renders ModelAdmin.admin_note directly above the result list.
+
+   The parent is a variable, not a literal, because `change_list_template` is a
+   single string and any other package wanting its own changelist template would
+   otherwise win or lose by MRO order, silently. AdminNoteMixin supplies
+   `admin_note_base_template`; the `default:` filter keeps this template usable
+   from a plain render with no context.
 
    It hooks `search` rather than `object-tools` on purpose: `object-tools` is a
    floated <ul> whose layout the admin CSS owns, while the `search` block sits in

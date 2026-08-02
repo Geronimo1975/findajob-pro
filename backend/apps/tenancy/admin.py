@@ -29,16 +29,51 @@ from django.utils.translation import gettext_lazy as _
 from apps.common.admin_support import (
     EMPTY,
     AdminNoteMixin,
+    LargeTableAdminMixin,
     ReadOnlyAdminMixin,
     UnguardedQuerySetMixin,
     distinct_values_filter,
     pretty_json,
 )
+from apps.common.admin_integrations import EvidenceExportAdminMixin, ModelResource
 from apps.tenancy.models import AuditLog, Membership, Organization, Role
 
 #: ``to_attr`` for the owner prefetch on the Organization changelist. A plain
 #: list, so nothing ever touches the guarded reverse manager.
 OWNERS_CACHE_ATTR = "_admin_owner_memberships"
+
+
+class AuditLogResource(ModelResource):
+    """Column list for the CSV/JSON export of the audit trail.
+
+    ``payload`` is included and is the reason this is worth stating: it is a
+    ``JSONField``, and CSV flattens it to whatever ``str()`` produces. That is
+    ugly but not lossy, and the alternative — dropping it — would export the
+    fact that something happened while discarding what it was. The values in
+    it were already scrubbed of secret-looking keys at *write* time, so this
+    exports the same redacted text the change form shows; nothing is being
+    revealed here that the admin does not already display.
+
+    ``org`` and ``actor`` are exported by their human identifiers for the same
+    reason as ``ConsentRecordResource.user__email``, and cost nothing extra:
+    the changelist's ``list_select_related`` covers both.
+    """
+
+    class Meta:
+        model = AuditLog
+        fields = (
+            "id",
+            "created_at",
+            "action",
+            "org__slug",
+            "actor__email",
+            "target_type",
+            "target_id",
+            "payload",
+            "ip",
+            "user_agent",
+        )
+        export_order = fields
 
 
 class MembershipInline(UnguardedQuerySetMixin, admin.TabularInline):
@@ -275,19 +310,36 @@ class MembershipAdmin(UnguardedQuerySetMixin, AdminNoteMixin, admin.ModelAdmin):
 
 
 @admin.register(AuditLog)
-class AuditLogAdmin(ReadOnlyAdminMixin, UnguardedQuerySetMixin, admin.ModelAdmin):
+class AuditLogAdmin(
+    EvidenceExportAdminMixin,
+    LargeTableAdminMixin,
+    ReadOnlyAdminMixin,
+    UnguardedQuerySetMixin,
+    admin.ModelAdmin,
+):
     """Append-only record of security- and tenancy-relevant events.
 
     The model refuses an UPDATE, so admin offers no form. Deletion is off here
     too — an audit trail a staff user can prune is not an audit trail. (Cascade
     from a deleted Organization still works; that is the ORM, not this admin.)
+
+    This is the fastest-growing table in the project — every login, every role
+    change, every workspace event — which is what ``LargeTableAdminMixin`` is
+    for. Note the mixin order: ``EvidenceExportAdminMixin`` exports through
+    ``get_queryset``, so it has to sit above ``UnguardedQuerySetMixin`` and
+    inherit the unguarded manager rather than reaching for ``AuditLog.objects``,
+    which raises ``OrgScopeError``.
     """
 
     admin_note = _(
         "Append-only. Payloads are scrubbed of secret-looking keys before they "
         "are written — a value showing as [redacted] was redacted at write time "
-        "and the original was never stored."
+        "and the original was never stored. Select rows and use the export "
+        "action for an incident write-up. Every completed export appends an "
+        "admin.export row to this same table."
     )
+
+    resource_classes = [AuditLogResource]
 
     list_display = ("created_at", "action", "org", "actor", "target", "ip")
     list_display_links = ("created_at", "action")
@@ -311,7 +363,7 @@ class AuditLogAdmin(ReadOnlyAdminMixin, UnguardedQuerySetMixin, admin.ModelAdmin
     )
     date_hierarchy = "created_at"
     ordering = ("-created_at", "-id")
-    list_per_page = 50
+    # `list_per_page` comes from LargeTableAdminMixin.
     list_select_related = ("org", "actor")
     readonly_fields = (
         "created_at",

@@ -89,3 +89,21 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# django-debug-toolbar's `__debug__/` tree.
+#
+# The guard is `INSTALLED_APPS`, not `try: import`. Since 7.0 the toolbar ships
+# a model (`debug_toolbar.models.HistoryEntry`), and importing any module that
+# reaches it while the app is *not* installed raises `RuntimeError` from
+# `ModelBase.__new__` — "doesn't declare an explicit app_label and isn't in
+# INSTALLED_APPS" — which is not an ImportError and would not be caught.
+#
+# `config.settings.dev` is the only settings module that appends the app, and
+# it does so only when DEBUG is on and the package is present. So this single
+# condition already covers "not installed in production" and "DEBUG off".
+# `debug_toolbar_urls()` re-checks DEBUG itself and returns [] — belt and
+# braces, at no cost.
+if "debug_toolbar" in settings.INSTALLED_APPS:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()

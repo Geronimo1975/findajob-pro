@@ -97,6 +97,20 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "anymail",
+    # Admin-only, both of them. Neither ships a model or a migration, and
+    # neither is imported outside `apps/*/admin.py` and
+    # `apps.common.admin_integrations`. They are listed here rather than in a
+    # dev-only module because the admin they extend runs in production — that
+    # is the whole point of it.
+    #
+    # Template precedence: `import_export` ships templates under
+    # `admin/import_export/`, and `django_object_actions` under
+    # `django_object_actions/`. Neither name collides with the Voltagent
+    # overrides in `apps.common`, and `apps.common` is pinned ahead of
+    # everything anyway (see the note on INSTALLED_APPS below), so the theme
+    # keeps winning regardless.
+    "import_export",
+    "django_object_actions",
 ]
 
 # Build order positions 1, 3, 4 (see spec §1). Nothing from position 5+
@@ -425,6 +439,55 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": None,
     "COERCE_DECIMAL_TO_STRING": True,
 }
+
+
+# ---------------------------------------------------------------------------
+# django-import-export
+# ---------------------------------------------------------------------------
+# Note what is NOT here: `IMPORT_EXPORT_FORMATS`. That setting has to hold
+# format *classes*, not dotted paths — `BaseExportMixin.get_export_formats`
+# calls `f()` on every entry — so honouring it from this module would mean
+# importing `import_export.formats.base_formats` (and through it tablib) while
+# settings are still being read. Every other third-party name in this file is a
+# string for exactly that reason. The allowed formats are pinned on
+# `apps.common.admin_integrations.EvidenceExportAdminMixin` instead, which is
+# imported from `admin.py` — i.e. after the app registry is ready.
+
+# CSV injection. An exported cell whose text begins with `=`, `+`, `-` or `@`
+# is a *formula* to Excel and LibreOffice, not a string. These exports carry
+# `user_agent` and `payload` — attacker-influenced free text — and their
+# intended reader is somebody opening the file in a spreadsheet, which is
+# precisely the vulnerable path. The library prefixes such values with a
+# tab when this is on. Off is the library's default and is wrong for this data.
+IMPORT_EXPORT_ESCAPE_FORMULAE_ON_EXPORT = True
+
+# Note what is also NOT here: `IMPORT_EXPORT_SKIP_ADMIN_LOG`. It reads as the
+# setting that controls "is an export recorded", and it is not — it governs
+# **imports** only, and nothing in the library writes any log line on export.
+# Setting it would be a comment that looks like a control. "Who took a copy of
+# the evidence" is recorded to `tenancy.AuditLog` by
+# `apps.common.admin_integrations.EvidenceExportAdminMixin` instead.
+
+
+# ---------------------------------------------------------------------------
+# django-object-actions
+# ---------------------------------------------------------------------------
+# Object-action buttons submit a POST form, not a GET link. This is a
+# correctness setting, not a style one, and the library's own default is the
+# wrong way round (it emits a DeprecationWarning saying so and plans to flip in
+# a future release).
+#
+# With "GET" the button renders as a bare `<a href>`: no CSRF token, and a
+# state-changing URL reachable by anything that follows links — a link
+# prefetcher, a browser's address-bar prediction, an antivirus proxy scanning a
+# pasted admin URL. The one action wired today
+# (`accounts.SuppressedAddressAdmin.unsuppress`) *deletes a row*. With "POST"
+# the template renders `<form method="post">{% csrf_token %}`, which is what a
+# destructive admin control has to be.
+#
+# The action views accept both verbs regardless (`DEFAULT_METHODS_ALLOWED`);
+# this decides what the button emits.
+DJANGO_OBJECT_ACTIONS_DEFAULT_HTTP_METHOD = "POST"
 
 
 # ---------------------------------------------------------------------------
