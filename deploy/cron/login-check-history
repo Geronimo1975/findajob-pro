@@ -1,0 +1,194 @@
+#!/bin/sh
+# =============================================================================
+# findajob.pro - "has login been working?" in one command.
+#
+# Repo copy:  deploy/cron/login-check-history
+# VPS path:   /root/findajob/deploy/cron/login-check-history   (mode 0755)
+#
+# Prints one line per healthcheck run, oldest first, across the live log AND its
+# rotated archives (plain or gzipped, numeric or dateext naming). The point is
+# that answering "was login broken this week?" should be a command, not a file
+# to open and a format to remember.
+#
+#   ./login-check-history                 last 20 runs
+#   ./login-check-history --limit 7       last week (one run a day)
+#   ./login-check-history --failures      only the failures, all history
+#   ./login-check-history --since 2026-07-01
+#   ./login-check-history --last          full output block of the most recent run
+#   ./login-check-history --run 20260802T061703Z   full block of one specific run
+#
+# Reads only the summary lines the runner emits ("LOGIN-CHECK <ts> <verdict>
+# ..."), whose format is pinned in run-login-check.sh. If that format ever
+# changes, this is the file that must change with it.
+#
+# POSIX sh + awk only. No jq, no python, nothing to install.
+# =============================================================================
+
+set -u
+
+LOG_DIR="${LOGIN_CHECK_LOG_DIR:-/var/log/findajob}"
+LOG_BASE="${LOGIN_CHECK_LOG_BASE:-login-check.log}"
+LOG="${LOG_DIR}/${LOG_BASE}"
+
+LIMIT=20
+ONLY_FAILURES=0
+SINCE=''
+MODE='list'
+WANT_RUN=''
+
+usage() {
+    sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -n|--limit)
+            [ $# -ge 2 ] || { echo "login-check-history: --limit needs a number" >&2; exit 2; }
+            LIMIT="$2"; shift 2 ;;
+        --limit=*)   LIMIT="${1#--limit=}"; shift ;;
+        -f|--failures) ONLY_FAILURES=1; shift ;;
+        --since)
+            [ $# -ge 2 ] || { echo "login-check-history: --since needs a date" >&2; exit 2; }
+            SINCE="$2"; shift 2 ;;
+        --since=*)   SINCE="${1#--since=}"; shift ;;
+        --last)      MODE='block'; WANT_RUN=''; shift ;;
+        --run)
+            [ $# -ge 2 ] || { echo "login-check-history: --run needs a run id" >&2; exit 2; }
+            MODE='block'; WANT_RUN="$2"; shift 2 ;;
+        --run=*)     MODE='block'; WANT_RUN="${1#--run=}"; shift ;;
+        -a|--all)    LIMIT=0; shift ;;
+        -h|--help)   usage 0 ;;
+        *) echo "login-check-history: unknown option '$1'" >&2; usage 2 ;;
+    esac
+done
+
+case "$LIMIT" in
+    ''|*[!0-9]*) echo "login-check-history: --limit must be a whole number" >&2; exit 2 ;;
+esac
+
+# --- assemble the log set, oldest first ---------------------------------------
+# Rotation may produce EITHER naming scheme depending on how logrotate is
+# configured on the day (`dateext` gives login-check.log-20260901, the numeric
+# default gives login-check.log.1), and either may be gzipped. Rather than
+# encode one scheme, order every candidate by MTIME ascending: gzip preserves
+# the original file's mtime, and logrotate stamps the archive at rotation time,
+# so mtime order is chronological under both schemes. The live log always goes
+# last because it is the only one still being appended to.
+#
+# `ls -tr` prints oldest-first. 2>/dev/null swallows the no-match case; the glob
+# then stays literal, which the -f test below rejects.
+ARCHIVES=''
+for f in $(ls -tr "${LOG}"-* "${LOG}".[0-9]* 2>/dev/null); do
+    [ -f "$f" ] && ARCHIVES="${ARCHIVES} ${f}"
+done
+
+if [ -z "$ARCHIVES" ] && [ ! -f "$LOG" ]; then
+    echo "login-check-history: no log found at ${LOG}" >&2
+    echo "  the check has never run, or it runs on the VPS and you are not on it:" >&2
+    echo "    ssh macbook-air /root/findajob/deploy/cron/login-check-history" >&2
+    exit 1
+fi
+
+# Stream every log in order. Decompress on the fly; never write a temp file.
+stream_all() {
+    for f in $ARCHIVES; do
+        case "$f" in
+            *.gz)  gzip -cd -- "$f" 2>/dev/null ;;
+            *)     cat -- "$f" ;;
+        esac
+    done
+    [ -f "$LOG" ] && cat -- "$LOG"
+    return 0
+}
+
+# --- --last / --run: print a whole run block ----------------------------------
+if [ "$MODE" = 'block' ]; then
+    if [ -z "$WANT_RUN" ]; then
+        WANT_RUN="$(stream_all | grep '^LOGIN-CHECK ' | tail -n 1 \
+            | sed -n 's/.*[[:space:]]run=\([^[:space:]]*\).*/\1/p')"
+    fi
+    if [ -z "$WANT_RUN" ]; then
+        echo "login-check-history: no completed run found in ${LOG}" >&2
+        exit 1
+    fi
+    # The block runs from its "=== ... | run <ID> | ..." header to the
+    # "LOGIN-CHECK ... run=<ID> ..." summary line inclusive.
+    stream_all | awk -v id="$WANT_RUN" '
+        index($0, "=== findajob login healthcheck | run " id " ") == 1 { show = 1 }
+        show { print }
+        show && $1 == "LOGIN-CHECK" && index($0, "run=" id " ") > 0 { show = 0 }
+    '
+    exit 0
+fi
+
+# --- the one-line-per-run listing ---------------------------------------------
+# Colour only on a terminal: piping into grep/mail must stay plain text.
+if [ -t 1 ]; then
+    C_RESET=$(printf '\033[0m'); C_PASS=$(printf '\033[32m')
+    C_FAIL=$(printf '\033[31m'); C_DIM=$(printf '\033[2m')
+else
+    C_RESET=''; C_PASS=''; C_FAIL=''; C_DIM=''
+fi
+
+ROWS="$(stream_all | grep '^LOGIN-CHECK ' \
+    | awk -v since="$SINCE" -v onlyfail="$ONLY_FAILURES" '
+        {
+            ts = $2; verdict = $3;
+            if (since != "" && substr(ts, 1, length(since)) < since) next;
+            if (onlyfail == 1 && verdict == "PASS") next;
+            print;
+        }')"
+
+if [ -z "$ROWS" ]; then
+    if [ "$ONLY_FAILURES" -eq 1 ]; then
+        printf '%sNo failed runs%s%s.\n' "$C_PASS" \
+            "$( [ -n "$SINCE" ] && printf ' since %s' "$SINCE" )" "$C_RESET"
+        exit 0
+    fi
+    echo "login-check-history: no runs matched." >&2
+    exit 1
+fi
+
+if [ "$LIMIT" -gt 0 ]; then
+    ROWS="$(printf '%s\n' "$ROWS" | tail -n "$LIMIT")"
+fi
+
+printf '%sdate       time      verdict   dur  steps        run id%s\n' "$C_DIM" "$C_RESET"
+
+printf '%s\n' "$ROWS" | awk \
+    -v cpass="$C_PASS" -v cfail="$C_FAIL" -v cdim="$C_DIM" -v creset="$C_RESET" '
+    {
+        ts = $2; verdict = $3;
+        dur = "?"; steps = "?"; failed = "?"; run = "?"; exitc = "?";
+        for (i = 4; i <= NF; i++) {
+            split($i, kv, "=");
+            if (kv[1] == "duration") dur = kv[2];
+            else if (kv[1] == "steps")  steps = kv[2];
+            else if (kv[1] == "failed") failed = kv[2];
+            else if (kv[1] == "run")    run = kv[2];
+            else if (kv[1] == "exit")   exitc = kv[2];
+        }
+        # "2026-08-02T06:17:03+00:00" -> date and time, offset dropped from the
+        # column (every stamp on one box shares it) but kept in the run id.
+        split(ts, parts, "T");
+        day = parts[1];
+        clock = substr(parts[2], 1, 8);
+
+        colour = (verdict == "PASS") ? cpass : cfail;
+        stepcol = (steps == "?") ? "-" : (steps - failed) "/" steps;
+
+        printf "%s %s  %s%-7s%s  %4s  %-11s  %s%s%s\n",
+            day, clock, colour, verdict, creset, dur, stepcol, cdim, run, creset;
+        if (verdict != "PASS") failcount++;
+        total++;
+        lastv = verdict; lastday = day; lastclock = clock;
+    }
+    END {
+        printf "%s---%s\n", cdim, creset;
+        printf "%d run%s shown, %d failed. Last: %s%s%s at %s %s.\n",
+            total, (total == 1 ? "" : "s"), failcount + 0,
+            (lastv == "PASS" ? cpass : cfail), lastv, creset, lastday, lastclock;
+        if (failcount + 0 > 0)
+            printf "%sInspect one with: login-check-history --run <run id>%s\n", cdim, creset;
+    }'

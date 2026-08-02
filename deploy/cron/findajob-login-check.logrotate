@@ -1,0 +1,76 @@
+# /etc/logrotate.d/findajob-login-check
+# =============================================================================
+# findajob.pro - rotation for the login healthcheck log.
+#
+# Repo copy:  deploy/cron/findajob-login-check.logrotate
+# VPS path:   /etc/logrotate.d/findajob-login-check   (root:root, mode 0644)
+#
+# Install:
+#   scp deploy/cron/findajob-login-check.logrotate \
+#       macbook-air:/etc/logrotate.d/findajob-login-check
+#   ssh macbook-air "chown root:root /etc/logrotate.d/findajob-login-check \
+#                 && chmod 0644 /etc/logrotate.d/findajob-login-check \
+#                 && logrotate -d /etc/logrotate.d/findajob-login-check"
+#
+# `logrotate -d` is a DRY RUN and prints exactly what it would do - always run
+# it after editing. A syntax error in one file makes logrotate abort the whole
+# daily pass, so a typo here can silently stop rotating every log on the box.
+#
+# Note the filename has no dot in it: logrotate (like cron.d and run-parts)
+# ignores files whose names contain a "." unless the `taboo` list is changed.
+# `findajob-login-check.logrotate` in the REPO is fine; the installed name must
+# stay `findajob-login-check`.
+# =============================================================================
+
+/var/log/findajob/login-check.log {
+    # Monthly, keeping 12 - one calendar year of login history, which is the
+    # horizon that actually gets asked about ("was login broken when that
+    # customer complained in March?"). The volume makes this cheap: one run a
+    # day writes roughly ten short lines, so an uncompressed year is well under
+    # a megabyte.
+    monthly
+    rotate 12
+
+    # Safety net against the volume assumption being wrong. If a wedged
+    # container starts producing tracebacks on every run, or someone raises the
+    # schedule to hourly, this rotates early instead of letting the file grow
+    # unbounded between monthly passes. Belt and braces: `monthly` alone gives
+    # no size ceiling at all.
+    maxsize 5M
+
+    # Compress the archives, but not the most recent one. `delaycompress` keeps
+    # login-check.log.1 as plain text so `grep`, `tail` and the history reader
+    # can read the previous period without zcat - which matters most at exactly
+    # the moment a rotation just happened and you are debugging.
+    compress
+    delaycompress
+
+    # Do not fail the whole rotation run if the file has not been created yet
+    # (fresh box, or the cron has never fired).
+    missingok
+    # Do not rotate an empty file into the archive set - that would push a real
+    # month of history off the end of `rotate 12` for nothing.
+    notifempty
+
+    # Recreate the file after rotation with an explicit owner and mode.
+    #
+    # This is REQUIRED, not cosmetic: the cron job's shell redirection appends
+    # to a path, and without `create` there is a window where no file exists.
+    # 0640 root:adm - the log records which email addresses receive a login
+    # probe and, on failure, provider error strings; `adm` can read it for
+    # support, the world cannot.
+    create 0640 root adm
+
+    # `copytruncate` is deliberately NOT used. The writer here is a fresh `>>`
+    # redirection from a new shell on every tick, so it never holds a long-lived
+    # file descriptor to the rotated inode - the normal rename-and-create path
+    # is correct and loses nothing. `copytruncate` would introduce a real race
+    # window in which appended lines are dropped.
+
+    # Timestamped archive names instead of .1/.2/.3. `login-check.log-20260901`
+    # answers "which file holds March?" by looking at it; the numeric scheme
+    # requires arithmetic against the rotation date and shifts every filename on
+    # every pass. The history reader understands both.
+    dateext
+    dateformat -%Y%m%d
+}

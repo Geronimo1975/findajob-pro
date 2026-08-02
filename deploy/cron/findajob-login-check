@@ -1,0 +1,114 @@
+# /etc/cron.d/findajob-login-check
+# =============================================================================
+# findajob.pro - daily end-to-end login healthcheck.
+#
+# Repo copy:  deploy/cron/findajob-login-check
+# VPS path:   /etc/cron.d/findajob-login-check      (root:root, mode 0644)
+#
+# Login on findajob.pro is a 6-digit email OTP sent SYNCHRONOUSLY inside the
+# request (auth spec §1). That makes the mail path the login path: if Brevo
+# stops accepting our messages, nobody can sign in, and nothing else in the
+# stack notices. The api container's own HEALTHCHECK is deliberately liveness
+# only - it must not depend on Postgres, Redis or the ESP, or a database blip
+# would restart-loop the whole API. So "can a human still log in?" has no
+# monitor at all unless this one exists.
+#
+# Two dated landmines this job is here to catch BEFORE a user does:
+#   * the Brevo SMTP key "findajob.pro OTP login" EXPIRES 2027-08-01 and nothing
+#     warns you - every login starts returning 503 the moment it does;
+#   * the DKIM/SPF/DMARC records for mail.findajob.pro live at Hostinger, edited
+#     by hand, and an unauthenticated sending domain is accepted by SMTP and
+#     then dropped at delivery.
+#
+# WHAT THIS PROVES AND WHAT IT DOES NOT:
+#   it proves Brevo ACCEPTED the message. It does NOT prove a human received it.
+#   See docs/2026-08-02-login-healthcheck.md - read that before you trust a PASS.
+#
+# Install / update:
+#   scp deploy/cron/findajob-login-check \
+#       macbook-air:/etc/cron.d/findajob-login-check
+#   ssh macbook-air "chown root:root /etc/cron.d/findajob-login-check \
+#                 && chmod 0644 /etc/cron.d/findajob-login-check"
+#
+# cron.d files are read on every tick, so there is nothing to reload. But a file
+# with a bad mode, a group/other-writable bit, a name containing a dot, or a
+# missing trailing newline is SKIPPED SILENTLY by cron - no log line, no error.
+# After installing, confirm it is live with:
+#   ssh macbook-air "grep -c CRON /var/log/syslog; run-parts --test /etc/cron.d"
+# and then force one run by hand (see the doc).
+# =============================================================================
+
+# cron starts every job with a nearly empty environment. Both of these are
+# REQUIRED, not decorative.
+#
+# SHELL - without it cron uses /bin/sh, which is fine, but pinning it means the
+# line below is interpreted by the same shell we tested it with. Deliberately
+# /bin/sh and not bash: nothing here needs bash, and /bin/sh is guaranteed.
+SHELL=/bin/sh
+# PATH - cron's default is famously "/usr/bin:/bin" on some distros and empty on
+# others. `docker` lives at /usr/bin/docker and `flock` at /usr/bin/flock, but
+# locally-installed tools land in /usr/local/bin. Spelling the whole path out is
+# the difference between "works when I run it" and "silently never runs".
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# MAILTO="" - suppress cron's own mail. The box has no MTA and no MX records for
+# findajob.pro (see the deploy skill), so cron's delivery attempt would fail and
+# fill the syslog with noise on every run. The log file below is the record.
+MAILTO=""
+
+# -----------------------------------------------------------------------------
+# The schedule: 06:17 every day, server local time.
+#
+#   06:17 and not 06:00 - a job on the top of the hour competes with every other
+#   cron on the box and with Brevo's own hourly traffic peak. An odd minute
+#   spreads the load and makes this job's lines trivially identifiable in
+#   syslog. Confirm the box's timezone with `timedatectl` before reading the
+#   log: cron uses SYSTEM LOCAL time, while the log lines below are stamped with
+#   an explicit UTC offset, so the two can legitimately differ.
+#
+#   Daily and not hourly - every run mails a real message through Brevo and so
+#   consumes quota, ages the sender reputation slightly, and (if the target
+#   address ever hard-bounces) risks landing that address on the suppression
+#   list. Daily is enough to catch an expired key, a DNS edit, or a dead
+#   container within one working day. Hourly buys ~23 extra emails a day and
+#   almost no extra signal.
+# -----------------------------------------------------------------------------
+#
+# Every element of the command line is load-bearing:
+#
+#   root
+#       the user field, mandatory in /etc/cron.d (and the one difference from a
+#       user crontab). `docker` needs root or docker-group membership here.
+#
+#   mkdir -p /var/log/findajob
+#       the redirection below cannot create a missing DIRECTORY, only a missing
+#       file. Without this, a fresh box (or a wiped /var/log) silently discards
+#       every run. It is idempotent and costs nothing.
+#
+#   flock -n /var/lock/findajob-login-check.lock
+#       mutual exclusion against the previous tick. Runs overlap in exactly the
+#       scenario that matters: the ESP has gone slow or a network path is
+#       hanging, i.e. precisely when the check is about to report a failure.
+#       Overlapping runs would then multiply the outbound mail and interleave
+#       their output into the log, corrupting the chronological record this job
+#       exists to produce.
+#       `-n` = fail immediately rather than QUEUE. Queuing is wrong here: a
+#       delayed run reports on a moment nobody is looking at, and the very next
+#       tick supersedes it anyway. A skipped tick prints flock's own message
+#       into the log, which is itself the signal that the previous run hung.
+#
+#   >> /var/log/findajob/login-check.log 2>&1
+#       ONE writer, append-only. The wrapper writes its whole block to stdout
+#       and nothing to the log directly - that is what makes a hand-run print to
+#       the terminal instead of polluting the record, and what lets flock's
+#       "cannot acquire lock" message land in the same chronological stream.
+#       2>&1 keeps a stack trace or a docker error inside the run's block rather
+#       than emailing it into a void.
+#
+# `timeout` is NOT on this line on purpose - it lives INSIDE the wrapper,
+# wrapping the single blocking call. Putting it outside flock would kill the
+# lock holder and leave the real work running; putting it inside guarantees the
+# wrapper always returns and therefore always releases the lock. See the
+# comments in run-login-check.sh.
+#
+17 6 * * * root mkdir -p /var/log/findajob && flock -n /var/lock/findajob-login-check.lock /root/findajob/deploy/cron/run-login-check.sh >> /var/log/findajob/login-check.log 2>&1

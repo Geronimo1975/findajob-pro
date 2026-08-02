@@ -94,6 +94,101 @@ ssh macbook-air "cd /root/findajob && docker compose up -d --force-recreate web"
 scp deploy/traefik/findajob.yml macbook-air:/opt/gethub/traefik/dynamic/findajob.yml
 ```
 
+## Scheduled jobs (cron)
+
+Scheduled work lives in `/etc/cron.d/` and `/etc/logrotate.d/` on the VPS, so it is **invisible
+to git and to any rsync of the project**. Record every entry in the table below or it is lost on
+the next rebuild. The *source* of each entry is kept in `deploy/cron/` in the repo; the installed
+copy is what actually runs.
+
+| Entry | Schedule | Source (repo) | Log |
+|---|---|---|---|
+| `findajob-login-check` | daily 06:17 | `deploy/cron/findajob-login-check` (+ `run-login-check.sh`, `login-check-history`, `findajob-login-check.logrotate`) | `/var/log/findajob/login-check.log` |
+
+*(This is the first cron entry of the post-2026-08-01 stack. The old Django/Jobick platform's
+`findajob-scrape` entry died with that platform — if you find it still installed on the box, it
+is pointing at containers that no longer exist and should be removed.)*
+
+### The pattern — every entry must follow it
+
+```
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+17 6 * * * root mkdir -p /var/log/findajob && flock -n /var/lock/findajob-login-check.lock /root/findajob/deploy/cron/run-login-check.sh >> /var/log/findajob/login-check.log 2>&1
+```
+
+Every part is load-bearing:
+
+- **`SHELL` + `PATH` spelled out.** cron starts with a near-empty environment; its default `PATH`
+  differs per distro. `docker` is `/usr/bin/docker`, `flock` is `/usr/bin/flock`, but anything
+  hand-installed is under `/usr/local/bin`. This is the #1 reason a line that works by hand never
+  runs on schedule.
+- **`MAILTO=""`.** The box has no MTA and `findajob.pro` has no MX records, so cron's own mail
+  attempt only produces syslog noise. The log file is the record.
+- **`flock -n <lock>`.** Runs must never overlap — overlap happens exactly when something is
+  already hanging, i.e. when the job is about to report a problem, and two writers corrupt the
+  chronological log. `-n` **skips** rather than queues: a delayed run reports on a moment nobody
+  is watching, and the next tick supersedes it anyway. The skip message lands in the log and is
+  itself the signal that the previous run hung.
+- **`timeout` somewhere, always.** `flock` bounds concurrency but not duration; a hung run with
+  no timeout holds the lock **forever** and silently kills every later tick — worse than the
+  original hang. Put it **inside** the lock, wrapping the blocking call (the login check does this
+  inside `run-login-check.sh`), so the lock holder always returns. Outside the lock it kills the
+  holder and orphans the work. Residual: `timeout` kills the docker CLI on the host, not
+  necessarily the process inside the container.
+- **`docker compose exec -T`.** cron has no TTY; without `-T` Compose dies with "the input device
+  is not a TTY". Use `exec` (the running container, the environment real requests use), not `run`
+  (a second container). The command needs `cd /root/findajob` first — Compose resolves the project
+  from the cwd and cron's cwd is `$HOME`.
+- **`mkdir -p` the log directory.** A `>>` redirection creates a missing *file*, never a missing
+  *directory*. Without it a fresh box discards every run silently.
+- **Append with `2>&1`, one writer.** Let the script write to stdout only and let cron redirect;
+  that way a hand-run prints to the terminal instead of polluting the record, and flock's own
+  message lands in the same stream.
+- **Ship a logrotate file with every log.** `/etc/logrotate.d/<name>`, and run
+  `logrotate -d <file>` after editing — a syntax error in one file aborts the daily pass for
+  **every** log on the box.
+
+### Two silent-skip traps
+
+- **cron ignores a `/etc/cron.d/` file whose name contains a `.`**, or that is group/other
+  writable, or that lacks a trailing newline — with no error anywhere. Same taboo rule applies to
+  `/etc/logrotate.d/`. Hence the repo keeps `findajob-login-check.logrotate` but installs it as
+  `findajob-login-check`.
+- **`scp` does not preserve the executable bit** (`rsync -a` does). A non-executable runner fails
+  with a bare "Permission denied" in the log.
+
+Verify a change under cron's own environment rather than waiting for the tick:
+
+```bash
+env -i SHELL=/bin/sh PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  /bin/sh -c '<the exact command from the cron line>'
+ssh macbook-air "run-parts --test /etc/cron.d"     # is the file even eligible?
+```
+
+### The login healthcheck specifically
+
+Answers "has login been working?" in one command:
+
+```bash
+ssh macbook-air /root/findajob/deploy/cron/login-check-history --limit 7
+ssh macbook-air /root/findajob/deploy/cron/login-check-history --last      # full block
+```
+
+Greppable summary line: `LOGIN-CHECK <iso8601+offset> <PASS|FAIL> duration= exit= steps= failed= run= invoked=`.
+
+**A `PASS` means Brevo ACCEPTED the message. It does NOT mean a human received it** — real
+delivery depends on SPF/DKIM/DMARC on `mail.findajob.pro` and a verified sender in Brevo, none of
+which is observable from inside our network. After any sender or DNS change, check Brevo's
+transactional log for `Delivered`, exactly as the email section above says. Full rationale,
+per-failure-mode runbook and log format: `docs/2026-08-02-login-healthcheck.md`.
+
+Its main reason to exist is dated: **the Brevo SMTP key expires 2027-08-01**, and the api
+container's own Docker `HEALTHCHECK` is liveness-only by design, so it reports "healthy" during a
+total login outage.
+
 ## Gotchas that cost real time
 
 - **A single-file bind mount breaks when rsync replaces the file.** Docker binds
