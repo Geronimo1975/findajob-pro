@@ -101,7 +101,35 @@ codebase map — ended up publicly served at `https://findajob.pro/graphify-out/
 also shielded from `--delete`, so anything already on the box stays forever. Removed by hand that
 day; the script and a CI guard now both assert it cannot come back.
 
-`api`, `nginx` and `traefik` are **not** in the script yet — do those by hand, below.
+**For the API, same script:**
+
+```bash
+deploy/deploy.sh api --dry-run    # diff, plus the pending-migration plan
+deploy/deploy.sh api
+deploy/deploy.sh api --allow-migrations   # required if the schema would change
+```
+
+On top of the shared preflight it also requires the **`migrations-pg16`** CI job green (the suite
+runs on SQLite; that job is the only check a migration is valid on PG16), tags the running image
+as `findajob-api:rollback-<ts>` **before** building — `findajob-api:local` is a mutable tag and
+the build destroys it — then builds, gates on `migrate --check`, and only then `up -d api`
+(never `restart`: env and mounts are fixed at container CREATE). It waits on the container's own
+Docker HEALTHCHECK rather than sleeping, and finishes with `check_login_flow`.
+
+**A pending migration stops the deploy** unless `--allow-migrations` is passed. It then takes a
+verified dump via `run-db-backup.sh`, asks again, and applies with
+`PGOPTIONS='-c lock_timeout=3s -c statement_timeout=60s'` — confirmed respected by the live
+database. Django wraps migrations in a transaction on PostgreSQL, so hitting either timeout rolls
+back cleanly instead of leaving half a schema.
+
+Two things the api target deliberately does NOT do: it copies `nginx.conf` but does not apply it
+(single-file bind mount, inode trap — that still needs `up -d --force-recreate web` by hand), and
+it never auto-rolls-back. `check_login_flow` is a **gate**: it prints the rollback command and
+stops, because that command asserts things (Brevo, DNS) which can be red for reasons this deploy
+did not cause, and reverting on its word would revert healthy deploys.
+
+`nginx` and `traefik` are **not** in the script — they are the two that can take the whole site
+down. Do those by hand, below.
 
 ```bash
 # nginx.conf or docker-compose.yml change — see the gotcha below, a reload is NOT enough
