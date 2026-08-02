@@ -154,3 +154,26 @@ Keep the same Traefik router; route `/api/` (and later `/`) to the Django servic
 frontend goes live-data by swapping `api.js` mock bodies for `fetch(BASE+path)` — but read the
 "Contract gaps" section of `findajob-architecture` first: `ENDPOINTS` is missing auth entirely
 and 6+ other routes the UI already calls.
+
+## Traefik traps measured on this box (2026-08-02)
+
+- **The file provider's watcher is unreliable here.** After an edit, Traefik kept serving the
+  previous configuration for over an hour — `touch`, a real content change and an atomic
+  `mv` all produced zero reload events in the log. If a route change does not take effect,
+  check `docker logs gethub-traefik | grep "Configuration loaded"` before debugging the rule.
+  The only reliable apply is `docker restart gethub-traefik` (~0.5 s; all sites recover).
+- **A router and the service it names can live in different files.** `n8n-studio.yml` routed
+  the live `app.n8n-studio.com` to `service: n8n`, which was defined in the *dead*
+  `n8n.get-hub.io` file. Deleting the dead file 404'd the live site. Before removing any
+  dynamic file, grep the others for the service names it defines.
+- **`get-hub.io` is dead (NXDOMAIN, zone gone) but "gethub" names are NOT.** `gethub-traefik`
+  is the shared reverse proxy for every site on the box, `gethub-postgres` / `gethub-redis`
+  back nine containers across resume/resume-v2/saas-ai, `gethub_gethub-network` is the network
+  findajob-api and findajob-web sit on, and `/opt/gethub/traefik/dynamic/` holds findajob's own
+  route and htpasswd. Never delete by the string "gethub".
+- **Dead routes come from two providers.** File routes were removed and 27 dead certificates
+  pruned from `acme.json` (12 live remain). Nine containers still declare `get-hub.io` hosts via
+  **docker labels** — `saas-ai-web`, `rotocon-web`, `rotocon-configurator`, `gmx_management-web-1`,
+  `mycloud-ocis`, `resume-nginx`, `resume-v2-nginx`, `social_media_web`, `gethub-traefik` — and
+  each keeps asking Let's Encrypt for a certificate it can never get. None of them serves a
+  reachable host, so this is noise and ACME rate-limit pressure, not an outage.
