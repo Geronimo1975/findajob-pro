@@ -331,3 +331,21 @@ class TestOutbox:
                                   "status": "connected", "password": "leak!"}
         report = outbox_mod.run(self._ctx(resp))
         assert any(r.status == "FAIL" and "secret" in r.name for r in report.results)
+
+    def test_skip_inbox_check_when_mailbox_differs_from_verify_account(self):
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=200)
+        resp.json.return_value = {"provider": "smtp", "email_address": "other@elsewhere.com",
+                                  "status": "connected"}
+        session = mock.Mock()
+        session.get.return_value = resp
+        session.cookies.get.return_value = "tok"
+        ctx = VerifyContext(
+            target="https://x", session=session,
+            env={"VERIFY_GMAIL_USER": "george@rotocon.world",
+                 "VERIFY_GMAIL_APP_PASSWORD": "app-pw"},
+        )
+        report = outbox_mod.run(ctx)
+        assert session.post.call_args_list == []
+        assert any(r.status == "SKIP" and "differs" in r.detail for r in report.results)

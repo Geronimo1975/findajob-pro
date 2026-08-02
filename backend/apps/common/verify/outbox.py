@@ -17,8 +17,9 @@ from apps.common.verify.gmail import GmailClient
 SECRET_KEYS = {"password", "credentials", "credentials_encrypted", "username", "refresh_token"}
 #: substring of send_test_email's actual subject "findajob.pro — mailbox test"
 #: (apps/outbox/services.py::send_test_email). The mail is sent to the
-#: mailbox's own address (message["To"] = from_address), so the Inbox check
-#: below does not need to SKIP for recipient mismatch.
+#: mailbox's own address (message["To"] = from_address). The Inbox check
+#: below only runs when that address matches VERIFY_GMAIL_USER — otherwise
+#: we'd be polling a Gmail inbox that will never receive the test mail.
 TEST_SUBJECT_MARKER = "findajob.pro"
 
 
@@ -52,6 +53,19 @@ def run(ctx: VerifyContext) -> ModuleReport:
         results.append(skipped("test send via user SMTP", f"mailbox status={payload.get('status')}"))
         return ModuleReport("outbox", results)
 
+    user, pw = ctx.env.get("VERIFY_GMAIL_USER"), ctx.env.get("VERIFY_GMAIL_APP_PASSWORD")
+    if not user or not pw:
+        results.append(skipped("test mail in Inbox", "Gmail credentials unset"))
+        return ModuleReport("outbox", results)
+
+    mailbox_address = (payload or {}).get("email_address", "") or ""
+    if mailbox_address.lower() != user.lower():
+        results.append(skipped(
+            "test mail in Inbox",
+            "mailbox address differs from VERIFY_GMAIL_USER — cannot verify inbox delivery",
+        ))
+        return ModuleReport("outbox", results)
+
     since = datetime.now(timezone.utc) - timedelta(minutes=1)
     resp = ctx.session.post(ctx.api("/outbox/mailbox/test/"),
                             headers=csrf_headers(ctx.session, ctx.target), timeout=TIMEOUT)
@@ -60,10 +74,6 @@ def run(ctx: VerifyContext) -> ModuleReport:
         return ModuleReport("outbox", results)
     results.append(passed("test send accepted"))
 
-    user, pw = ctx.env.get("VERIFY_GMAIL_USER"), ctx.env.get("VERIFY_GMAIL_APP_PASSWORD")
-    if not user or not pw:
-        results.append(skipped("test mail in Inbox", "Gmail credentials unset"))
-        return ModuleReport("outbox", results)
     found = GmailClient(user, pw).wait_for_message(
         subject_contains=TEST_SUBJECT_MARKER, since=since, timeout=OTP_WAIT)
     if found is None:
