@@ -112,6 +112,42 @@ class FindajobAdminSite(admin.AdminSite):
             )
         return app_list
 
+    def _fj_kpis(self) -> list[dict]:
+        """Global platform counts for the index dashboard cards.
+
+        Deliberately cross-tenant: this is the operator's console. Org-scoped
+        models are read through the greppable ``.unscoped()``; the rest through
+        their plain managers. Each count is independent so one broken app never
+        blanks the whole row.
+        """
+        from django.utils import timezone
+
+        from apps.accounts.models import EmailOTP, SuppressedAddress, User
+        from apps.jobs.models import JobListing
+        from apps.outbox.models import MailboxConnection
+        from apps.tenancy.models import Organization
+
+        today = timezone.localdate()
+        return [
+            {"key": "users", "label": _("Users"),
+             "value": User.objects.count()},
+            {"key": "organizations", "label": _("Organizations"),
+             "value": Organization.objects.count()},
+            {"key": "job_listings", "label": _("Job listings"),
+             "value": JobListing.objects.count()},
+            {"key": "otps_today", "label": _("OTP codes today"),
+             "value": EmailOTP.objects.filter(created_at__date=today).count()},
+            {"key": "mailboxes", "label": _("Mailbox connections"),
+             "value": MailboxConnection.objects.unscoped().count()},
+            {"key": "suppressed", "label": _("Suppressed addresses"),
+             "value": SuppressedAddress.objects.count()},
+        ]
+
+    def index(self, request, extra_context=None):
+        """Render the admin index with KPI context."""
+        extra_context = {**(extra_context or {}), "fj_kpis": self._fj_kpis()}
+        return super().index(request, extra_context=extra_context)
+
     def login(self, request, extra_context=None):
         """Throttle failed sign-ins before authenticating.
 
