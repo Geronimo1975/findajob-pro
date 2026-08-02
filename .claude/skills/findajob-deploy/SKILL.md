@@ -12,6 +12,60 @@ Reverse proxy = **Traefik** (separate stack), dynamic config dir
 `/opt/gethub/traefik/dynamic/`, external docker network `gethub_gethub-network`, TLS via the
 `letsencrypt` certResolver. Traefik already redirects http→https globally.
 
+## Email delivery — configured and verified 2026-08-02
+
+Login is a 6-digit email OTP sent synchronously, so mail delivery IS the login path. It works
+end to end; a delivered message was confirmed in Brevo's transactional log, not merely a 202.
+
+| Thing | Value |
+|---|---|
+| Transport | Brevo **SMTP relay**, `smtp-relay.brevo.com:587`, TLS. Django's built-in SMTP backend |
+| `EMAIL_HOST_USER` | `a4167f001@smtp-brevo.com` (Brevo's SMTP login, from Settings → SMTP & API) |
+| `EMAIL_HOST_PASSWORD` | SMTP key named "findajob.pro OTP login" — **expires 2027-08-01** |
+| Sender | `'"Findjob.pro" <noreply@mail.findajob.pro>'` in `.env` |
+| Sending domain | `mail.findajob.pro`, authenticated in Brevo (DKIM + SPF + DMARC live) |
+
+**The SMTP key expires 2027-08-01 and nothing warns you.** When it does, every login stops:
+`request-code` returns 503 and no code is ever delivered. Rotate it in Brevo (Settings →
+SMTP & API → Generate SMTP key), put it in `/root/findajob/.env`, then
+`docker compose up -d api` — env is read at container CREATE, so a bare `restart` keeps the
+old value.
+
+**Do NOT use the Brevo API backend** (`anymail.backends.brevo.EmailBackend`). Brevo enforces an
+IP allowlist on API calls and 401s this VPS; SMTP authenticates by credential instead. Note
+`backend/.env.example` still suggests the API backend — the VPS `.env` deliberately overrides it.
+Equally, do NOT click "Activate for SMTP keys" on Brevo's IP-blocking banner: SMTP keys are not
+IP-restricted today, which is exactly why sending works from a box whose IP is not allowlisted.
+
+**Two failures that cost time, both silent-looking:**
+- Django 6 parses addresses with the modern email API and rejects an unquoted display name
+  containing a period: `findajob.pro <noreply@…>` raises `ValueError: period in 'phrase'`, which
+  surfaces only as a 503. The value needs inner double quotes — and because Compose's `env_file`
+  parser reads quotes, the whole thing must additionally be wrapped in single quotes.
+- An unauthenticated sending domain is accepted by SMTP and then rejected at delivery. Brevo
+  logs it as an `Error` event next to the `Sent` one, so the API sees a clean 202 and the user
+  sees nothing arrive. **After any sender change, check the transactional log for `Delivered`,
+  not for a 2xx from our own API.**
+
+### DNS at Hostinger (registrar + DNS, NS = `dns-parking.com`)
+
+Added 2026-08-02, all live and verified on the authoritative NS and on 1.1.1.1. Names are
+relative to `findajob.pro`:
+
+| Type | Name | Value |
+|---|---|---|
+| TXT | `mail` | `brevo-code:0d15e912ee86a10908120a5066bda8bf` |
+| TXT | `mail` | `v=spf1 include:spf.brevo.com ~all` |
+| CNAME | `brevo1._domainkey.mail` | `b1.mail-findajob-pro.dkim.brevo.com` |
+| CNAME | `brevo2._domainkey.mail` | `b2.mail-findajob-pro.dkim.brevo.com` |
+| TXT | `_dmarc.mail` | `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` |
+
+The zone also holds `A @ → 85.215.69.83` and `CNAME www → findajob.pro`, which serve the site.
+Never touch those. DMARC is deliberately `p=none` — read the reports for 2–3 weeks, then move to
+`p=quarantine; pct=25` and only later `p=reject`. There are still **no MX records**: nothing can
+receive mail at `@findajob.pro`, which is fine for OTP (send-only) but means the Impressum's
+contact address must stay a mailbox that actually exists elsewhere.
+
 ## Current stack (UI-first phase, since 2026-08-01)
 
 | Thing | Value |
