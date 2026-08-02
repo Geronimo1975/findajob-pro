@@ -2450,29 +2450,32 @@ summary:focus-visible,
 .fj-kpi-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 12px;
   margin: 0 0 24px;
 }
 
+/* Card chrome measured off app.html's stat tiles (grid gap 12, radius 10,
+   padding 14/16, mono 10.5 label with 0.08em tracking, Inter 26/700 value)
+   so the two dashboards are visually interchangeable. */
 .fj-kpi {
   background: var(--surface);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
-  padding: 18px 20px;
+  border-radius: 10px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .fj-kpi-label {
   font: 600 10.5px/1.4 var(--font-family-monospace);
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mute);
 }
 
 .fj-kpi-value {
-  font: 600 28px/1.1 var(--font-family-monospace);
+  font: 700 26px/1.2 var(--font-family-primary);
   color: var(--ink);
 }
 
