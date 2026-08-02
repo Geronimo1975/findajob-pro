@@ -109,3 +109,25 @@ class SidebarTests(AdminTestCase):
         self.client.logout()
         response = self.client.get(reverse("admin:login"))
         self.assertNotContains(response, 'id="fj-sidebar"')
+
+
+class IndexTemplateTests(AdminTestCase):
+    def test_kpi_cards_render_with_values(self):
+        response = self.client.get(reverse("admin:index"))
+        content = response.content.decode()
+        self.assertIn('data-kpi="users"', content)
+        self.assertIn('data-kpi="suppressed"', content)
+        # 3 fixture users; value is rendered inside the card.
+        self.assertIn('class="fj-kpi-value">3<', content)
+
+    def test_n8n_panel_renders_exactly_once(self):
+        response = self.client.get(reverse("admin:index"))
+        content = response.content.decode()
+        self.assertEqual(content.count('id="fj-n8n-index-card"'), 1)
+
+    def test_app_list_still_present(self):
+        from apps.accounts.models import User
+        from tests.admin.support import changelist_url
+
+        response = self.client.get(reverse("admin:index"))
+        self.assertContains(response, changelist_url(User))
