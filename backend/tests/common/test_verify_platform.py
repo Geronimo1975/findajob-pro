@@ -296,3 +296,38 @@ class TestDeliverability:
         with mock.patch("apps.common.verify.deliverability.dig_txt", return_value=[]):
             report = deliverability_run(ctx)
         assert any(r.status == "SKIP" and "auth-otp" in r.detail for r in report.results)
+
+
+class TestOutbox:
+    def _ctx(self, get_resp):
+        session = mock.Mock()
+        session.get.return_value = get_resp
+        session.cookies.get.return_value = "tok"
+        return VerifyContext(target="https://x", session=session, env={})
+
+    def test_skip_when_not_deployed(self):
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=404)
+        resp.json.return_value = {"detail": "Not found."}  # Django HTML 404 / non-API shape
+        resp.json.side_effect = ValueError
+        report = outbox_mod.run(self._ctx(resp))
+        assert any(r.status == "SKIP" and "not deployed" in r.detail for r in report.results)
+
+    def test_skip_when_no_mailbox_connected(self):
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=404)
+        resp.json.return_value = {"error": {"code": "mailbox_not_connected", "detail": "x"}}
+        report = outbox_mod.run(self._ctx(resp))
+        assert report.failed is False
+        assert any("connect a mailbox" in r.detail for r in report.results)
+
+    def test_secrets_never_in_payload(self):
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=200)
+        resp.json.return_value = {"provider": "smtp", "email_address": "a@b.c",
+                                  "status": "connected", "password": "leak!"}
+        report = outbox_mod.run(self._ctx(resp))
+        assert any(r.status == "FAIL" and "secret" in r.name for r in report.results)
