@@ -131,3 +131,25 @@ class IndexTemplateTests(AdminTestCase):
 
         response = self.client.get(reverse("admin:index"))
         self.assertContains(response, changelist_url(User))
+
+
+class StaticAssetTests(AdminTestCase):
+    def test_theme_assets_are_findable(self):
+        from django.contrib.staticfiles import finders
+
+        for path in (
+            "admin/css/voltagent-admin.css",
+            "admin/js/fj-sidebar.js",
+            "admin/fonts/inter-latin.woff2",
+            "admin/fonts/inter-latin-ext.woff2",
+            "admin/fonts/jetbrains-mono-latin.woff2",
+            "admin/fonts/jetbrains-mono-latin-ext.woff2",
+        ):
+            self.assertIsNotNone(finders.find(path), path)
+
+    def test_sidebar_css_present(self):
+        from django.contrib.staticfiles import finders
+
+        css = open(finders.find("admin/css/voltagent-admin.css")).read()
+        for selector in (".fj-sidebar", ".fj-kpi-row", ".fj-collapsed"):
+            self.assertIn(selector, css)

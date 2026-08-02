@@ -2273,3 +2273,171 @@ summary:focus-visible,
     border-radius: 0 0 10px 10px;
   }
 }
+
+
+/* ==========================================================================
+   22 · Font fallback copies (admin/fonts/) — NOT wired into @font-face
+   --------------------------------------------------------------------------
+   Section 1 above already self-hosts Inter and JetBrains Mono from
+   `/fonts/*.woff2`, served by nginx straight out of `web/fonts/` at the same
+   origin as `/admin/` — that is the live font source and stays authoritative;
+   see section 1's comment for why the paths there are absolute and why a
+   relative reference from this file would break `collectstatic`.
+
+   These four files are a second, identical copy placed under this app's own
+   `static/admin/fonts/` tree so `django.contrib.staticfiles.finders.find()`
+   can resolve them (and so `collectstatic` ships them) even in a deployment
+   that runs the admin without nginx's `/fonts/` alias in front of it — e.g.
+   `runserver` with `--insecure`, or a future staff console on its own origin.
+   No @font-face here references them; adding a second set of @font-face
+   rules for the same family/unicode-range would just race section 1's rules
+   for which face the browser picks, for no benefit while nginx is in front.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   23 · App-shell sidebar (.fj-sidebar) — replaces #nav-sidebar entirely
+   --------------------------------------------------------------------------
+   base_site.html's {% block nav-sidebar %} renders admin/_fj_sidebar.html
+   instead of Django's own admin/nav_sidebar.html, so #nav-sidebar (section 6)
+   never appears on a page using this theme; that section is kept only as a
+   defensive fallback if this template is ever bypassed. This is the real
+   nav, glyph-identical to web/app.html's <aside>.
+
+   Layout: base.html wraps the sidebar and <main id="content-start"> as
+   direct siblings inside <div class="main" id="main"> (verified against the
+   Django 6.0 vendor template, not assumed) — so making #main a flex row and
+   letting #content-start grow is enough to put the rail flush left, full
+   height, with content beside it. No extra wrapper markup was added.
+   ========================================================================== */
+
+#main {
+  display: flex;
+  align-items: stretch;
+}
+
+#main > #content-start {
+  flex: 1;
+  min-width: 0;
+}
+
+.fj-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 218px;
+  min-height: 100vh;
+  padding: 10px;
+  background: var(--canvas);
+  border-right: 1px solid var(--hairline);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: width 120ms ease;
+}
+
+.fj-sidebar.fj-collapsed {
+  width: 58px;
+}
+
+.fj-sidebar.fj-collapsed .fj-nav-label {
+  display: none;
+}
+
+.fj-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  color: var(--mute);
+  font: 500 13px/1 var(--font-family-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fj-nav-item:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.fj-nav-item[aria-current="page"] {
+  background: var(--accent-fill);
+  color: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.fj-sidebar-toggle {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--mute);
+  cursor: pointer;
+}
+
+.fj-sidebar-toggle:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.fj-collapsed .fj-sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+
+/* ==========================================================================
+   24 · Index KPI cards (.fj-kpi-row)
+   --------------------------------------------------------------------------
+   Dashboard card chrome, matching web/app.html's stat tiles. Rendered by
+   apps/automation's findajob_index.html above the app list — see that
+   template and IndexTemplateTests for the context contract.
+   ========================================================================== */
+
+.fj-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+.fj-kpi {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fj-kpi-label {
+  font: 600 10.5px/1.4 var(--font-family-monospace);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.fj-kpi-value {
+  font: 600 28px/1.1 var(--font-family-monospace);
+  color: var(--ink);
+}
+
+@media (max-width: 1023px) {
+  .fj-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .fj-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
