@@ -1,0 +1,80 @@
+# findajob.pro — build-surface validation. Also never deploys, and pushes
+# nothing to any registry.
+#
+# Split out of ci.yml and filtered by path deliberately. It costs ~2 minutes
+# against ci.yml's ~40 seconds, and running it on every push would burn roughly
+# 1500 of the 2000 free minutes a month for no signal: none of these three
+# things can break unless one of the files below changes.
+#
+# A `paths:` filter is used rather than a commit-message marker
+# (`contains(github.event.head_commit.message, '[ci-images]')`) because the
+# marker reads attacker-controllable event data and, more prosaically, because
+# it depends on remembering to type it.
+
+name: images
+
+on:
+  push:
+    paths:
+      - 'backend/Dockerfile'
+      - 'backend/docker/**'
+      - 'backend/requirements*.txt'
+      - 'backend/requirements*.in'
+      - 'deploy/nginx.conf'
+      - 'deploy/docker-compose.yml'
+      - '.github/workflows/images.yml'
+  pull_request:
+    paths:
+      - 'backend/Dockerfile'
+      - 'backend/docker/**'
+      - 'backend/requirements*.txt'
+      - 'backend/requirements*.in'
+      - 'deploy/nginx.conf'
+      - 'deploy/docker-compose.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Dockerfile runs `pip check` in its builder stage. Finding out here
+      # beats finding out while debugging pip on the box that also serves nine
+      # unrelated production stacks. The image is built and thrown away — it is
+      # never tagged, never pushed, and the VPS keeps building its own.
+      - name: build api image
+        run: docker build -t findajob-api:ci backend
+
+      # Works without the upstream existing because deploy/nginx.conf resolves
+      # the API lazily, through a variable:
+      #     resolver 127.0.0.11 ipv6=off valid=10s;
+      #     set $findajob_api ...;
+      #     proxy_pass $findajob_api$request_uri;
+      # nginx does not resolve a name held in a variable at parse time (that is
+      # the documented reason for the form — see nginx.conf lines 64-83), so
+      # `nginx -t` validates syntax with no findajob-api container in sight.
+      - name: nginx -t
+        run: |
+          docker run --rm \
+            -v "$PWD/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:alpine nginx -t
+
+      # On the VPS this compose file lives at the REPO ROOT (/root/findajob/),
+      # not in deploy/, and every relative path inside it is written for that
+      # location — hence --project-directory . rather than running from deploy/.
+      # `env_file: .env` requires the file to exist, and the
+      # ${POSTGRES_PASSWORD:?} / ${REDIS_PASSWORD:?} forms require values, so a
+      # throwaway .env is written for the parse and removed straight after. It
+      # holds no real credential and never leaves the runner.
+      - name: compose config
+        run: |
+          printf 'POSTGRES_PASSWORD=ci\nREDIS_PASSWORD=ci\n' > .env
+          docker compose --project-directory . -f deploy/docker-compose.yml config -q
+          rm -f .env

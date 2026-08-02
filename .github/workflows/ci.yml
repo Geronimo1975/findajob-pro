@@ -1,0 +1,167 @@
+# findajob.pro — verification only. This workflow NEVER deploys.
+#
+# Deploy stays a laptop-initiated action (deploy/deploy.sh) on purpose: the only
+# way GitHub could reach the VPS is a root SSH key in a repository secret, and
+# that box also runs ~9 unrelated production stacks behind one shared Traefik.
+# The blast radius of that key is not findajob, it is every site on 85.215.69.83.
+# For a single developer, automating the deploy trades that exposure for about
+# twenty seconds of typing. Not worth it. Revisit when there is a second dev.
+#
+# What this DOES buy: the suite needs no infrastructure at all — SQLite
+# `:memory:` + LocMemCache + locmem email, wired in config/settings/test.py — so
+# the whole thing runs in ~4s with no services, no secrets and no .env file.
+# Not having that was indefensible.
+
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Read-only. Nothing here writes to the repo, publishes a package, or needs an
+# id-token; say so explicitly rather than inheriting the default write scope.
+permissions:
+  contents: read
+
+# A second push to the same ref makes the first run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      # Tags, not SHAs. SHA-pinning is the stricter practice and worth adopting
+      # if this repo ever gains a second contributor; today the threat it guards
+      # against (a tag moved under you) is smaller than the cost of hand-bumping
+      # digests on a one-person project.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'          # matches the local venv: 3.12.13
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - run: pip install -r backend/requirements-dev.txt
+
+      # 632 tests + 605 subtests in ~4s. `working-directory: backend` IS the
+      # whole trick: pytest.ini lives there and supplies
+      # DJANGO_SETTINGS_MODULE=config.settings.test. Run from the repo root and
+      # collection dies with 20 ImproperlyConfigured errors instead.
+      - name: pytest
+        working-directory: backend
+        run: pytest -q
+
+      # Nothing today catches a model edited without a migration — it surfaces
+      # as a runtime error on the VPS. Verified locally against a clean
+      # `git archive` export: "No changes detected".
+      - name: migration drift
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: python manage.py makemigrations --check --dry-run
+
+      # config/checks.py registers findajob.E001/E003/E005/E006 as ORDINARY
+      # checks, so a misconfigured prod setting stops the container from
+      # booting. This step moves that failure from "the site is down and the
+      # api container is restart-looping" to a red X before anything ships.
+      #
+      # Every value below is a SHAPE probe, not a credential: nothing connects
+      # anywhere during `check`. Verified against a clean export with no .env
+      # present — the same condition this runner has.
+      - name: django check --deploy
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          SECRET_KEY: ci-dummy-not-a-real-key-0123456789abcdefghijklmnopqrstuvwxyz
+          ALLOWED_HOSTS: findajob.pro
+          CSRF_TRUSTED_ORIGINS: https://findajob.pro
+          EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+          EMAIL_HOST: smtp-relay.brevo.com
+          EMAIL_PORT: '587'
+          EMAIL_USE_TLS: 'True'
+          EMAIL_HOST_USER: ci@example.invalid
+          EMAIL_HOST_PASSWORD: ci-dummy
+          DEFAULT_FROM_EMAIL: ci@example.invalid
+          REDIS_URL: redis://:ci@127.0.0.1:6379/0
+          ANYMAIL_WEBHOOK_SECRET: ci-dummy
+        run: python manage.py check --deploy
+
+      # --- hygiene ---------------------------------------------------------
+      # One line each, no new dependency (CLAUDE.md: no heavy new deps).
+      # These exist because every one of them has actually gone wrong here.
+
+      # .env holds SECRET_KEY, the Postgres and Redis passwords and the Brevo
+      # SMTP key. It is gitignored; this asserts nobody ever `git add -f`s it.
+      - name: no .env is tracked
+        run: '! git ls-files | grep -E "(^|/)\.env$"'
+
+      # web/ is the nginx webroot, rsynced wholesale to the VPS. On 2026-08-02
+      # the graphify knowledge-graph output was found being served publicly at
+      # https://findajob.pro/graphify-out/graph.json (200, 119KB) — it is
+      # gitignored, so `git status` never showed it, but rsync does not read
+      # .gitignore. The real fix is deploying from `git archive`; this asserts
+      # the tracked webroot never grows the directory back either.
+      - name: webroot carries only product files
+        run: |
+          ! git ls-files web | grep -q '^web/graphify-out/'
+          test "$(git ls-files web | wc -l)" -le 40
+
+      # scp does not preserve the executable bit (rsync -a does). A
+      # non-executable runner fails under cron with a bare "Permission denied".
+      # The two config files must stay 0644: cron.d and logrotate.d SILENTLY
+      # skip a file that is group- or other-writable.
+      - name: deploy/cron modes
+        run: |
+          git ls-files -s deploy/cron | grep -q '^100755 .*	deploy/cron/run-login-check.sh$'
+          git ls-files -s deploy/cron | grep -q '^100755 .*	deploy/cron/login-check-history$'
+          git ls-files -s deploy/cron | grep -q '^100644 .*	deploy/cron/findajob-login-check$'
+          git ls-files -s deploy/cron | grep -q '^100644 .*	deploy/cron/findajob-login-check.logrotate$'
+
+  # Separate job so it cannot slow the 4-second feedback loop above.
+  #
+  # The suite runs on SQLite; production is postgres:16-alpine. SQLite rebuilds
+  # a table for most schema changes and is permissive about identifier length
+  # and constraint timing, so a migration can be green there and invalid on
+  # PG16. This migrates an EMPTY database and therefore catches exactly that
+  # class and no other — see the docstring in config/settings/ci.py for what it
+  # deliberately does not cover.
+  migrations-pg16:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: findajob_ci
+          POSTGRES_USER: findajob
+          POSTGRES_PASSWORD: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U findajob"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r backend/requirements-dev.txt
+
+      - name: migrate on real PG16
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.ci
+          POSTGRES_DB: findajob_ci
+          POSTGRES_USER: findajob
+          POSTGRES_PASSWORD: ci
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: '5432'
+        run: |
+          python manage.py migrate --plan
+          python manage.py migrate --no-input
