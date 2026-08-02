@@ -2273,3 +2273,220 @@ summary:focus-visible,
     border-radius: 0 0 10px 10px;
   }
 }
+
+
+/* ==========================================================================
+   22 · The admin's actual fonts (admin/fonts/), wired into @font-face
+   --------------------------------------------------------------------------
+   Section 1's `/fonts/*.woff2` rules depend on nginx's `/fonts/` alias in
+   front of `/admin/`; under `runserver` (no nginx) that path 404s and the
+   admin silently falls back to the system UI font — cosmetic locally, but it
+   defeats the point of self-hosting Inter/JetBrains Mono for this app. The
+   files below are a copy placed under this app's own `static/admin/fonts/`
+   tree, referenced here with paths *relative to this CSS file*
+   (`../fonts/<file>.woff2`), so `staticfiles.finders.find()` resolves them
+   under `runserver`, and `collectstatic`/`ManifestStaticFilesStorage` can
+   hash and ship them too since the referenced files genuinely exist inside
+   this app's static tree (unlike the absolute `/fonts/…` paths in section 1,
+   which point outside STATIC_URL on purpose — see that section's comment).
+
+   Load-order consequence: these rules come AFTER section 1's in the
+   cascade. @font-face selection is per-codepoint by unicode-range, not
+   whole-family, and when two @font-face rules for the same family cover an
+   overlapping codepoint the LAST one registered wins for that codepoint. So
+   wherever nginx's `/fonts/` alias is reachable (prod, and any environment
+   that mounts `web/` in front of `/admin/`), the browser tries section 1's
+   absolute URL first in practice only if it loads first; here both are
+   declared for the same unicode-ranges, so these local copies take priority
+   once loaded. That is fine — they are byte-identical files — but it means
+   section 1 is not truly "authoritative" for font *bytes* once this section
+   loads, only redundant. Section 1's absolute `/fonts/` alias remains for
+   the pages outside `/admin/` (nginx serves `web/*.html` those fonts too).
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/inter-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/jetbrains-mono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/jetbrains-mono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+
+/* ==========================================================================
+   23 · App-shell sidebar (.fj-sidebar) — replaces #nav-sidebar entirely
+   --------------------------------------------------------------------------
+   base_site.html's {% block nav-sidebar %} renders admin/_fj_sidebar.html
+   instead of Django's own admin/nav_sidebar.html, so #nav-sidebar (section 6)
+   never appears on a page using this theme; that section is kept only as a
+   defensive fallback if this template is ever bypassed. This is the real
+   nav, glyph-identical to web/app.html's <aside>.
+
+   Layout: base.html wraps the sidebar and <main id="content-start"> as
+   direct siblings inside <div class="main" id="main"> (verified against the
+   Django 6.0 vendor template, not assumed) — so making #main a flex row and
+   letting #content-start grow is enough to put the rail flush left, full
+   height, with content beside it. No extra wrapper markup was added.
+   ========================================================================== */
+
+#main {
+  display: flex;
+  align-items: stretch;
+}
+
+#main > #content-start {
+  flex: 1;
+  min-width: 0;
+}
+
+.fj-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 218px;
+  min-height: 100vh;
+  padding: 10px;
+  background: var(--canvas);
+  border-right: 1px solid var(--hairline);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: width 120ms ease;
+}
+
+.fj-sidebar.fj-collapsed {
+  width: 58px;
+}
+
+.fj-sidebar.fj-collapsed .fj-nav-label {
+  display: none;
+}
+
+.fj-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  color: var(--mute);
+  font: 500 13px/1 var(--font-family-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fj-nav-item:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.fj-nav-item[aria-current="page"] {
+  background: var(--accent-fill);
+  color: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.fj-sidebar-toggle {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  color: var(--mute);
+  cursor: pointer;
+}
+
+.fj-sidebar-toggle:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.fj-collapsed .fj-sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+
+/* ==========================================================================
+   24 · Index KPI cards (.fj-kpi-row)
+   --------------------------------------------------------------------------
+   Dashboard card chrome, matching web/app.html's stat tiles. Rendered by
+   apps/automation's findajob_index.html above the app list — see that
+   template and IndexTemplateTests for the context contract.
+   ========================================================================== */
+
+.fj-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 0 24px;
+}
+
+/* Card chrome measured off app.html's stat tiles (grid gap 12, radius 10,
+   padding 14/16, mono 10.5 label with 0.08em tracking, Inter 26/700 value)
+   so the two dashboards are visually interchangeable. */
+.fj-kpi {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fj-kpi-label {
+  font: 600 10.5px/1.4 var(--font-family-monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.fj-kpi-value {
+  font: 700 26px/1.2 var(--font-family-primary);
+  color: var(--ink);
+}
+
+@media (max-width: 1023px) {
+  .fj-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .fj-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}

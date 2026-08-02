@@ -10,14 +10,18 @@
     * admin/login.html is NOT forked — the staff-console note it needed goes in
       {% block pretitle %} below, guarded on the resolved URL name. Forking a
       60-line vendor template for two sentences is not worth the upgrade drift.
-    * admin/index.html is NOT overridden. apps.automation already owns that
-      slot: its AppConfig.ready() points admin.site.index_template at
-      backend/templates/admin/findajob_index.html, which extends
-      "admin/index.html" and includes "admin/_n8n_panel.html". Adding a second
-      include here would render the n8n card twice — see the warning in that
-      file. The include is the agreed hand-off point between the two streams;
-      the theme's job is only to make it look right, which section 20 of the
-      stylesheet does.
+    * admin/index.html IS overridden, but by apps.common, not this file: it is
+      a documented FORK of the Django 6.0 vendor template (see the comment at
+      the top of apps/common/templates/admin/index.html) that re-declares
+      {% block nav-sidebar %} so the Voltagent sidebar renders on the
+      dashboard too. apps.automation's findajob_index.html still extends
+      "admin/index.html" by name and appends the n8n card — because
+      apps.common sits before apps.automation in INSTALLED_APPS, that name
+      resolves to the fork, not Django's own file. Adding a second
+      "admin/_n8n_panel.html" include anywhere in that chain would render the
+      n8n card twice — see the warning in that file. The include stays the
+      agreed hand-off point between the two streams; the theme's job here is
+      only to make it look right, which section 20 of the stylesheet does.
 
   Ordering requirement: `apps.common` must sit BEFORE the admin app in
   INSTALLED_APPS or the APP_DIRS loader returns Django's own base_site.html and
@@ -108,5 +112,28 @@
 {% endblock %}
 
 {% block nav-global %}{% endblock %}
+
+{% comment %}
+  The Voltagent app-shell sidebar, replacing Django's own filter/nav sidebar
+  entirely — that is the design decision recorded in the spec, not an
+  oversight. base.html only emits this block for authenticated, non-popup
+  pages, and the extra user check keeps it off any page rendered for a
+  logged-out or inactive account (e.g. a session that outlives is_active).
+{% endcomment %}
+{% block nav-sidebar %}
+  {% if user.is_active and user.is_staff %}
+    {% include "admin/_fj_sidebar.html" %}
+  {% endif %}
+{% endblock %}
+
+{% comment %}
+  The collapse toggle's behaviour (icon-only below 900px, state kept per
+  browser) lives in fj-sidebar.js, loaded after Django's own admin scripts via
+  {{ block.super }} so it can safely assume the DOM it targets already exists.
+{% endcomment %}
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'admin/js/fj-sidebar.js' %}" defer></script>
+{% endblock %}
 
 {% block footer %}findajob.pro &middot; {% translate "staff console" %}{% endblock %}
