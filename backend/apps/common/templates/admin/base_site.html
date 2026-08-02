@@ -109,4 +109,27 @@
 
 {% block nav-global %}{% endblock %}
 
+{% comment %}
+  The Voltagent app-shell sidebar, replacing Django's own filter/nav sidebar
+  entirely — that is the design decision recorded in the spec, not an
+  oversight. base.html only emits this block for authenticated, non-popup
+  pages, and the extra user check keeps it off any page rendered for a
+  logged-out or inactive account (e.g. a session that outlives is_active).
+{% endcomment %}
+{% block nav-sidebar %}
+  {% if user.is_active and user.is_staff %}
+    {% include "admin/_fj_sidebar.html" %}
+  {% endif %}
+{% endblock %}
+
+{% comment %}
+  The collapse toggle's behaviour (icon-only below 900px, state kept per
+  browser) lives in fj-sidebar.js, loaded after Django's own admin scripts via
+  {{ block.super }} so it can safely assume the DOM it targets already exists.
+{% endcomment %}
+{% block extrahead %}
+  {{ block.super }}
+  <script src="{% static 'admin/js/fj-sidebar.js' %}" defer></script>
+{% endblock %}
+
 {% block footer %}findajob.pro &middot; {% translate "staff console" %}{% endblock %}

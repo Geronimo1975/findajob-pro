@@ -12,6 +12,20 @@
   apps.py — otherwise the card renders twice.
 {% endcomment %}
 
+{% comment %}
+  Django's own admin/index.html clears {% block nav-sidebar %}{% endblock %}
+  (the dashboard normally relies on its own app-list body instead of a
+  sidebar), which silently drops the Voltagent sidebar from the one page that
+  most needs it. Re-declaring it here — identically to base_site.html's own
+  override — is required, not decorative; without it "admin:index" renders
+  with everything else themed but no sidebar at all.
+{% endcomment %}
+{% block nav-sidebar %}
+  {% if user.is_active and user.is_staff %}
+    {% include "admin/_fj_sidebar.html" %}
+  {% endif %}
+{% endblock %}
+
 {% block content %}
   {{ block.super }}
   {% comment %}

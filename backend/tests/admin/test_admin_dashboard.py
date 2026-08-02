@@ -67,3 +67,45 @@ class KpiEmptyDatabaseTests(AdminTestCase):
         self.assertEqual(kpis["otps_today"], 0)
         self.assertEqual(kpis["mailboxes"], 0)
         self.assertEqual(kpis["suppressed"], 0)
+
+
+class SidebarTests(AdminTestCase):
+    def test_sidebar_on_index_and_changelist(self):
+        from apps.accounts.models import User
+        from tests.admin.support import changelist_url
+
+        for url in (reverse("admin:index"), changelist_url(User)):
+            response = self.client.get(url)
+            self.assertContains(response, 'id="fj-sidebar"')
+            self.assertContains(response, 'data-nav="dashboard"')
+
+    def test_active_entry_matches_page(self):
+        from apps.accounts.models import User
+        from tests.admin.support import changelist_url
+
+        response = self.client.get(changelist_url(User))
+        self.assertContains(
+            response, 'data-nav="accounts" aria-current="page"'
+        )
+        response = self.client.get(reverse("admin:index"))
+        self.assertContains(
+            response, 'data-nav="dashboard" aria-current="page"'
+        )
+
+    def test_entries_filtered_by_permission(self):
+        """A staff user with no permissions sees only Dashboard."""
+        from apps.accounts.models import User
+
+        limited = User.objects.create_user(email="staff@example.de")
+        limited.is_staff = True
+        limited.save(update_fields=["is_staff"])
+        self.client.force_login(limited)
+        response = self.client.get(reverse("admin:index"))
+        self.assertContains(response, 'data-nav="dashboard"')
+        self.assertNotContains(response, 'data-nav="accounts"')
+        self.assertNotContains(response, 'data-nav="tenancy"')
+
+    def test_login_page_has_no_sidebar(self):
+        self.client.logout()
+        response = self.client.get(reverse("admin:login"))
+        self.assertNotContains(response, 'id="fj-sidebar"')
