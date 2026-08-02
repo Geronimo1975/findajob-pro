@@ -347,7 +347,7 @@ needs inner double quotes, and because Compose's `env_file` parser also reads qu
 value must additionally be wrapped in single quotes:
 
 ```
-DEFAULT_FROM_EMAIL='"Findjob.pro" <noreply@mail.findajob.pro>'
+DEFAULT_FROM_EMAIL='"findajob.pro" <noreply@mail.findajob.pro>'
 ```
 
 ### No new lines in the log at all
