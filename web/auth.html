@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in — Findjob.pro</title>
+<title>Sign in — findajob.pro</title>
 <meta name="robots" content="noindex">
 <meta name="referrer" content="same-origin">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -117,7 +117,7 @@
 </head>
 <body>
   <header>
-    <a class="brand" href="index.html">Findjob<span>.pro</span></a>
+    <a class="brand" href="index.html">findajob<span>.pro</span></a>
     <div class="langs" role="group" aria-label="Language" id="langs"></div>
   </header>
 
@@ -356,7 +356,7 @@ function pickLang() {
 function applyLang() {
   const t = T[lang];
   document.documentElement.lang = lang;
-  document.title = t.emailTitle + ' — Findjob.pro';
+  document.title = t.emailTitle + ' — findajob.pro';
   els.eyebrow.textContent = t.eyebrow;
   $('t-email-title').textContent = t.emailTitle;
   $('t-email-sub').textContent = t.emailSub;
@@ -673,7 +673,7 @@ els.btnResend.addEventListener('click', () => {
 // ── code input: typing, autofill and paste ───────────────────────────────────
 // A pasted OTP arrives in every shape: "123456", "123 456", or a whole sentence
 // lifted out of the mail client. Prefer a standalone six-digit group, so
-// "Your Findjob.pro code is 123456" does not become "2026…" from the year.
+// "Your findajob.pro code is 123456" does not become "2026…" from the year.
 els.code.addEventListener('paste', e => {
   if (!e.clipboardData) return;                    // let the input handler cope
   const text = e.clipboardData.getData('text') || '';

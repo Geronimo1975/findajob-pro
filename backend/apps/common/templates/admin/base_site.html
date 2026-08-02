@@ -71,10 +71,11 @@
   It is kept as the link's accessible name so the configured value still
   reaches assistive tech.
 
-  Spelling note: web/auth.html and web/app.html currently ship the wordmark as
-  "Findjob.pro" (no "a"). The domain, CLAUDE.md and apps/common/admin_site.py
-  all say findajob.pro, so that is what is used here. Flagged in the handover —
-  if web/ is authoritative, this is the one string to change.
+  Spelling note, resolved: web/ used to ship the wordmark as "Findjob.pro" (no
+  "a"), against the domain, CLAUDE.md and apps/common/admin_site.py. The web
+  side was corrected to lowercase findajob.pro — including the contractual text
+  in web/legal.js, which meant minting a new document version rather than
+  rewriting the hashed rows two consent records already point at.
 {% endcomment %}
 {% block branding %}
 <div id="site-name">

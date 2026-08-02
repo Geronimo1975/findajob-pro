@@ -9,7 +9,7 @@ from django.test import TestCase
 
 from apps.legal.hashing import compute_content_hash
 from apps.legal.models import DOC_ID_ORDER, LANG_ORDER, LegalDocument
-from tests.legal.support import LEGAL_JS, seed
+from tests.legal.support import LEGAL_JS, seed, shipped_date, shipped_version
 
 
 class SeedLegalTests(TestCase):
@@ -57,10 +57,15 @@ class SeedLegalTests(TestCase):
 
     def test_version_is_derived_from_the_document_date(self):
         seed()
-        versions = set(
-            LegalDocument.objects.values_list("version", flat=True).distinct()
-        )
-        self.assertEqual(versions, {"2026-08-01"})
+        for doc_id in DOC_ID_ORDER:
+            for lang in LANG_ORDER:
+                with self.subTest(doc=doc_id, lang=lang):
+                    document = LegalDocument.objects.get(
+                        doc_id=doc_id, lang=lang, is_current=True
+                    )
+                    self.assertEqual(
+                        document.version, shipped_version(doc_id, lang)
+                    )
 
     def test_all_languages_of_a_document_share_one_version(self):
         """Otherwise the German-only staleness check 409s every EN/RO visitor."""
@@ -146,7 +151,7 @@ class SeedDriftTests(TestCase):
             seed()
         message = str(ctx.exception)
         self.assertIn("terms/de", message)
-        self.assertIn("2026-08-01", message)
+        self.assertIn(shipped_version("terms", "de"), message)
 
     def test_a_refused_run_writes_nothing_at_all(self):
         """The whole seed is one transaction: a drift aborts every row."""
@@ -193,4 +198,38 @@ class SeedCurrentPointerTests(TestCase):
         seed(doc_version="hotfix-1")
         document = LegalDocument.objects.get(doc_id="terms", lang="de")
         self.assertEqual(document.version, "hotfix-1")
-        self.assertEqual(document.effective_from.date().isoformat(), "2026-08-01")
+        # Compared against the *date*, not against shipped_version(): the two
+        # happen to render identically today, so using the version here would
+        # pass for a reason that has nothing to do with effective_from the
+        # moment anyone prefixes versions ("v2026-08-02").
+        self.assertEqual(document.effective_from.date(), shipped_date("terms", "de"))
+
+
+class ShippedCorpusVersionTests(TestCase):
+    """The external oracle for the shipped contract versions.
+
+    Every other version assertion in this package goes through
+    ``shipped_version()``, which computes the expected value with the same
+    parser and date reader the seeder uses. That kills a class of brittleness —
+    a literal that has to be edited whenever any unrelated document is
+    re-dated — but it is circular: a mutation of ``version_for_date`` or
+    ``parse_document_date`` leaves all of them green.
+
+    These two literals are the fix. They are written by hand, and they are
+    *supposed* to need a human edit: a legal document changing version is a
+    contractual event, and the person doing it should have to say so in the
+    diff. Re-deriving them from ``web/legal.js`` would defeat the entire point
+    of this class — don't.
+
+    When they fail, the question to ask is not "what is the new date" but
+    "was this document meant to be re-versioned, and has prod been re-seeded?"
+    """
+
+    def test_the_binding_terms_version_is_what_we_think_it_is(self):
+        self.assertEqual(shipped_version("terms", "de"), "2026-08-02")
+        self.assertEqual(shipped_version("dpa", "de"), "2026-08-02")
+
+    def test_the_untouched_documents_are_still_on_their_original_version(self):
+        for doc_id in ("privacy", "cookies", "impressum", "withdrawal"):
+            with self.subTest(doc=doc_id):
+                self.assertEqual(shipped_version(doc_id, "de"), "2026-08-01")

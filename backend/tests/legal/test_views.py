@@ -8,7 +8,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from apps.legal.models import ConsentRecord, ConsentType, LegalDocument
-from tests.legal.support import csrf_pair, seed
+from tests.legal.support import csrf_pair, seed, shipped_version
 from tests.support import make_user
 
 
@@ -38,7 +38,7 @@ class LegalReadEndpointTests(TestCase):
         body = response.json()
         self.assertEqual(body["doc_id"], "terms")
         self.assertEqual(body["lang"], "de")
-        self.assertEqual(body["version"], "2026-08-01")
+        self.assertEqual(body["version"], shipped_version("terms", "de"))
         self.assertTrue(body["is_binding"])
         self.assertTrue(body["sections"])
         self.assertIn("heading", body["sections"][0])

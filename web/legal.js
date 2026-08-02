@@ -5,9 +5,9 @@ export const LEGAL_DOCS = ['terms', 'privacy', 'cookies', 'impressum', 'withdraw
 export const LEGAL = {
   en: {
     _note: 'English translation for convenience. The German version (DE) is the legally binding one.',
-    terms: { title: 'Terms & Conditions (AGB)', updated: 'Aug 1, 2026', sections: [
-      ['1. Scope', 'These Terms govern the use of Findjob.pro, operated by George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germany ("we"). By registering you accept these Terms. Deviating user terms do not apply.'],
-      ['2. Services', 'Findjob.pro aggregates job listings from third-party platforms, generates AI-assisted application content and manages application documents. AI output is a draft: you are responsible for reviewing and sending every application. We do not guarantee interviews or employment.'],
+    terms: { title: 'Terms & Conditions (AGB)', updated: 'Aug 2, 2026', sections: [
+      ['1. Scope', 'These Terms govern the use of findajob.pro, operated by George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germany ("we"). By registering you accept these Terms. Deviating user terms do not apply.'],
+      ['2. Services', 'findajob.pro aggregates job listings from third-party platforms, generates AI-assisted application content and manages application documents. AI output is a draft: you are responsible for reviewing and sending every application. We do not guarantee interviews or employment.'],
       ['3. Account & permitted use', 'One account per person. You must not use the service to violate third-party platform terms (e.g. automated actions on LinkedIn or Indeed where prohibited), send spam, or upload unlawful content. We may suspend accounts for abuse.'],
       ['4. Subscriptions & payment', 'Free, Pro and Max plans as described on the Billing page. Paid plans renew monthly or yearly and are billed via Stripe. Prices include statutory German VAT where applicable. You may cancel at any time, effective at the end of the billing period (§ 327 et seq. BGB remains unaffected).'],
       ['5. Right of withdrawal', 'Consumers have a 14-day right of withdrawal — see the separate Withdrawal Policy (Widerrufsbelehrung).'],
@@ -42,15 +42,15 @@ export const LEGAL = {
       ['Consequences', 'We refund all payments received within 14 days using the original payment method. If you requested the service to start during the withdrawal period, you owe a proportionate amount for services already provided.'],
       ['Early expiry', 'The right expires when we have fully performed the service and you expressly consented to performance before the end of the withdrawal period (§ 356 (4) BGB).'],
     ]},
-    dpa: { title: 'Data Processing Agreement (AVV, Art. 28 GDPR)', updated: 'Aug 1, 2026', sections: [
-      ['For team workspaces', 'Where an organisation processes candidate data of third parties in Findjob.pro, we act as processor and offer a Data Processing Agreement pursuant to Art. 28 GDPR, including the list of sub-processors, technical and organisational measures (TOMs) and deletion duties. Request: george.cucuiet@gmx.de.'],
+    dpa: { title: 'Data Processing Agreement (AVV, Art. 28 GDPR)', updated: 'Aug 2, 2026', sections: [
+      ['For team workspaces', 'Where an organisation processes candidate data of third parties in findajob.pro, we act as processor and offer a Data Processing Agreement pursuant to Art. 28 GDPR, including the list of sub-processors, technical and organisational measures (TOMs) and deletion duties. Request: george.cucuiet@gmx.de.'],
     ]},
   },
   de: {
     _note: 'Die deutsche Fassung ist rechtlich maßgeblich.',
-    terms: { title: 'Allgemeine Geschäftsbedingungen (AGB)', updated: '1. Aug. 2026', sections: [
-      ['1. Geltungsbereich', 'Diese AGB regeln die Nutzung von Findjob.pro, betrieben von George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen („wir"). Mit der Registrierung akzeptieren Sie diese AGB. Abweichende Bedingungen des Nutzers finden keine Anwendung.'],
-      ['2. Leistungen', 'Findjob.pro aggregiert Stellenanzeigen von Drittplattformen, erstellt KI-gestützte Bewerbungsentwürfe und verwaltet Bewerbungsunterlagen. KI-Ausgaben sind Entwürfe: Die Prüfung und der Versand jeder Bewerbung liegen in Ihrer Verantwortung. Ein Vermittlungserfolg wird nicht geschuldet.'],
+    terms: { title: 'Allgemeine Geschäftsbedingungen (AGB)', updated: '2. Aug. 2026', sections: [
+      ['1. Geltungsbereich', 'Diese AGB regeln die Nutzung von findajob.pro, betrieben von George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen („wir"). Mit der Registrierung akzeptieren Sie diese AGB. Abweichende Bedingungen des Nutzers finden keine Anwendung.'],
+      ['2. Leistungen', 'findajob.pro aggregiert Stellenanzeigen von Drittplattformen, erstellt KI-gestützte Bewerbungsentwürfe und verwaltet Bewerbungsunterlagen. KI-Ausgaben sind Entwürfe: Die Prüfung und der Versand jeder Bewerbung liegen in Ihrer Verantwortung. Ein Vermittlungserfolg wird nicht geschuldet.'],
       ['3. Konto & zulässige Nutzung', 'Ein Konto pro Person. Untersagt sind Nutzungen, die gegen Bedingungen von Drittplattformen verstoßen (z. B. verbotene Automatisierung auf LinkedIn oder Indeed), Spam sowie rechtswidrige Inhalte. Bei Missbrauch können Konten gesperrt werden.'],
       ['4. Abonnements & Zahlung', 'Tarife Free, Pro und Max gemäß Abrechnungsseite. Bezahlte Tarife verlängern sich monatlich bzw. jährlich und werden über Stripe abgerechnet. Preise verstehen sich inkl. gesetzlicher USt. Kündigung jederzeit zum Ende des Abrechnungszeitraums; §§ 327 ff. BGB bleiben unberührt.'],
       ['5. Widerrufsrecht', 'Verbrauchern steht ein 14-tägiges Widerrufsrecht zu — siehe gesonderte Widerrufsbelehrung.'],
@@ -85,15 +85,15 @@ export const LEGAL = {
       ['Folgen des Widerrufs', 'Erhaltene Zahlungen erstatten wir binnen 14 Tagen über das ursprüngliche Zahlungsmittel. Haben Sie den Beginn der Leistung während der Widerrufsfrist verlangt, schulden Sie einen anteiligen Betrag für bereits erbrachte Leistungen.'],
       ['Vorzeitiges Erlöschen', 'Das Widerrufsrecht erlischt, wenn wir die Leistung vollständig erbracht haben und Sie der Ausführung vor Fristablauf ausdrücklich zugestimmt haben (§ 356 Abs. 4 BGB).'],
     ]},
-    dpa: { title: 'Auftragsverarbeitungsvertrag (AVV, Art. 28 DSGVO)', updated: '1. Aug. 2026', sections: [
-      ['Für Team-Workspaces', 'Verarbeitet eine Organisation in Findjob.pro Kandidatendaten Dritter, handeln wir als Auftragsverarbeiter und bieten einen AVV nach Art. 28 DSGVO an — inkl. Subunternehmerliste, technisch-organisatorischer Maßnahmen (TOMs) und Löschpflichten. Anfrage: george.cucuiet@gmx.de.'],
+    dpa: { title: 'Auftragsverarbeitungsvertrag (AVV, Art. 28 DSGVO)', updated: '2. Aug. 2026', sections: [
+      ['Für Team-Workspaces', 'Verarbeitet eine Organisation in findajob.pro Kandidatendaten Dritter, handeln wir als Auftragsverarbeiter und bieten einen AVV nach Art. 28 DSGVO an — inkl. Subunternehmerliste, technisch-organisatorischer Maßnahmen (TOMs) und Löschpflichten. Anfrage: george.cucuiet@gmx.de.'],
     ]},
   },
   ro: {
     _note: 'Traducere în limba română pentru conveniență. Versiunea germană (DE) este cea obligatorie juridic.',
-    terms: { title: 'Termeni și condiții (AGB)', updated: '1 aug. 2026', sections: [
-      ['1. Domeniu de aplicare', 'Acești termeni reglementează utilizarea Findjob.pro, operat de George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germania. Prin înregistrare acceptați acești termeni.'],
-      ['2. Servicii', 'Findjob.pro agregă joburi din platforme terțe, generează conținut de aplicare asistat de AI și gestionează documentele. Conținutul AI este un draft: verificarea și trimiterea fiecărei aplicări sunt responsabilitatea dvs. Nu garantăm interviuri sau angajare.'],
+    terms: { title: 'Termeni și condiții (AGB)', updated: '2 aug. 2026', sections: [
+      ['1. Domeniu de aplicare', 'Acești termeni reglementează utilizarea findajob.pro, operat de George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germania. Prin înregistrare acceptați acești termeni.'],
+      ['2. Servicii', 'findajob.pro agregă joburi din platforme terțe, generează conținut de aplicare asistat de AI și gestionează documentele. Conținutul AI este un draft: verificarea și trimiterea fiecărei aplicări sunt responsabilitatea dvs. Nu garantăm interviuri sau angajare.'],
       ['3. Cont & utilizare permisă', 'Un cont per persoană. Este interzisă utilizarea care încalcă termenii platformelor terțe (ex. automatizare interzisă pe LinkedIn sau Indeed), spamul sau conținutul ilegal.'],
       ['4. Abonamente & plată', 'Planuri Free, Pro și Max conform paginii de Billing. Planurile plătite se reînnoiesc lunar/anual, facturate prin Stripe, cu TVA german inclus. Puteți anula oricând, cu efect la finalul perioadei de facturare.'],
       ['5. Drept de retragere', 'Consumatorii au drept de retragere de 14 zile — vezi Politica de retragere (Widerrufsbelehrung).'],
@@ -128,8 +128,8 @@ export const LEGAL = {
       ['Consecințe', 'Rambursăm plățile primite în 14 zile, prin metoda de plată originală. Dacă ați cerut începerea serviciului în perioada de retragere, datorați o sumă proporțională pentru serviciile deja prestate.'],
       ['Expirare anticipată', 'Dreptul se stinge când serviciul a fost prestat integral și ați consimțit expres la executare înainte de expirarea termenului (§ 356 (4) BGB).'],
     ]},
-    dpa: { title: 'Acord de prelucrare a datelor (AVV, art. 28 RGPD)', updated: '1 aug. 2026', sections: [
-      ['Pentru workspace-uri de echipă', 'Când o organizație prelucrează în Findjob.pro date ale unor candidați terți, acționăm ca persoană împuternicită și oferim un AVV conform art. 28 RGPD — cu lista subîmputerniciților, măsurile tehnice și organizatorice (TOMs) și obligațiile de ștergere. Solicitări: george.cucuiet@gmx.de.'],
+    dpa: { title: 'Acord de prelucrare a datelor (AVV, art. 28 RGPD)', updated: '2 aug. 2026', sections: [
+      ['Pentru workspace-uri de echipă', 'Când o organizație prelucrează în findajob.pro date ale unor candidați terți, acționăm ca persoană împuternicită și oferim un AVV conform art. 28 RGPD — cu lista subîmputerniciților, măsurile tehnice și organizatorice (TOMs) și obligațiile de ștergere. Solicitări: george.cucuiet@gmx.de.'],
     ]},
   },
 };

@@ -21,6 +21,18 @@ class ParseDocumentDateTests(SimpleTestCase):
             with self.subTest(value=value):
                 self.assertEqual(parse_document_date(value), date(2026, 8, 1))
 
+    def test_parses_the_day_the_corpus_currently_ships(self):
+        """The AGB and the AVV moved to Aug 2; day 1 was the only day covered.
+
+        Kept as its own case on purpose: with only day-1 fixtures, a reader
+        that silently collapsed the day-of-month would have passed everything
+        here while minting a version that collides with the already-seeded
+        2026-08-01 rows in production.
+        """
+        for value in ("Aug 2, 2026", "2. Aug. 2026", "2 aug. 2026"):
+            with self.subTest(value=value):
+                self.assertEqual(parse_document_date(value), date(2026, 8, 2))
+
     def test_parses_iso(self):
         self.assertEqual(parse_document_date("2026-08-01"), date(2026, 8, 1))
 

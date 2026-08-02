@@ -23,7 +23,7 @@ from apps.legal.services import (
     resolve_document,
     revoke_consent,
 )
-from tests.legal.support import make_document, seed
+from tests.legal.support import make_document, seed, shipped_version
 from tests.support import make_user
 
 
@@ -55,7 +55,9 @@ class RegistrationConsentTests(TestCase):
         self.assertEqual(record.ui_language, "en")
 
     def test_stores_the_server_version_not_the_client_string(self):
-        record_registration_consent(self.user, client_terms_version="2026-08-01")
+        record_registration_consent(
+            self.user, client_terms_version=shipped_version("terms", "de")
+        )
         record = ConsentRecord.objects.for_user(self.user).of_type("terms").get()
         self.assertEqual(record.doc_version, current_terms_version())
 

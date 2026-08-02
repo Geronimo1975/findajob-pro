@@ -13,8 +13,8 @@ from apps.legal.hashing import (
 )
 
 SECTIONS = [
-    ["1. Geltungsbereich", "Diese AGB regeln die Nutzung von Findjob.pro."],
-    ["2. Leistungen", "Findjob.pro aggregiert Stellenanzeigen."],
+    ["1. Geltungsbereich", "Diese AGB regeln die Nutzung von findajob.pro."],
+    ["2. Leistungen", "findajob.pro aggregiert Stellenanzeigen."],
 ]
 
 
@@ -58,8 +58,8 @@ class ContentHashTests(SimpleTestCase):
         self.assertEqual(digest(sections=crlf), digest(sections=lf))
 
     def test_trailing_whitespace_does_not_change_the_digest(self):
-        padded = [[" 1. Geltungsbereich  ", "Diese AGB regeln die Nutzung von Findjob.pro.  "]]
-        clean = [[" 1. Geltungsbereich", "Diese AGB regeln die Nutzung von Findjob.pro."]]
+        padded = [[" 1. Geltungsbereich  ", "Diese AGB regeln die Nutzung von findajob.pro.  "]]
+        clean = [[" 1. Geltungsbereich", "Diese AGB regeln die Nutzung von findajob.pro."]]
         self.assertEqual(digest(sections=padded), digest(sections=clean))
 
     def test_section_storage_shape_does_not_change_the_digest(self):

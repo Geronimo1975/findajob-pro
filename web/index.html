@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Findjob.pro — AI-assisted job tracking &amp; applications</title>
+<title>findajob.pro — AI-assisted job tracking &amp; applications</title>
 <meta name="description" content="Aggregate jobs from LinkedIn, RemoteOK, We Work Remotely, Wellfound and Indeed, score them against your profile, and send AI-tailored applications. EN / DE / RO.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <!-- Serve React from our own origin instead of unpkg.com: no US-CDN request before consent,
@@ -52,7 +52,7 @@
 <div style="min-height: 100vh; background: #101010;">
   <!-- NAV -->
   <nav style="display: flex; align-items: center; gap: 24px; padding: 14px 40px; border-bottom: 1px solid #3d3a39; position: sticky; top: 0; background: #101010; z-index: 10;">
-    <div style="font-weight: 700; font-size: 18px;">Findjob<span style="color: #00d992;">.pro</span></div>
+    <div style="font-weight: 700; font-size: 18px;">findajob<span style="color: #00d992;">.pro</span></div>
     <div style="display: flex; gap: 20px; margin-left: 16px;">
       <a href="#features" style="font-size: 13px; color: #bdbdbd;">{{ tFeatures }}</a>
       <a href="#pricing" style="font-size: 13px; color: #bdbdbd;">{{ tPricing }}</a>
@@ -85,39 +85,20 @@
         <span style="width: 10px; height: 10px; border-radius: 50%; background: #00d992;"></span>
       </div>
       <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.9; color: #f5f6f7;">
-        <div><span style="color: #8b949e;">$</span> findjob pull --module remoteok</div>
+        <div><span style="color: #8b949e;">$</span> findajob pull --module remoteok</div>
         <div><span style="color: #00d992;">✓</span> 12 new listings · skill match ≥ 66%</div>
-        <div><span style="color: #8b949e;">$</span> findjob apply --job 101 --review</div>
+        <div><span style="color: #8b949e;">$</span> findajob apply --job 101 --review</div>
         <div><span style="color: #00d992;">✓</span> email + cover letter generated · awaiting your review</div>
       </div>
     </div>
   </section>
 
-  <!-- SOCIAL PROOF -->
-  <section style="border-top: 1px solid #3d3a39; border-bottom: 1px solid #3d3a39; background: #1a1a1a;">
-    <div style="max-width: 1100px; margin: 0 auto; padding: 28px 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;">
-      <sc-for list="{{ statCards }}" as="st" hint-placeholder-count="4">
-        <div>
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 600; color: #00d992;">{{ st.value }}</div>
-          <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">{{ st.label }}</div>
-        </div>
-      </sc-for>
-    </div>
-  </section>
-  <section style="max-width: 1100px; margin: 0 auto; padding: 48px 40px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-    <sc-for list="{{ quotes }}" as="qt" hint-placeholder-count="2">
-      <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 8px; padding: 22px;">
-        <div style="font-size: 14.5px; line-height: 1.65; color: #f2f2f2;">"{{ qt.text }}"</div>
-        <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px;">
-          <div style="width: 30px; height: 30px; border-radius: 50%; background: rgba(0,217,146,0.12); color: #00d992; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">{{ qt.initial }}</div>
-          <div>
-            <div style="font-size: 12.5px; font-weight: 600;">{{ qt.name }}</div>
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;">{{ qt.role }}</div>
-          </div>
-        </div>
-      </div>
-    </sc-for>
-  </section>
+  <!-- A social-proof band and two testimonials used to sit here. They were
+       removed: the product has no users, so every figure was a claim about
+       nothing, and on the German market that is UWG § 5 irreführende Werbung.
+       Do not put a usage metric or a testimonial here until it is measured and
+       attributable. (The removed copy is not repeated here on purpose — this
+       file is served publicly.) -->
 
   <!-- FEATURES -->
   <section id="features" style="max-width: 1100px; margin: 0 auto; padding: 40px 40px 56px;">
@@ -162,7 +143,7 @@
 
   <!-- FOOTER -->
   <footer style="border-top: 1px solid #3d3a39; padding: 32px 40px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-    <div style="font-weight: 700; font-size: 14px;">Findjob<span style="color: #00d992;">.pro</span></div>
+    <div style="font-weight: 700; font-size: 14px;">findajob<span style="color: #00d992;">.pro</span></div>
     <span style="font-size: 12px; color: #8b949e;">© 2026 George Sebastian Cucuiet, Hanstedt</span>
     <div style="margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap;">
       <sc-for list="{{ footerLinks }}" as="fl" hint-placeholder-count="5">
@@ -229,7 +210,7 @@ class Component extends DCLogic {
     const T = {
       en: {
         eyebrow: 'AI-ASSISTED JOB APPLICATION PLATFORM', heroTitle: 'Every job board. One tracker. Applications that write themselves.',
-        heroSub: 'Findjob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, made in Hamburg.',
+        heroSub: 'findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, made in Hamburg.',
         cta: 'Start free', demo: 'View live demo', noCard: 'Free plan · no credit card required', login: 'Log in', signup: 'Sign up',
         features: 'Features', pricing: 'Pricing', featuresTitle: 'Built like an engineering tool', pricingTitle: 'Simple pricing', choose: 'Choose plan',
         email: 'E-mail address', password: 'Password (min. 8 characters)', continue: 'Continue', finish: 'Go to dashboard →',
@@ -249,7 +230,7 @@ class Component extends DCLogic {
       },
       de: {
         eyebrow: 'KI-GESTÜTZTE BEWERBUNGSPLATTFORM', heroTitle: 'Alle Jobbörsen. Ein Tracker. Bewerbungen, die sich selbst schreiben.',
-        heroSub: 'Findjob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, aus Hamburg.',
+        heroSub: 'findajob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, aus Hamburg.',
         cta: 'Kostenlos starten', demo: 'Live-Demo ansehen', noCard: 'Free-Tarif · keine Kreditkarte nötig', login: 'Anmelden', signup: 'Registrieren',
         features: 'Funktionen', pricing: 'Preise', featuresTitle: 'Gebaut wie ein Engineering-Tool', pricingTitle: 'Einfache Preise', choose: 'Tarif wählen',
         email: 'E-Mail-Adresse', password: 'Passwort (mind. 8 Zeichen)', continue: 'Weiter', finish: 'Zum Dashboard →',
@@ -269,7 +250,7 @@ class Component extends DCLogic {
       },
       ro: {
         eyebrow: 'PLATFORMĂ DE APLICARE ASISTATĂ DE AI', heroTitle: 'Toate site-urile de joburi. Un singur tracker. Aplicări care se scriu singure.',
-        heroSub: 'Findjob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, făcut în Hamburg.',
+        heroSub: 'findajob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, făcut în Hamburg.',
         cta: 'Începe gratuit', demo: 'Vezi demo live', noCard: 'Plan gratuit · fără card', login: 'Autentificare', signup: 'Înregistrare',
         features: 'Funcții', pricing: 'Prețuri', featuresTitle: 'Construit ca un tool de inginerie', pricingTitle: 'Prețuri simple', choose: 'Alege planul',
         email: 'Adresă de e-mail', password: 'Parolă (min. 8 caractere)', continue: 'Continuă', finish: 'Spre dashboard →',
@@ -309,30 +290,9 @@ class Component extends DCLogic {
         go: () => { document.documentElement.lang = l; this.setState({ lang: l }); },
       })),
       featureCards: tr.featureCards.map(([tag, title, desc]) => ({ tag, title, desc })),
-      statCards: [
-        ['1,240', { en: 'applications sent this week', de: 'Bewerbungen diese Woche', ro: 'aplicări trimise săptămâna asta' }],
-        ['9', { en: 'platform modules live', de: 'aktive Plattform-Module', ro: 'module de platformă active' }],
-        ['82%', { en: 'avg. skill match on applied jobs', de: 'Ø Skill-Match bei Bewerbungen', ro: 'potrivire medie la aplicări' }],
-        ['4.8/5', { en: 'user rating', de: 'Nutzerbewertung', ro: 'rating utilizatori' }],
-      ].map(([value, labels]) => ({ value, label: labels[s.lang] })),
-      quotes: [
-        {
-          initial: 'JK', name: 'Jonas K.', role: 'Backend Engineer · Hamburg',
-          text: {
-            en: 'I sent 60 tailored applications in my first month — the founder-message tone for Wellfound got me three intro calls in week one.',
-            de: 'Im ersten Monat 60 maßgeschneiderte Bewerbungen — der Gründer-Ton für Wellfound brachte mir drei Erstgespräche in Woche eins.',
-            ro: 'Am trimis 60 de aplicări personalizate în prima lună — tonul de mesaj către founder pentru Wellfound mi-a adus trei call-uri în prima săptămână.',
-          }[s.lang],
-        },
-        {
-          initial: 'AM', name: 'Alina M.', role: 'Career Coach · 12-seat Team plan',
-          text: {
-            en: 'The client workspaces and the mandatory review step are why we switched. My coachees apply 5× faster without a single spam complaint.',
-            de: 'Client-Workspaces und der verpflichtende Review-Schritt waren der Grund für den Wechsel. Meine Coachees bewerben sich 5× schneller — ohne eine einzige Spam-Beschwerde.',
-            ro: 'Workspace-urile per client și pasul obligatoriu de review au fost motivul schimbării. Clienții mei aplică de 5× mai repede, fără nicio plângere de spam.',
-          }[s.lang],
-        },
-      ],
+      // `statCards` and `quotes` are gone on purpose — see the comment where the
+      // markup used to be. They fed invented usage numbers and two testimonials
+      // from people who do not exist.
       planCards: plans.map(([name, price, popular, features]) => ({
         name, price, popular, features,
         per: name === 'Team' ? '/ mo / seat' : '/ mo',
