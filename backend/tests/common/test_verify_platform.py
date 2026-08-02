@@ -77,3 +77,30 @@ class TestContext:
     def test_api_joins(self):
         ctx = VerifyContext(target="https://findajob.pro", session=mock.Mock(), env={})
         assert ctx.api("/me/") == "https://findajob.pro/api/v1/me/"
+
+
+class TestFrontendHelpers:
+    def test_third_party_origin_detected(self):
+        from apps.common.verify.frontend import third_party_origins
+
+        html = '<script src="https://cdn.example.com/x.js"></script>'
+        assert third_party_origins(html, "https://findajob.pro") == {"https://cdn.example.com"}
+
+    def test_same_origin_and_relative_ok(self):
+        from apps.common.verify.frontend import third_party_origins
+
+        html = ('<script src="/vendor/react.js"></script>'
+                '<link href="https://findajob.pro/fonts/a.woff2">')
+        assert third_party_origins(html, "https://findajob.pro") == set()
+
+    def test_resource_urls_parsed(self):
+        from apps.common.verify.frontend import resource_urls
+
+        html = ('<script>window.__resources = {"react": "/vendor/react.production.js",'
+                ' "font": "/fonts/inter.woff2"};</script>')
+        assert resource_urls(html) == ["/vendor/react.production.js", "/fonts/inter.woff2"]
+
+    def test_resource_urls_absent(self):
+        from apps.common.verify.frontend import resource_urls
+
+        assert resource_urls("<html></html>") == []
