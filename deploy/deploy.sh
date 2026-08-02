@@ -256,14 +256,36 @@ deploy_api() {
     # --- ship the build context ----------------------------------------------
     # The compose file lives at the repo ROOT on the VPS, not in deploy/ — every
     # relative path inside it is written for that location.
+    # What the RUNNING container is serving, read before anything is copied.
+    #
+    # Compared against the container rather than against the file on disk, and
+    # that is the whole point: Docker binds deploy/nginx.conf by INODE, and
+    # rsync writes a temp file and renames it. So the on-disk copy can already
+    # match the payload while nginx keeps serving the previous config —
+    # `nginx -t` and `nginx -s reload` both report success while changing
+    # nothing. Comparing the two files on disk would find them equal and say
+    # everything is fine in exactly the case that is broken.
+    NGINX_SERVED="$(ssh "$HOST" "cd '$ROOT' && docker compose exec -T web sha256sum /etc/nginx/conf.d/default.conf 2>/dev/null | awk '{print \$1}'" || true)"
+    NGINX_SHIPPING="$(shasum -a 256 "$PAYLOAD/deploy/nginx.conf" | awk '{print $1}')"
+
     say "transfer"
     rsync -rlptD --delete --delay-updates "$PAYLOAD/backend/" "$HOST:$ROOT/backend/"
     rsync -rlptD "$PAYLOAD/deploy/docker-compose.yml" "$HOST:$ROOT/docker-compose.yml"
     rsync -rlptD "$PAYLOAD/deploy/nginx.conf" "$HOST:$ROOT/deploy/nginx.conf"
     rsync -rlptD "$PAYLOAD/deploy/cron/" "$HOST:$ROOT/deploy/cron/"
     note "backend/, docker-compose.yml, nginx.conf, cron scripts"
-    warn "nginx.conf was copied but NOT applied — it is bind-mounted by inode, so"
-    warn "it needs 'docker compose up -d --force-recreate web'. Do that by hand."
+
+    # Only speak up when there is something to do. An unconditional warning is
+    # one people learn to scroll past, and then it is not a warning.
+    if [ -z "$NGINX_SERVED" ]; then
+        warn "could not read the running nginx config — check whether nginx.conf needs applying by hand."
+    elif [ "$NGINX_SERVED" != "$NGINX_SHIPPING" ]; then
+        warn "nginx.conf CHANGED and is NOT live yet. It is bind-mounted by inode, so"
+        warn "a reload is not enough — 'nginx -t' and 'nginx -s reload' will both"
+        warn "report success while still serving the old file. Apply it with:"
+        warn "    ssh $HOST \"cd $ROOT && docker compose up -d --force-recreate web\""
+        warn "That briefly 502s the site (~1-2s), which is why it is not automatic."
+    fi
 
     # --- build ----------------------------------------------------------------
     # A build never touches the running container.
