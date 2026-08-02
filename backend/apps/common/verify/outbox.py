@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, timezone
 from apps.common.verify.base import (
     OTP_WAIT, TIMEOUT, ModuleReport, VerifyContext, failed, passed, skipped,
 )
-from apps.common.verify.api_gate import is_error_shape
 from apps.common.verify.auth_otp import csrf_headers
 from apps.common.verify.gmail import GmailClient
 
@@ -34,12 +33,17 @@ def run(ctx: VerifyContext) -> ModuleReport:
     if resp.status_code == 401:
         results.append(skipped("mailbox endpoint", "no authenticated session — see auth-otp"))
         return ModuleReport("outbox", results)
-    if resp.status_code == 404 and not is_error_shape(payload):
-        results.append(skipped("mailbox endpoint", "not deployed on this target"))
-        return ModuleReport("outbox", results)
-    if resp.status_code == 404 and payload["error"]["code"] == "mailbox_not_connected":
+    if resp.status_code == 404 and payload and payload.get("error", {}).get("code") == "mailbox_not_connected":
         results.append(skipped("test send via user SMTP",
                                "connect a mailbox in the workspace to enable"))
+        return ModuleReport("outbox", results)
+    if resp.status_code == 404:
+        # handler404 (apps/common/errors.py::api_page_not_found) wraps *every*
+        # unmatched /api/ route in the same error shape as a real view's 404,
+        # so an unmounted apps.outbox.urls (module absent on this deploy
+        # target) is indistinguishable from a genuinely missing sub-path other
+        # than by the generic "not_found" code used here.
+        results.append(skipped("mailbox endpoint", "not deployed on this target"))
         return ModuleReport("outbox", results)
     if resp.status_code != 200:
         results.append(failed("mailbox endpoint", f"HTTP {resp.status_code}: {str(resp.text)[:120]}"))
