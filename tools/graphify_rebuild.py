@@ -32,6 +32,7 @@ owed, which is exactly the failure that let auth.html land invisibly on
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -76,6 +77,63 @@ def targets_for(changed: list[str]) -> list[str]:
             hit.append(name)
             break
     return hit
+
+
+def source_hash(path: Path) -> str | None:
+    """Content hash of a semantic layer's source document, or None if it is gone."""
+    try:
+        return hashlib.md5(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def seal_sources(name: str) -> None:
+    """Record today's hashes into semantic.json — call after a semantic refresh.
+
+    Run this only when semantic.json genuinely describes the current documents.
+    Sealing stale content is how you get a graph that lies confidently.
+    """
+    root = REPO / name
+    path = root / "graphify-out" / "semantic.json"
+    sem = json.loads(path.read_text(encoding="utf-8"))
+    srcs = sorted({n["source_file"] for n in sem["nodes"] if n.get("source_file")})
+    sealed, missing = {}, []
+    for s in srcs:
+        h = source_hash(root / s)
+        if h is None:
+            missing.append(s)
+        else:
+            sealed[s] = h
+    sem["sources"] = sealed
+    path.write_text(json.dumps(sem, indent=2, ensure_ascii=False), encoding="utf-8")
+    log(f"{name}: sealed {len(sealed)} source(s)")
+    if missing:
+        log(f"{name}: {len(missing)} source(s) referenced but absent: {missing}")
+
+
+def check_drift(name: str, root: Path, sem: dict) -> tuple[set[str], list[str]]:
+    """Which semantic sources no longer match what the layer was written against?
+
+    This replaces asking git "did the commit touch a .html file". A commit can
+    touch a document without changing what it means, and a document can drift
+    through a rebase or a checkout that no post-commit hook ever sees. Hashing
+    the actual bytes is the only check that cannot be fooled either way.
+    """
+    sealed = sem.get("sources")
+    if not sealed:
+        log(f"{name}: semantic.json is unsealed — run with --seal to enable drift detection")
+        return set(), []
+
+    drifted, notes = set(), []
+    for src, was in sealed.items():
+        now = source_hash(root / src)
+        if now is None:
+            drifted.add(src)
+            notes.append(f"{src}: DELETED since the semantic layer was written")
+        elif now != was:
+            drifted.add(src)
+            notes.append(f"{src}: changed since the semantic layer was written")
+    return drifted, notes
 
 
 def resolve_labels(name: str, out: Path, comms: dict) -> dict:
@@ -138,12 +196,21 @@ def rebuild(name: str, changed: list[str]) -> bool:
     ast = extract([Path(f) for f in det["files"]["code"]], cache_root=Path("."))
     sem = json.loads(semantic_path.read_text(encoding="utf-8"))
 
+    # Drift is stamped onto the nodes themselves, not just reported alongside
+    # them. A stale claim that only shows up in a side file is a claim that gets
+    # read as current by everything that queries graph.json.
+    drifted, notes = check_drift(name, root, sem)
+
     seen = {n["id"] for n in ast["nodes"]}
     nodes = list(ast["nodes"])
     for n in sem["nodes"]:
-        if n["id"] not in seen:
-            nodes.append(n)
-            seen.add(n["id"])
+        if n["id"] in seen:
+            continue
+        if n.get("source_file") in drifted:
+            n = {**n, "stale": True,
+                 "stale_reason": f"{n['source_file']} changed after this node was written"}
+        nodes.append(n)
+        seen.add(n["id"])
 
     edges = ast["edges"] + sem["edges"]
     # A semantic edge can point at a code symbol that has since been renamed or
@@ -196,28 +263,40 @@ def rebuild(name: str, changed: list[str]) -> bool:
 
     log(f"{name}: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges, {len(comms)} communities")
 
-    # Documents carry the meaning here and nothing in this script can read prose.
-    # Record them so the debt is visible instead of silently accruing.
-    doc_exts = {".html", ".md", ".txt", ".svg"}
-    docs = [
-        f for f in changed
-        if Path(f).parts and Path(f).parts[0] == name and Path(f).suffix.lower() in doc_exts
-    ]
+    # Documents carry the meaning here and nothing in this script can read prose,
+    # so the debt is recorded rather than paid. Driven by content hashes, not by
+    # the commit's file list: the marker therefore clears itself once the
+    # semantic layer is refreshed and re-sealed, and never names a file that has
+    # since been deleted or reverted.
     marker = out / ".needs_update"
-    if docs:
+    stale_nodes = sum(1 for n in nodes if n.get("stale"))
+    if drifted:
         marker.write_text(
-            "Semantic layer is stale. These documents changed but semantic.json was not\n"
-            "regenerated — run /graphify in Claude Code to refresh it.\n\n"
-            + "\n".join(sorted(set(docs)))
-            + "\n",
+            "Semantic layer is stale.\n\n"
+            f"{len(drifted)} source document(s) no longer match what semantic.json was\n"
+            f"written against, so {stale_nodes} node(s) in graph.json are marked stale:\n\n"
+            + "\n".join(f"  {n}" for n in sorted(notes))
+            + "\n\nRefresh with /graphify in Claude Code, then re-seal:\n"
+            f"  tools/graphify_rebuild.py --seal {name}\n",
             encoding="utf-8",
         )
-        log(f"{name}: {len(docs)} document(s) changed — semantic pass owed, see .needs_update")
+        log(f"{name}: {len(drifted)} source(s) drifted, {stale_nodes} node(s) marked stale — see .needs_update")
+    else:
+        marker.unlink(missing_ok=True)
     return True
 
 
 def main() -> int:
-    changed = [a for a in sys.argv[1:] if a.strip()]
+    argv = [a for a in sys.argv[1:] if a.strip()]
+    if argv and argv[0] == "--seal":
+        for name in argv[1:] or list(TARGETS):
+            if name not in TARGETS:
+                log(f"unknown target {name!r}; expected one of {sorted(TARGETS)}")
+                return 2
+            seal_sources(name)
+        return 0
+
+    changed = argv
     if not changed:
         env = os.environ.get("GRAPHIFY_CHANGED", "")
         changed = [line.strip() for line in env.splitlines() if line.strip()]

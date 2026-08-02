@@ -8,5 +8,19 @@
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/tools/graphify_drift_notice.sh\" 2>/dev/null || true",
+            "timeout": 10,
+            "statusMessage": "Checking graphify drift"
+          }
+        ]
+      }
+    ]
   }
 }
