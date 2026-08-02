@@ -2276,23 +2276,69 @@ summary:focus-visible,
 
 
 /* ==========================================================================
-   22 · Font fallback copies (admin/fonts/) — NOT wired into @font-face
+   22 · The admin's actual fonts (admin/fonts/), wired into @font-face
    --------------------------------------------------------------------------
-   Section 1 above already self-hosts Inter and JetBrains Mono from
-   `/fonts/*.woff2`, served by nginx straight out of `web/fonts/` at the same
-   origin as `/admin/` — that is the live font source and stays authoritative;
-   see section 1's comment for why the paths there are absolute and why a
-   relative reference from this file would break `collectstatic`.
+   Section 1's `/fonts/*.woff2` rules depend on nginx's `/fonts/` alias in
+   front of `/admin/`; under `runserver` (no nginx) that path 404s and the
+   admin silently falls back to the system UI font — cosmetic locally, but it
+   defeats the point of self-hosting Inter/JetBrains Mono for this app. The
+   files below are a copy placed under this app's own `static/admin/fonts/`
+   tree, referenced here with paths *relative to this CSS file*
+   (`../fonts/<file>.woff2`), so `staticfiles.finders.find()` resolves them
+   under `runserver`, and `collectstatic`/`ManifestStaticFilesStorage` can
+   hash and ship them too since the referenced files genuinely exist inside
+   this app's static tree (unlike the absolute `/fonts/…` paths in section 1,
+   which point outside STATIC_URL on purpose — see that section's comment).
 
-   These four files are a second, identical copy placed under this app's own
-   `static/admin/fonts/` tree so `django.contrib.staticfiles.finders.find()`
-   can resolve them (and so `collectstatic` ships them) even in a deployment
-   that runs the admin without nginx's `/fonts/` alias in front of it — e.g.
-   `runserver` with `--insecure`, or a future staff console on its own origin.
-   No @font-face here references them; adding a second set of @font-face
-   rules for the same family/unicode-range would just race section 1's rules
-   for which face the browser picks, for no benefit while nginx is in front.
+   Load-order consequence: these rules come AFTER section 1's in the
+   cascade. @font-face selection is per-codepoint by unicode-range, not
+   whole-family, and when two @font-face rules for the same family cover an
+   overlapping codepoint the LAST one registered wins for that codepoint. So
+   wherever nginx's `/fonts/` alias is reachable (prod, and any environment
+   that mounts `web/` in front of `/admin/`), the browser tries section 1's
+   absolute URL first in practice only if it loads first; here both are
+   declared for the same unicode-ranges, so these local copies take priority
+   once loaded. That is fine — they are byte-identical files — but it means
+   section 1 is not truly "authoritative" for font *bytes* once this section
+   loads, only redundant. Section 1's absolute `/fonts/` alias remains for
+   the pages outside `/admin/` (nginx serves `web/*.html` those fonts too).
    ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/inter-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/jetbrains-mono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(../fonts/jetbrains-mono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 
 /* ==========================================================================
