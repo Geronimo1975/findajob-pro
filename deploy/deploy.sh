@@ -185,7 +185,26 @@ deploy_web() {
         ls -1dt '$ROOT'/.deploy-state/web-* 2>/dev/null | tail -n +$((KEEP_SNAPSHOTS + 1)) | xargs -r rm -rf"
     note "web-$TS (keeping $KEEP_SNAPSHOTS)"
 
-    ROLLBACK="ssh $HOST \"rm -rf $ROOT/web.failed && mv $ROOT/web $ROOT/web.failed && cp -al $ROOT/.deploy-state/web-$TS $ROOT/web\""
+    # Restores INTO $ROOT/web rather than replacing the directory, for the same
+    # reason the transfer below does: ./web is a directory bind mount and Docker
+    # resolved it at container CREATE. `mv $ROOT/web …` renames the very inode
+    # nginx is serving — the container follows the rename and keeps serving the
+    # failed payload, while the freshly created $ROOT/web is a different inode it
+    # never sees. The rollback would report success and change nothing visible,
+    # which is the exact trap this file warns about three lines down.
+    #
+    # `-c` (checksum) rather than the default size+mtime quick check: a rollback
+    # is the one moment where being right matters more than being fast, the
+    # webroot is under a megabyte, and a payload that differs from the snapshot
+    # only in content — same size, same mtime — is precisely the sort of thing
+    # one would be rolling back from.
+    #
+    # The failed payload is hardlinked aside first, so it can still be examined.
+    # `;` not `&&`: forensics must never be able to block the restore. And it is
+    # a timestamped name under .deploy-state, not a fixed $ROOT/web.failed —
+    # the old fixed name meant a SECOND rollback began with `rm -rf` of the
+    # directory the container was by then actually serving.
+    ROLLBACK="ssh $HOST \"cp -al $ROOT/web $ROOT/.deploy-state/failed-$TS 2>/dev/null; rsync -rlptDc --delete $ROOT/.deploy-state/web-$TS/ $ROOT/web/\""
 
     # -rlptD, not -a: -a additionally carries owner and group, which is how every
     # file in the webroot ended up owned by 501:staff — the laptop's uid.
@@ -206,15 +225,43 @@ deploy_web() {
     # substitution, which is bash-only, and the remote command runs in root's
     # login shell. Under dash it would fail — and `if !` would read that failure
     # as "legal.js changed" and re-seed on every single deploy.
+    # The seed runs UNCONDITIONALLY, and that is the fix for a silent-skip bug:
+    # the decision used to be "did this rsync change legal.js", which is not the
+    # question. The question is "does the database match the file now being
+    # served". Those differ exactly when it matters most — after a failed seed.
+    # `seed_legal` died, the operator followed the message and re-ran the deploy,
+    # and on that second run the live file was ALREADY the new one, so the hashes
+    # matched, the seed was skipped, and the deploy reported success while prod
+    # served the new AGB against the old hashes. Permanently, and silently.
+    #
+    # Unconditional is affordable because the command is idempotent by design
+    # (see seed_legal.py): with nothing to do it writes nothing and reports
+    # "0 created, 18 unchanged".
     LEGAL_NOW="$(ssh "$HOST" "sha256sum '$ROOT/web/legal.js' 2>/dev/null | awk '{print \$1}'")"
     LEGAL_WAS="$(ssh "$HOST" "cat '$ROOT/.deploy-state/legal-$TS.sha256' 2>/dev/null || true")"
-    if [ -z "$LEGAL_NOW" ] || [ "$LEGAL_NOW" != "$LEGAL_WAS" ]; then
-        say "legal.js changed — re-seeding"
-        ssh "$HOST" "cd '$ROOT' && docker compose exec -T api python manage.py seed_legal" \
-            || die "seed_legal FAILED. Consent fails closed with 503, so first login is broken until this succeeds. Fix it, or roll back:
+    LEGAL_CHANGED=0
+    if [ -z "$LEGAL_NOW" ] || [ "$LEGAL_NOW" != "$LEGAL_WAS" ]; then LEGAL_CHANGED=1; fi
+
+    say "seed legal"
+    if seed_out="$(ssh "$HOST" "cd '$ROOT' && docker compose exec -T api python manage.py seed_legal" 2>&1)"; then
+        printf '%s\n' "$seed_out" | tail -1 | sed 's/^/    /'
+    elif [ "$LEGAL_CHANGED" -eq 1 ]; then
+        # The served text moved and the hashes did not follow it. Consent now
+        # resolves against a document nobody is reading.
+        printf '%s\n' "$seed_out" | tail -10 | sed 's/^/    /'
+        die "seed_legal FAILED and legal.js CHANGED in this deploy — the served text and the
+hashed text now disagree. Consent fails closed with 503 when unseeded, and
+records against the wrong hash when stale. Fix it and re-run (the seed is
+unconditional now, so a re-run really does re-seed), or roll back:
   $ROLLBACK"
     else
-        note "legal.js unchanged — no re-seed needed"
+        # legal.js is byte-identical to what was already seeded, so consent is
+        # still resolving against the right text. Worth saying out loud — it
+        # usually means the api container is down — but not worth failing a
+        # web-only deploy that is otherwise correct.
+        printf '%s\n' "$seed_out" | tail -5 | sed 's/^/    /'
+        warn "seed_legal did not run, but legal.js is unchanged from what is already"
+        warn "seeded, so consent still resolves correctly. Check the api container."
     fi
 }
 
@@ -304,11 +351,33 @@ deploy_api() {
     # real gate rather than output parsing. It runs from the image just built,
     # which is what makes it the NEW code's plan.
     say "migrations"
-    if ssh "$HOST" "cd '$ROOT' && docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate --check" >/dev/null 2>&1; then
+    mig_rc=0
+    mig_out="$(ssh "$HOST" "cd '$ROOT' && docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate --check" 2>&1)" || mig_rc=$?
+    if [ "$mig_rc" -eq 0 ]; then
         note "none pending"
     else
+        # `migrate --check` exits non-zero for TWO different reasons: unapplied
+        # migrations, and Django failing to start at all. Reading every non-zero
+        # as "pending" told the operator the deploy would change the production
+        # schema — and then printed an empty plan, because the same crash also
+        # killed `--plan`, whose stderr used to go to /dev/null. Under
+        # --allow-migrations that path continued into a pg_dump and a "Apply the
+        # migrations above?" prompt with nothing above it.
+        #
+        # Told apart by whether a plan actually came back: Django prints
+        # `[ ] app.0001_name` per pending migration, and we only get here when
+        # --check already said something is pending, so an empty plan is a crash.
+        plan_rc=0
+        plan_out="$(ssh "$HOST" "cd '$ROOT' && docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate --plan" 2>&1)" || plan_rc=$?
+        if [ "$plan_rc" -ne 0 ] || ! printf '%s' "$plan_out" | grep -q '\[ \]'; then
+            printf '%s\n' "$mig_out" | tail -20 | sed 's/^/    /'
+            die "could not read a migration plan from the image just built. That is Django
+failing to start, not a pending schema change — the output above is the real
+error. The old container is still running and still serving; nothing changed."
+        fi
+
         say "PENDING MIGRATIONS"
-        ssh "$HOST" "cd '$ROOT' && docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate --plan" 2>/dev/null | sed 's/^/    /'
+        printf '%s\n' "$plan_out" | sed 's/^/    /'
 
         [ "$ALLOW_MIGRATIONS" -eq 1 ] \
             || die "the deploy would change the production schema. Re-run with --allow-migrations once you have read the plan above.
@@ -432,12 +501,17 @@ check "auth"                 "https://findajob.pro/auth.html"               200
 check "branded 404"          "https://findajob.pro/nope"                    404
 # The leak pin. It was 200 on 2026-08-02; it must never be again.
 check "graphify not public"  "https://findajob.pro/graphify-out/graph.json" 404
+# Asserted on BOTH targets, because `web` is the target that ships legal.js and
+# therefore the one that can leave the corpus unseeded. 503 here is the
+# fail-closed path in apps.legal, and it means nobody can complete a first
+# login. (200 proves the corpus is seeded, not that it is CURRENT — the seed
+# step above is what establishes that, and it is unconditional for this reason.)
+check "legal (seeded)"       "https://findajob.pro/api/v1/legal/"           200
 
 if [ "$TARGET" = api ]; then
     # 401 not 403: the session endpoint must reject an anonymous caller, and a
     # 502 here means nginx cannot reach the container at all.
     check "api session gate"  "https://findajob.pro/api/v1/me/"    401
-    check "api legal (seeded)" "https://findajob.pro/api/v1/legal/" 200
     check "admin basicAuth"   "https://findajob.pro/admin/"        401
 fi
 

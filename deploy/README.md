@@ -358,7 +358,8 @@ docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py seed_lega
 
 | What changed | Command |
 |---|---|
-| `web/**` (html/js/css/assets) | `rsync -az --delete web/ macbook-air:/root/findajob/web/` — nginx serves the bind mount, **no restart** |
+| `web/**` (html/js/css/assets) | `deploy/deploy.sh web` — ships from `git archive HEAD`, snapshots first, seeds legal, verifies. A bare `rsync -az --delete web/` also publishes `web/graphify-out/`, which `.gitignore` excludes and rsync does not read |
+| **`web/legal.js`** | `deploy/deploy.sh web` — it re-seeds. Doing it by hand means `docker compose exec -T api python manage.py seed_legal` **as well as** the rsync: that file is both what the browser renders and what is hashed into `LegalDocument`, and consent fails **closed** with 503 when the two disagree |
 | `backend/**/*.py` (no new dependency) | rsync `backend/`, then `docker compose restart api` |
 | **`backend/requirements.txt`** | `docker compose build api && docker compose up -d api` — **a bare `restart` runs the OLD image** and 500s on the missing import |
 | `backend/Dockerfile`, `backend/gunicorn.conf.py`, `backend/docker/*` | `docker compose build api && docker compose up -d api` |
