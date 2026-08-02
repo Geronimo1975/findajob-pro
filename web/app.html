@@ -928,6 +928,7 @@ class Component extends DCLogic {
     // The landing page's footer deep-links here as app.html#legal-<doc>, so Impressum,
     // Datenschutz, AGB etc. are reachable in one click from the public page.
     const m = /^#legal-(terms|privacy|cookies|impressum|withdrawal|dpa)$/.exec(location.hash);
+    let session = null;
 
     // Spec §7 — the gate is the API, not the shell. index.html and app.html stay
     // publicly served so the demo keeps working; the data behind /api/v1/* is
@@ -936,24 +937,30 @@ class Component extends DCLogic {
     // A #legal-* deep link is exempt for a harder reason than convenience: § 5 DDG
     // requires the Impressum to be reachable WITHOUT an account, and every one of
     // those links is published on the public landing page.
+    // Browsing is FREE. An anonymous visitor gets the demo dashboard, never a
+    // redirect to a login screen: this is the only place the 13 screens can be
+    // seen before signing up, and bouncing visitors to a form they did not ask
+    // for is the fastest way to lose them. The restricted surface is /admin/,
+    // gated at Traefik — not this shell.
+    // A session, when there is one, simply upgrades the same page from fixture
+    // data to the account's real data.
     if (new URLSearchParams(location.search).get('demo') !== '1' && !m) {
       try {
-        await this.api.getMe();
+        session = await this.api.getMe();
       } catch (err) {
-        if (err && err.status === 401) {
-          const next = location.pathname + location.search + location.hash;
-          location.replace('/auth.html?next=' + encodeURIComponent(next));
-          return;
-        }
-        // Any other failure — backend not deployed yet, offline, 502 — degrades
-        // to the demo shell. Bouncing to a login page that cannot work either
-        // would take the whole site down, and UI-first is not negotiable.
+        // 401 is the ordinary case for a visitor, not an error: fall through to
+        // the fixtures below with `session` left null, which is what makes the
+        // sidebar offer "Sign in" instead of "Sign out". Every other failure —
+        // backend not deployed, offline, 502 — lands here too and degrades
+        // identically. UI-first is not negotiable.
+        session = null;
       }
     }
 
     this.legal = await import('./legal.js');
     if (m) this.setState({ nav: 'legal', legalDoc: m[1] });
     this.setState({
+      session,
       jobs: this.api.JOBS.map(j => ({ ...j })),
       platforms: this.api.PLATFORMS.map(p => ({ ...p })),
       docs: this.api.DOCUMENTS, profile: { ...this.api.PROFILE },
@@ -1034,7 +1041,7 @@ class Component extends DCLogic {
     const T = {
       en: {
         nav: { dashboard: 'Dashboard', search: 'Job Search', advisor: 'Advisor', analytics: 'Analytics', history: 'History', network: 'Network', documents: 'Documents', profile: 'Profile', integrations: 'APIs', settings: 'Modules', org: 'Organization', billing: 'Billing', legal: 'Legal' },
-        signout: 'Sign out',
+        signout: 'Sign out', signin: 'Sign in',
         screens: {
           dashboard: ['Dashboard', 'One module per platform · aggregated view on All'],
           search: ['Job Search Profile', 'What you\'re open to — like LinkedIn\'s "Open to Work"'],
@@ -1054,7 +1061,7 @@ class Component extends DCLogic {
       },
       de: {
         nav: { dashboard: 'Dashboard', search: 'Jobsuche', advisor: 'Berater', analytics: 'Analysen', history: 'Verlauf', network: 'Netzwerk', documents: 'Dokumente', profile: 'Profil', integrations: 'APIs', settings: 'Module', org: 'Organisation', billing: 'Abrechnung', legal: 'Rechtliches' },
-        signout: 'Abmelden',
+        signout: 'Abmelden', signin: 'Anmelden',
         screens: {
           dashboard: ['Dashboard', 'Ein Modul pro Plattform · aggregierte Ansicht unter „All"'],
           search: ['Jobsuche-Profil', 'Wofür Sie offen sind — wie LinkedIns „Open to Work"'],
@@ -1074,7 +1081,7 @@ class Component extends DCLogic {
       },
       ro: {
         nav: { dashboard: 'Dashboard', search: 'Căutare job', advisor: 'Consultant', analytics: 'Analize', history: 'Istoric', network: 'Rețea', documents: 'Documente', profile: 'Profil', integrations: 'API-uri', settings: 'Module', org: 'Organizație', billing: 'Abonament', legal: 'Legal' },
-        signout: 'Deconectare',
+        signout: 'Deconectare', signin: 'Autentificare',
         screens: {
           dashboard: ['Dashboard', 'Un modul per platformă · vedere agregată pe „All"'],
           search: ['Profil de căutare', 'La ce ești deschis — ca „Open to Work" de pe LinkedIn'],
@@ -1214,12 +1221,16 @@ class Component extends DCLogic {
       sidebarToggleTitle: s.collapsed ? 'Expand sidebar' : 'Collapse sidebar',
       sidebarToggleIcon: s.collapsed ? 'M9 18l6-6-6-6' : 'M15 18l-6-6 6-6',
       initials: profile.name.split(' ').map(w => w[0]).join('').slice(0, 2), profileName: profile.name,
-      signOutLabel: tr.signout,
+      // Browsing is free, so this control has two jobs. Signed in it is the only
+      // way out; anonymous it is the only way in — and labelling it "Sign out"
+      // for a visitor who never signed in is a dead end that reads as a bug.
+      signOutLabel: s.session ? tr.signout : tr.signin,
       signOutStyle: 'display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; border-radius: 7px; cursor: pointer; padding: ' + (s.collapsed ? '8px 0; justify-content: center;' : '8px 10px;'),
       // Best-effort POST: a demo visitor and an already-expired session both have
       // nothing to destroy, and neither may be trapped inside the shell — so the
       // navigation happens either way.
       signOut: async () => {
+        if (!s.session) { location.assign('/auth.html?next=%2Fapp.html'); return; }
         try { if (api) await api.logout(); } catch { /* no session, or no backend yet */ }
         location.assign('/auth.html?signedout=1');
       },
