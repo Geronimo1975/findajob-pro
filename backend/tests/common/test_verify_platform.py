@@ -254,3 +254,45 @@ class TestAuthOtpSkips:
         report = auth_otp.run(ctx)
         assert report.failed is False
         assert any(r.status == "SKIP" for r in report.results)
+
+
+class TestDeliverability:
+    def test_dig_txt_parses_and_strips_quotes(self):
+        from apps.common.verify.deliverability import dig_txt
+
+        with mock.patch("subprocess.run") as sp:
+            sp.return_value = mock.Mock(returncode=0, stdout='"v=spf1 include:spf.brevo.com ~all"\n')
+            assert dig_txt("findajob.pro") == ["v=spf1 include:spf.brevo.com ~all"]
+
+    def test_inbox_not_spam(self):
+        from apps.common.verify.deliverability import run as deliverability_run
+
+        raw = ("Authentication-Results: mx.google.com; spf=pass; dkim=pass; dmarc=pass\n"
+               "Subject: 123456 is your findajob.pro login code\n\nbody\n")
+        ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+        ctx.otp_message = email_lib.message_from_string(raw)
+        ctx.otp_folder = "INBOX"
+        with mock.patch("apps.common.verify.deliverability.dig_txt",
+                        side_effect=lambda name: ["v=spf1 x"] if "dmarc" not in name else ["v=DMARC1; p=none"]):
+            report = deliverability_run(ctx)
+        by_name = {r.name: r.status for r in report.results}
+        assert by_name["OTP landed in Inbox (not Spam)"] == "PASS"
+        assert by_name["SPF/DKIM/DMARC all pass"] == "PASS"
+
+    def test_spam_folder_fails(self):
+        from apps.common.verify.deliverability import run as deliverability_run
+
+        ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+        ctx.otp_message = email_lib.message_from_string("Subject: t\n\nb\n")
+        ctx.otp_folder = "[Gmail]/Spam"
+        with mock.patch("apps.common.verify.deliverability.dig_txt", return_value=[]):
+            report = deliverability_run(ctx)
+        assert report.failed is True
+
+    def test_skips_without_otp_mail(self):
+        from apps.common.verify.deliverability import run as deliverability_run
+
+        ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+        with mock.patch("apps.common.verify.deliverability.dig_txt", return_value=[]):
+            report = deliverability_run(ctx)
+        assert any(r.status == "SKIP" and "auth-otp" in r.detail for r in report.results)

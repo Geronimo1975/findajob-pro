@@ -9,9 +9,10 @@ MODULES: dict[str, Callable[[VerifyContext], ModuleReport]] = {}
 # Later tasks register: api-gate, auth-otp, mail-deliverability,
 # outbox, automation, n8n — by importing their module and adding it here.
 
-from apps.common.verify import api_gate, auth_otp, frontend
+from apps.common.verify import api_gate, auth_otp, deliverability, frontend
 
 MODULES["frontend"] = frontend.run
 MODULES["api-gate"] = api_gate.run
 MODULES["auth-otp"] = auth_otp.run
+MODULES["mail-deliverability"] = deliverability.run
 # MODULES["logout"] = auth_otp.finish  — registered last, after Task 8
