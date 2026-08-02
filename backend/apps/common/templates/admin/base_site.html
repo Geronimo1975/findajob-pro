@@ -70,21 +70,6 @@
   in the title block above, via site_title) but is a sentence, not a lockup.
   It is kept as the link's accessible name so the configured value still
   reaches assistive tech.
-
-  Spelling note, resolved for web/ only: it used to ship the wordmark as
-  "Findjob.pro" (no "a"), against the domain, CLAUDE.md and
-  apps/common/admin_site.py. The web side was corrected to lowercase
-  findajob.pro — including the contractual text in web/legal.js, which meant
-  minting a new document version (2026-08-02) rather than rewriting the hashed
-  rows two consent records already point at.
-
-  STILL OUTSTANDING: the OTP mail sender. DEFAULT_FROM_EMAIL lives in the VPS
-  .env, which is gitignored and never shipped by deploy.sh, so no commit can
-  fix it — every login mail still shows "Findjob.pro" in the From line while
-  its body (apps/accounts/mailer.py) says findajob.pro. Changing it needs
-  `docker compose up -d api`, not `restart`: env is read at container CREATE.
-  See docs/2026-08-02-login-healthcheck.md for the mandatory quoting — Django 6
-  raises `ValueError: period in 'phrase'` on the unquoted form.
 {% endcomment %}
 {% block branding %}
 <div id="site-name">
