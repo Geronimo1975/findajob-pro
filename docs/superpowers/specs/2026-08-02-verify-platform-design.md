@@ -70,9 +70,13 @@ Django management command:
 - Endpoint absent on the target (not yet deployed) → SKIP "not deployed".
 
 ### `automation`
-- Authenticated: the `apps.automation` endpoints respond 200 with valid
-  JSON; unauthenticated they return 401 in the canonical error shape.
-- Absent on the target → SKIP "not deployed".
+- External check only: the admin-only panel at `/admin/automation/` must be
+  GATED for anonymous visitors. 401/403, or a 200 whose final URL contains
+  "login" (redirected to a login page), → PASS. An anonymous 200 serving the
+  panel itself → FAIL. A 404 → SKIP "not deployed on this target".
+- Authenticated endpoint checks are out of scope: the panel requires a
+  Django admin session, which the OTP user session established by
+  `auth-otp` is not.
 
 ### `n8n`
 - Via the personal n8n instance's REST API (`N8N_VERIFY_URL`,

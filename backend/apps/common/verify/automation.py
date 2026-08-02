@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import requests
 
-from apps.common.verify.base import TIMEOUT, ModuleReport, VerifyContext, failed, passed
+from apps.common.verify.base import TIMEOUT, ModuleReport, VerifyContext, failed, passed, skipped
 
 PATH = "/admin/automation/"
 
@@ -20,7 +20,9 @@ def run(ctx: VerifyContext) -> ModuleReport:
         resp.status_code in (401, 403)
         or (resp.status_code == 200 and "login" in resp.url)
     )
-    if gated:
+    if resp.status_code == 404:
+        results.append(skipped("admin automation panel", "not deployed on this target"))
+    elif gated:
         results.append(passed("admin automation panel is gated", f"HTTP {resp.status_code}"))
     else:
         results.append(failed("admin automation panel is gated",

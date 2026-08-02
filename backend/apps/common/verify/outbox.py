@@ -54,7 +54,7 @@ def run(ctx: VerifyContext) -> ModuleReport:
     results.append(failed("no secrets in payload", f"leaked keys: {sorted(leaked)}") if leaked
                    else passed("no secrets in payload"))
     if (payload or {}).get("status") != "connected":
-        results.append(skipped("test send via user SMTP", f"mailbox status={payload.get('status')}"))
+        results.append(skipped("test send via user SMTP", f"mailbox status={(payload or {}).get('status')}"))
         return ModuleReport("outbox", results)
 
     user, pw = ctx.env.get("VERIFY_GMAIL_USER"), ctx.env.get("VERIFY_GMAIL_APP_PASSWORD")

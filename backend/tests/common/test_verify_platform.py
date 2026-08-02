@@ -338,6 +338,15 @@ class TestOutbox:
         assert report.failed is False
         assert any("connect a mailbox" in r.detail for r in report.results)
 
+    def test_non_json_200_body_does_not_crash(self):
+        from apps.common.verify import outbox as outbox_mod
+
+        resp = mock.Mock(status_code=200)
+        resp.json.side_effect = ValueError
+        report = outbox_mod.run(self._ctx(resp))
+        assert isinstance(report, ModuleReport)
+        assert all(r.name != "module crashed" for r in report.results)
+
     def test_secrets_never_in_payload(self):
         from apps.common.verify import outbox as outbox_mod
 
@@ -386,6 +395,16 @@ class TestAutomation:
         with mock.patch("apps.common.verify.automation.requests.get", return_value=resp):
             ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
             assert automation_mod.run(ctx).failed is True
+
+    def test_not_deployed_is_skip(self):
+        from apps.common.verify import automation as automation_mod
+
+        resp = mock.Mock(status_code=404, url="https://x/admin/automation/")
+        with mock.patch("apps.common.verify.automation.requests.get", return_value=resp):
+            ctx = VerifyContext(target="https://x", session=mock.Mock(), env={})
+            report = automation_mod.run(ctx)
+        assert report.failed is False
+        assert any(r.status == "SKIP" and "not deployed" in r.detail for r in report.results)
 
 
 class TestN8n:
