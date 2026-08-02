@@ -177,3 +177,52 @@ class TestAuthResults:
 
         msg = email_lib.message_from_string("Subject: t\n\nbody\n")
         assert auth_results(msg) == {}
+
+
+class TestGmailClient:
+    def test_connect_passes_timeout(self):
+        from apps.common.verify.gmail import GmailClient, CONNECT_TIMEOUT
+
+        with mock.patch("imaplib.IMAP4_SSL") as mock_imap:
+            mock_conn = mock.Mock()
+            mock_imap.return_value = mock_conn
+            client = GmailClient("user@example.com", "app_password")
+            client._connect()
+            # Verify IMAP4_SSL was called with the timeout kwarg
+            mock_imap.assert_called_once_with("imap.gmail.com", timeout=CONNECT_TIMEOUT)
+
+    def test_search_escapes_quotes_in_subject(self):
+        from apps.common.verify.gmail import GmailClient
+        from datetime import datetime
+
+        mock_conn = mock.Mock()
+        mock_conn.select.return_value = ("OK", None)
+        mock_conn.search.return_value = ("OK", [b"1"])
+        mock_conn.fetch.return_value = ("OK", [(None, b"test message")])
+
+        with mock.patch("email.message_from_bytes") as mock_from_bytes:
+            mock_from_bytes.return_value = mock.Mock()
+            client = GmailClient("user@example.com", "app_password")
+            client._search(mock_conn, "INBOX", 'test"subject', datetime(2026, 8, 3))
+            # Verify the subject was escaped in the search call
+            call_args = mock_conn.search.call_args
+            # The last argument should contain the escaped quote
+            assert '"test\\"subject"' in call_args[0]
+
+    def test_search_escapes_backslashes_in_subject(self):
+        from apps.common.verify.gmail import GmailClient
+        from datetime import datetime
+
+        mock_conn = mock.Mock()
+        mock_conn.select.return_value = ("OK", None)
+        mock_conn.search.return_value = ("OK", [b"1"])
+        mock_conn.fetch.return_value = ("OK", [(None, b"test message")])
+
+        with mock.patch("email.message_from_bytes") as mock_from_bytes:
+            mock_from_bytes.return_value = mock.Mock()
+            client = GmailClient("user@example.com", "app_password")
+            client._search(mock_conn, "INBOX", 'test\\subject', datetime(2026, 8, 3))
+            # Verify the subject was escaped in the search call
+            call_args = mock_conn.search.call_args
+            # The last argument should contain the escaped backslash
+            assert '"test\\\\subject"' in call_args[0]

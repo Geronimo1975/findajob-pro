@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 FOLDERS = ["INBOX", "[Gmail]/Spam"]
+CONNECT_TIMEOUT = 30
 _OTP = re.compile(r"^(\d{6})\b")
 _VERDICT = re.compile(r"\b(spf|dkim|dmarc)=(\w+)", re.I)
 
@@ -42,7 +43,7 @@ class GmailClient:
         self.app_password = app_password
 
     def _connect(self) -> imaplib.IMAP4_SSL:
-        conn = imaplib.IMAP4_SSL("imap.gmail.com")
+        conn = imaplib.IMAP4_SSL("imap.gmail.com", timeout=CONNECT_TIMEOUT)
         conn.login(self.user, self.app_password)
         return conn
 
@@ -52,7 +53,9 @@ class GmailClient:
         if conn.select(f'"{folder}"', readonly=True)[0] != "OK":
             return None
         date = since.strftime("%d-%b-%Y")
-        status, data = conn.search(None, "SINCE", date, "SUBJECT", f'"{subject_contains}"')
+        # Escape backslashes and quotes in subject_contains for IMAP protocol
+        escaped = subject_contains.replace("\\", "\\\\").replace('"', '\\"')
+        status, data = conn.search(None, "SINCE", date, "SUBJECT", f'"{escaped}"')
         if status != "OK" or not data or not data[0]:
             return None
         latest = data[0].split()[-1]
