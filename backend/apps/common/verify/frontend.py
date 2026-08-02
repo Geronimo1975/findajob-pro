@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import json
 import re
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from apps.common.verify.base import (
-    TIMEOUT, ModuleReport, VerifyContext, failed, passed, skipped,
+    TIMEOUT, ModuleReport, VerifyContext, failed, passed,
 )
 
 PAGES = ["/", "/app.html", "/auth.html"]
@@ -59,7 +59,7 @@ def run(ctx: VerifyContext) -> ModuleReport:
             else:
                 results.append(passed(f"{page} no third-party origins"))
             for url in resource_urls(resp.text):
-                full = url if url.startswith("http") else ctx.target + url
+                full = url if url.startswith("http") else urljoin(ctx.target + "/", url)
                 try:
                     r = ctx.session.get(full, timeout=TIMEOUT)
                     ok = r.status_code == 200

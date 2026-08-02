@@ -104,3 +104,22 @@ class TestFrontendHelpers:
         from apps.common.verify.frontend import resource_urls
 
         assert resource_urls("<html></html>") == []
+
+    def test_slash_less_resource_urls_joined_correctly(self):
+        """Regression: slash-less __resources paths must join with domain correctly."""
+        from apps.common.verify.frontend import run
+
+        html = ('<script>window.__resources = {"react": "vendor/react.production.min.js"};</script>'
+                '<meta name="csp" value="default-src \'self\'">')
+        session = mock.Mock()
+        session.get.side_effect = [
+            mock.Mock(status_code=200, text=html, headers={"Content-Security-Policy": "default-src 'self'"}),
+            mock.Mock(status_code=200),
+        ]
+        ctx = VerifyContext(target="https://findajob.pro", session=session, env={})
+        report = run(ctx)
+
+        # Verify the resource URL was joined correctly (without double-slash issue)
+        calls = [c for c in session.get.call_args_list if "vendor" in str(c)]
+        assert len(calls) == 1
+        assert calls[0][0][0] == "https://findajob.pro/vendor/react.production.min.js"
