@@ -226,3 +226,31 @@ class TestGmailClient:
             call_args = mock_conn.search.call_args
             # The last argument should contain the escaped backslash
             assert '"test\\\\subject"' in call_args[0]
+
+
+class TestCsrfHeaders:
+    def test_reads_token_from_cookiejar(self):
+        from apps.common.verify.auth_otp import csrf_headers
+
+        session = mock.Mock()
+        session.cookies.get.return_value = "tok123"
+        h = csrf_headers(session, "https://findajob.pro")
+        assert h["X-CSRFToken"] == "tok123"
+        assert h["Referer"] == "https://findajob.pro/"
+
+
+class TestAuthOtpSkips:
+    def test_skips_without_gmail_creds(self):
+        """request-code 202 still runs; code fetch SKIPs, nothing FAILs."""
+        session = mock.Mock()
+        resp202 = mock.Mock(status_code=202)
+        respcsrf = mock.Mock(status_code=200)
+        session.get.return_value = respcsrf
+        session.post.return_value = resp202
+        session.cookies.get.return_value = "tok"
+        session.cookies.keys.return_value = ["csrftoken"]
+        from apps.common.verify import auth_otp
+        ctx = VerifyContext(target="https://x", session=session, env={})
+        report = auth_otp.run(ctx)
+        assert report.failed is False
+        assert any(r.status == "SKIP" for r in report.results)
