@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+findajob.pro — pull the VPS database dumps to the laptop, daily.
+
+Repo copy:   deploy/com.geronimo.findajob-backup-pull.plist
+Installed:   ~/Library/LaunchAgents/com.geronimo.findajob-backup-pull.plist
+
+  cp deploy/com.geronimo.findajob-backup-pull.plist ~/Library/LaunchAgents/
+  launchctl unload ~/Library/LaunchAgents/com.geronimo.findajob-backup-pull.plist 2>/dev/null
+  launchctl load   ~/Library/LaunchAgents/com.geronimo.findajob-backup-pull.plist
+  launchctl start  com.geronimo.findajob-backup-pull          # run it once now
+  tail ~/Library/Logs/findajob-backup-pull.log
+
+07:30 local. The VPS writes its dump at 03:41 in ITS timezone, which is
+Etc/UTC — verified with timedatectl, not assumed — and the laptop is EEST
+(UTC+3), so the dump lands at 06:41 local. 07:30 leaves an hour of slack for a
+slow dump without waiting so long that a whole working day passes first.
+
+A LaunchAgent, not a cron entry: launchd runs a missed StartCalendarInterval
+job when the machine next wakes, which is the normal case for a laptop that is
+closed at 07:30. cron would simply skip it and say nothing.
+
+The paths are absolute and include this user's home. That is a real limitation
+of keeping the file in the repo — if the checkout ever moves, this breaks
+silently until the staleness check in the script starts failing, which is
+exactly what that check is for.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.geronimo.findajob-backup-pull</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/Geronimo/Projects/findajob/deploy/pull-backups.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <!-- Not at load: this fires on every login, and a pull that just ran an
+         hour ago is noise in the log rather than another copy. -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Appended, never truncated: the whole point of the BACKUP-PULL line is
+         being able to ask "when did this last work?" months later. -->
+    <key>StandardOutPath</key>
+    <string>/Users/Geronimo/Library/Logs/findajob-backup-pull.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Geronimo/Library/Logs/findajob-backup-pull.log</string>
+
+    <!-- ssh needs a usable PATH; launchd gives an agent almost nothing. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>

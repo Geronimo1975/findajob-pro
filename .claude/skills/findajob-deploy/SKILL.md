@@ -159,8 +159,29 @@ history with `grep '^DB-BACKUP' /var/log/findajob/db-backup.log`; the line forma
 login check's, so one grep reads both. Restore-tested 2026-08-02: 17 tables and the real row
 counts came back into a scratch database under `ON_ERROR_STOP=1`.
 
-**Its honest limit: every copy is on the same disk as the database.** Losing the VPS loses both.
-An off-box destination is still missing.
+**Off-box copies:** `deploy/pull-backups.sh` on the laptop pulls those dumps to `~/Backups/
+findajob-db/` (0700/0600, FileVault at rest), keeps 60 — deeper than the VPS's 14 on purpose —
+and runs daily at 07:30 local under `~/Library/LaunchAgents/com.geronimo.findajob-backup-pull.plist`.
+The laptop **pulls**; the VPS is never given a credential that reaches the laptop, so a
+compromised VPS cannot touch the off-box copies. Its most useful line is the staleness check: if
+the newest local copy is older than 3 days it exits non-zero, because a puller that silently
+stops looks exactly like one with nothing to do.
+
+**`pg_dump` runs with `--no-owner --no-acl`, and that is load-bearing.** Without them the dump
+carries `ALTER TABLE … OWNER TO findajob`, so it restores on the VPS (where the role exists) and
+dies on the FIRST table anywhere else with `ERROR: role "findajob" does not exist` — i.e. it
+fails in exactly the scenario a backup is for. Found 2026-08-02 by actually restoring an off-box
+copy into a local PostgreSQL 16; **dumps taken before that timestamp still carry the defect.**
+
+Verify a copy is really usable, rather than merely present:
+
+```bash
+createdb probe && gzip -cd ~/Backups/findajob-db/<newest>.sql.gz | psql -q -v ON_ERROR_STOP=1 -d probe
+psql -tA -d probe -c "SELECT count(*) FROM accounts_user"    # then: dropdb probe
+```
+
+**Remaining limit:** the off-box copy is on a laptop that is usually in the same building as
+nothing else. It survives losing the VPS, not losing both machines.
 
 *(The old Django/Jobick platform's
 `findajob-scrape` entry died with that platform — if you find it still installed on the box, it

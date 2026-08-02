@@ -72,10 +72,21 @@ else
     # is why the inner command is single-quoted — the host shell must not
     # expand them, and this way no password is ever written on a command line
     # visible in `ps`.
+    #
+    # --no-owner --no-acl, and this is not a style preference. Without them
+    # pg_dump emits `ALTER TABLE … OWNER TO findajob` and GRANT statements, so
+    # the dump only restores onto a machine that already has that role. It
+    # restores fine on the VPS, where the role exists — and dies on the FIRST
+    # table anywhere else with `ERROR: role "findajob" does not exist`.
+    #
+    # "Anywhere else" is the entire scenario this backup exists for. Measured
+    # 2026-08-02 by actually restoring an off-box copy into a local PostgreSQL
+    # 16: one table created, then the restore stopped. Objects end up owned by
+    # whoever runs the restore, which is what you want in a recovery.
     (
         umask 077
         timeout "$TIMEOUT_SECONDS" docker compose exec -T "$SERVICE" \
-            sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 2>/tmp/db-backup-err.$$ \
+            sh -c 'pg_dump --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 2>/tmp/db-backup-err.$$ \
             | gzip -9 > "${TARGET}.part"
     )
     # In a pipeline `$?` is the LAST command's status (gzip), which is 0 even
