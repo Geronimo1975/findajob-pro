@@ -116,10 +116,33 @@ jobs:
       # skip a file that is group- or other-writable.
       - name: deploy/cron modes
         run: |
-          git ls-files -s deploy/cron | grep -q '^100755 .*	deploy/cron/run-login-check.sh$'
-          git ls-files -s deploy/cron | grep -q '^100755 .*	deploy/cron/login-check-history$'
-          git ls-files -s deploy/cron | grep -q '^100644 .*	deploy/cron/findajob-login-check$'
-          git ls-files -s deploy/cron | grep -q '^100644 .*	deploy/cron/findajob-login-check.logrotate$'
+          set -e
+          # Runners must stay executable.
+          for f in deploy/cron/run-login-check.sh \
+                   deploy/cron/run-db-backup.sh \
+                   deploy/cron/login-check-history; do
+            git ls-files -s "$f" | grep -q '^100755 ' \
+              || { echo "$f must be mode 100755 — scp drops the exec bit and cron then fails with a bare 'Permission denied'"; exit 1; }
+          done
+          # Files installed into /etc/cron.d and /etc/logrotate.d must be 0644:
+          # both directories SILENTLY skip anything group- or other-writable.
+          for f in deploy/cron/findajob-login-check \
+                   deploy/cron/findajob-login-check.logrotate \
+                   deploy/cron/findajob-db-backup \
+                   deploy/cron/findajob-db-backup.logrotate; do
+            git ls-files -s "$f" | grep -q '^100644 ' \
+              || { echo "$f must be mode 100644 — cron.d and logrotate.d silently ignore group/other-writable files"; exit 1; }
+          done
+
+      # Same silent-skip trap, other half: cron and logrotate ignore a file in
+      # those directories that lacks a trailing newline, with no error anywhere.
+      - name: cron files end with a newline
+        run: |
+          set -e
+          for f in deploy/cron/findajob-login-check deploy/cron/findajob-db-backup; do
+            [ "$(tail -c1 "$f" | wc -l | tr -d ' ')" = "1" ] \
+              || { echo "$f has no trailing newline — cron will skip it silently"; exit 1; }
+          done
 
   # Separate job so it cannot slow the 4-second feedback loop above.
   #

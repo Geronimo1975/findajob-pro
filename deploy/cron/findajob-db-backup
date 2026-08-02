@@ -1,0 +1,48 @@
+# /etc/cron.d/findajob-db-backup
+# =============================================================================
+# findajob.pro — nightly PostgreSQL backup.
+#
+# Repo copy:  deploy/cron/findajob-db-backup
+# VPS path:   /etc/cron.d/findajob-db-backup      (root:root, mode 0644)
+#
+# Before this job, /root/backups/ held exactly one findajob dump — the one taken
+# on 2026-08-01 while wiping the previous platform. Every row written since was
+# recoverable from nowhere at all.
+#
+# The reason it is a precondition rather than a nice-to-have: `migrate` has no
+# undo. Rolling back code is retagging an image; rolling back a schema is
+# restoring a dump, and restoring a dump loses every write made after it was
+# taken. Without a recent one there is no rollback story for a migration at all.
+#
+# Install / update:
+#   scp deploy/cron/findajob-db-backup macbook-air:/etc/cron.d/findajob-db-backup
+#   ssh macbook-air "chown root:root /etc/cron.d/findajob-db-backup \
+#                 && chmod 0644 /etc/cron.d/findajob-db-backup"
+#
+# NOTE the filename has no dot: cron SILENTLY ignores a file in /etc/cron.d
+# whose name contains one, or that is group/other-writable, or that lacks a
+# trailing newline. No log line, no error. Same taboo rule as logrotate.d.
+# =============================================================================
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# 03:41 — deliberately not on the hour, and deliberately far from the login
+# healthcheck at 06:17. Two jobs that both `docker compose exec` into the same
+# stack should not contend, and an odd minute makes this job's lines trivial to
+# pick out of syslog.
+#
+# Daily is the right frequency for a 9MB database that dumps to ~75KB: a year
+# of nightlies is under 30MB, so the retention limit (14, in the runner) is
+# about keeping the directory readable, not about disk.
+#
+# `flock -n` for the same reason as the login check: runs must never overlap,
+# and overlap happens precisely when something is already wrong. `-n` skips
+# rather than queues — a delayed dump reports on a moment nobody is watching,
+# and tomorrow's run supersedes it. The skip message in the log IS the signal.
+#
+# `timeout` is NOT here: it lives inside the runner, wrapping the blocking call,
+# so the lock holder always returns and always releases the lock.
+#
+41 3 * * * root mkdir -p /var/log/findajob && flock -n /var/lock/findajob-db-backup.lock /root/findajob/deploy/cron/run-db-backup.sh >> /var/log/findajob/db-backup.log 2>&1

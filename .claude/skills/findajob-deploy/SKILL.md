@@ -82,10 +82,28 @@ runtime), `api.js` (mock API), `legal.js`, `404.html`, `robots.txt`, `sitemap.xm
 
 ### Deploy commands
 
-```bash
-# content change (html/js/css/assets) — nginx serves the bind mount, no restart needed
-rsync -az --delete web/ macbook-air:/root/findajob/web/
+**For `web/`, use the script — not a bare rsync.**
 
+```bash
+deploy/deploy.sh web --dry-run    # shows exactly what would change, writes nothing
+deploy/deploy.sh web
+```
+
+It refuses to run on an uncommitted or unpushed tree, gates on the `backend` CI job being green
+for HEAD, takes the payload from `git archive HEAD` rather than the working tree, snapshots the
+webroot **before** transferring, re-seeds `legal.js` only when its hash changed, and verifies the
+live site afterwards — printing the rollback command instead of executing one.
+
+The `git archive` part is the point, not ceremony. `rsync -az --delete web/` ships the WORKING
+TREE, and rsync does not read `.gitignore`: that is how `web/graphify-out/` — the internal
+codebase map — ended up publicly served at `https://findajob.pro/graphify-out/graph.json` (200,
+119KB) until 2026-08-02. `--exclude` would not have fixed it either, because an excluded path is
+also shielded from `--delete`, so anything already on the box stays forever. Removed by hand that
+day; the script and a CI guard now both assert it cannot come back.
+
+`api`, `nginx` and `traefik` are **not** in the script yet — do those by hand, below.
+
+```bash
 # nginx.conf or docker-compose.yml change — see the gotcha below, a reload is NOT enough
 rsync -az deploy/nginx.conf macbook-air:/root/findajob/deploy/nginx.conf
 ssh macbook-air "cd /root/findajob && docker compose up -d --force-recreate web"
@@ -104,8 +122,19 @@ copy is what actually runs.
 | Entry | Schedule | Source (repo) | Log |
 |---|---|---|---|
 | `findajob-login-check` | daily 06:17 | `deploy/cron/findajob-login-check` (+ `run-login-check.sh`, `login-check-history`, `findajob-login-check.logrotate`) | `/var/log/findajob/login-check.log` |
+| `findajob-db-backup` | daily 03:41 | `deploy/cron/findajob-db-backup` (+ `run-db-backup.sh`, `findajob-db-backup.logrotate`) | `/var/log/findajob/db-backup.log` |
 
-*(This is the first cron entry of the post-2026-08-01 stack. The old Django/Jobick platform's
+`findajob-db-backup` writes `/root/backups/findajob-db-<stamp>.sql.gz`, mode 0600 (the dump
+holds real user emails), keeping the **14 newest** — and it prunes only after the new dump has
+passed a size, `gzip -t` and content check, so a failed night never spends a good backup. Verify
+history with `grep '^DB-BACKUP' /var/log/findajob/db-backup.log`; the line format matches the
+login check's, so one grep reads both. Restore-tested 2026-08-02: 17 tables and the real row
+counts came back into a scratch database under `ON_ERROR_STOP=1`.
+
+**Its honest limit: every copy is on the same disk as the database.** Losing the VPS loses both.
+An off-box destination is still missing.
+
+*(The old Django/Jobick platform's
 `findajob-scrape` entry died with that platform — if you find it still installed on the box, it
 is pointing at containers that no longer exist and should be removed.)*
 
@@ -240,8 +269,19 @@ ssh macbook-air "docker ps --filter name=findajob-web"
   `findajob-prod-FINAL-20260801_1415.sql` (final Postgres dump),
   `findajob-traefik-route-FINAL-20260801.yml` (old Traefik route).
 - Desktop `~/Desktop/findajob-atomic-backup-2026-08-01/` — immutable full backup incl. real
-  prod secrets, git bundle M1→M6, prototype, docs.
-- GitHub `Geronimo1975/findjob-pro` = discarded R0/R1 Django-6 attempt (parts bin only).
+  prod secrets, git bundle M1→M6, prototype, docs. Note its `findajob-full-history.bundle` is a
+  backup of the OLD `Geronimo1975/findajob` repo, not of anything current.
+- VPS `/root/backups/findajob-db-*.sql.gz` — the nightly dumps (14 kept). This is the only
+  recovery path for data written after 2026-08-01.
+- VPS `/root/findajob/.deploy-state/` — the last 5 webroot snapshots plus the pre-deploy legal.js
+  hash, written by `deploy/deploy.sh`. Roll the frontend back by `cp -al`-ing one back into
+  place; do **not** `mv` the `web` directory, the bind mount is resolved at container create.
+- Docker image rollback targets on the VPS: `findajob-api:pre-ci-20260802` and
+  `findajob-api:rollback-20260802`. `findajob-api:local` is a MUTABLE tag — every build destroys
+  it, so it is never a rollback target.
+- GitHub `Geronimo1975/findjob-pro` (the discarded R0/R1 Django-6 attempt) was **deleted
+  2026-08-02** at the operator's explicit instruction, with no backup taken. It is not a parts
+  bin; it is gone.
 
 ## When the Django backend lands
 

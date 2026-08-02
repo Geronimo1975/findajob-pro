@@ -1,0 +1,53 @@
+# /etc/logrotate.d/findajob-db-backup
+# =============================================================================
+# findajob.pro — rotation for the nightly database backup LOG.
+#
+# Repo copy:  deploy/cron/findajob-db-backup.logrotate
+# VPS path:   /etc/logrotate.d/findajob-db-backup   (root:root, mode 0644)
+#
+# This rotates the LOG, not the dumps. Dump retention is the runner's job
+# (DB_BACKUP_KEEP, 14 newest, pruned only after a verified-good dump) — putting
+# it here as well would give two components the power to delete backups, which
+# is exactly the kind of split ownership that loses one.
+#
+# Install:
+#   scp deploy/cron/findajob-db-backup.logrotate \
+#       macbook-air:/etc/logrotate.d/findajob-db-backup
+#   ssh macbook-air "chown root:root /etc/logrotate.d/findajob-db-backup \
+#                 && chmod 0644 /etc/logrotate.d/findajob-db-backup \
+#                 && logrotate -d /etc/logrotate.d/findajob-db-backup"
+#
+# Always run `logrotate -d` (dry run) after editing: a syntax error in ONE file
+# aborts the whole daily pass, so a typo here silently stops rotating every log
+# on the box. And the installed name must not contain a dot — logrotate skips
+# those the same way cron.d does.
+# =============================================================================
+
+/var/log/findajob/db-backup.log {
+    # One run a night writing ~12 lines. Monthly with a year kept is a few
+    # hundred KB and answers "when did backups start failing?" a year later.
+    monthly
+    rotate 12
+
+    # Ceiling in case a wedged container starts writing a traceback every
+    # night, or the schedule is raised.
+    maxsize 5M
+
+    compress
+    delaycompress
+
+    missingok
+    notifempty
+
+    # 0640 root:adm — the log names the dump files and, on failure, carries
+    # PostgreSQL error strings. `adm` can read it; the world cannot.
+    create 0640 root adm
+
+    # NOT copytruncate: the writer is a fresh `>>` from a new shell each night,
+    # so it never holds a long-lived descriptor to the rotated inode. The
+    # rename-and-create path is correct here and loses nothing, while
+    # copytruncate would open a window where appended lines are dropped.
+
+    dateext
+    dateformat -%Y%m%d
+}
