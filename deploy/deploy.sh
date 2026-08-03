@@ -364,12 +364,18 @@ deploy_api() {
         # --allow-migrations that path continued into a pg_dump and a "Apply the
         # migrations above?" prompt with nothing above it.
         #
-        # Told apart by whether a plan actually came back: Django prints
-        # `[ ] app.0001_name` per pending migration, and we only get here when
-        # --check already said something is pending, so an empty plan is a crash.
+        # Told apart by whether a plan actually came back: `migrate --plan`
+        # prints a `Planned operations:` header followed by one
+        # `app.0001_name` line per pending migration (NO `[ ]` checkboxes —
+        # that is showmigrations' format, and grepping for it here rejected
+        # every real plan). We only get here when --check already said
+        # something is pending, so a plan that is missing or says "No planned
+        # migration operations." is a crash.
         plan_rc=0
         plan_out="$(ssh "$HOST" "cd '$ROOT' && docker compose run --rm -e DJANGO_COLLECTSTATIC=0 api python manage.py migrate --plan" 2>&1)" || plan_rc=$?
-        if [ "$plan_rc" -ne 0 ] || ! printf '%s' "$plan_out" | grep -q '\[ \]'; then
+        if [ "$plan_rc" -ne 0 ] \
+            || ! printf '%s' "$plan_out" | grep -q '^Planned operations:' \
+            || printf '%s' "$plan_out" | grep -q 'No planned migration operations'; then
             printf '%s\n' "$mig_out" | tail -20 | sed 's/^/    /'
             die "could not read a migration plan from the image just built. That is Django
 failing to start, not a pending schema change — the output above is the real
