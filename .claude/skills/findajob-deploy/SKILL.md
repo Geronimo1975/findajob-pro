@@ -151,6 +151,13 @@ copy is what actually runs.
 |---|---|---|---|
 | `findajob-login-check` | daily 06:17 | `deploy/cron/findajob-login-check` (+ `run-login-check.sh`, `login-check-history`, `findajob-login-check.logrotate`) | `/var/log/findajob/login-check.log` |
 | `findajob-db-backup` | daily 03:41 | `deploy/cron/findajob-db-backup` (+ `run-db-backup.sh`, `findajob-db-backup.logrotate`) | `/var/log/findajob/db-backup.log` |
+| `findajob-ingest` | every 2h at :07 | `deploy/cron/findajob-ingest` (+ `run-ingest.sh`, `findajob-ingest.logrotate`) | `/var/log/findajob/ingest.log` |
+
+`findajob-ingest` runs `manage.py ingest_jobs` inside the api container (RemoteOK + WWR official
+feeds, upsert on platform+url, idempotent). **Install it only after the jobs app is deployed** —
+before that, every tick fails with "Unknown command". After deploying the backend, also run
+`seed_platforms` once in prod (the ingest silently ingests nothing without the catalog).
+Greppable line: `grep '^INGEST' /var/log/findajob/ingest.log`.
 
 `findajob-db-backup` writes `/root/backups/findajob-db-<stamp>.sql.gz`, mode 0600 (the dump
 holds real user emails), keeping the **14 newest** — and it prunes only after the new dump has

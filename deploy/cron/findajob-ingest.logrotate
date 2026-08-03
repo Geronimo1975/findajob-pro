@@ -1,0 +1,44 @@
+# /etc/logrotate.d/findajob-ingest
+# =============================================================================
+# findajob.pro — rotation for the ingestion LOG.
+#
+# Repo copy:  deploy/cron/findajob-ingest.logrotate
+# VPS path:   /etc/logrotate.d/findajob-ingest   (root:root, mode 0644)
+#
+# Install:
+#   scp deploy/cron/findajob-ingest.logrotate \
+#       macbook-air:/etc/logrotate.d/findajob-ingest
+#   ssh macbook-air "chown root:root /etc/logrotate.d/findajob-ingest \
+#                 && chmod 0644 /etc/logrotate.d/findajob-ingest \
+#                 && logrotate -d /etc/logrotate.d/findajob-ingest"
+#
+# Always run `logrotate -d` (dry run) after editing: a syntax error in ONE
+# file aborts the whole daily pass for every log on the box. And the installed
+# name must not contain a dot — logrotate skips those like cron.d does.
+# =============================================================================
+
+/var/log/findajob/ingest.log {
+    # 12 runs/day writing ~10 lines each. Weekly with 12 kept is a season of
+    # history in well under a megabyte.
+    weekly
+    rotate 12
+
+    # Ceiling in case a broken feed makes every run dump a traceback.
+    maxsize 5M
+
+    compress
+    delaycompress
+
+    missingok
+    notifempty
+
+    # 0640 root:adm — failure output can carry feed URLs and container error
+    # strings; same posture as the other findajob logs.
+    create 0640 root adm
+
+    # NOT copytruncate: the writer is a fresh `>>` from a new shell each run,
+    # never a long-lived descriptor to the rotated inode.
+
+    dateext
+    dateformat -%Y%m%d
+}

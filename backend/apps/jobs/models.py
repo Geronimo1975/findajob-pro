@@ -103,9 +103,10 @@ class JobListing(models.Model):
     """A scraped/ingested job. Global: shared by every tenant.
 
     Anything platform-specific (``apply_email``, ``founder``, ``easy_apply``)
-    lives in ``platform_specific_data``; ``apply_email`` is required at
-    ingest for platforms whose ``apply_mechanism`` is email — enforced by the
-    adapter layer, and re-checked at send time (422 ``missing_apply_email``).
+    lives in ``platform_specific_data``. Adapters extract ``apply_email``
+    best-effort at ingest (feeds do not reliably carry it); the hard check is
+    at send time, where a missing address on an email-mechanism platform is a
+    422 ``missing_apply_email``.
     """
 
     platform = models.ForeignKey(

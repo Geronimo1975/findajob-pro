@@ -25,6 +25,7 @@ cd backend
 ../.venv/bin/pytest -k subnet                         # by name
 ../.venv/bin/python manage.py runserver                # DEBUG on, OTP codes print to the console
 ../.venv/bin/python manage.py migrate                  # first local run: db.sqlite3 starts empty
+../.venv/bin/python manage.py verify_platform   # external smoke of prod; --json, --module <name>
 ```
 
 - **pytest must run from `backend/`.** `pytest.ini` lives there and supplies

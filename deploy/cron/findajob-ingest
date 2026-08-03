@@ -1,0 +1,33 @@
+# /etc/cron.d/findajob-ingest
+# =============================================================================
+# findajob.pro — scheduled job ingestion (RemoteOK + We Work Remotely feeds).
+#
+# Repo copy:  deploy/cron/findajob-ingest
+# VPS path:   /etc/cron.d/findajob-ingest      (root:root, mode 0644)
+#
+# Install / update:
+#   scp deploy/cron/findajob-ingest macbook-air:/etc/cron.d/findajob-ingest
+#   ssh macbook-air "chown root:root /etc/cron.d/findajob-ingest \
+#                 && chmod 0644 /etc/cron.d/findajob-ingest"
+#
+# NOTE the filename has no dot: cron SILENTLY ignores a file in /etc/cron.d
+# whose name contains one, or that is group/other-writable, or that lacks a
+# trailing newline. No log line, no error. Same taboo rule as logrotate.d.
+# =============================================================================
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# Every 2 hours at :07 — deliberately not on the hour, and far from the
+# db backup (03:41) and the login healthcheck (06:17), so jobs that
+# `docker compose exec` into the same stack never contend. Fresh-enough for
+# job feeds that update a handful of times a day; polite to the sources
+# (12 fetches/day per feed, well under anything rate-limited).
+#
+# `flock -n` skips rather than queues: an overlapping run means the previous
+# one is hanging, and the skip message in the log IS the signal. The timeout
+# lives inside run-ingest.sh, wrapping the blocking call, so the lock holder
+# always returns.
+#
+7 */2 * * * root mkdir -p /var/log/findajob && flock -n /var/lock/findajob-ingest.lock /root/findajob/deploy/cron/run-ingest.sh >> /var/log/findajob/ingest.log 2>&1
