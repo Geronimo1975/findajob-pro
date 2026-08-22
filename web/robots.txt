@@ -1,10 +1,46 @@
+# findajob.pro — robots policy
+# AI answer-engine crawlers are welcome on public marketing pages.
+# The application itself (app.html, auth.html) stays out of scope.
+
 User-agent: *
 Allow: /$
+Allow: /llms.txt
 Disallow: /app.html
 Disallow: /auth.html
 Disallow: /vendor/
 Disallow: /api.js
 Disallow: /legal.js
 Disallow: /support.js
+
+# --- AI / answer-engine crawlers (explicit so the policy is unambiguous) ---
+User-agent: GPTBot
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
+
+User-agent: OAI-SearchBot
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
+
+User-agent: ChatGPT-User
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
+
+User-agent: ClaudeBot
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
+
+User-agent: PerplexityBot
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
+
+User-agent: Google-Extended
+Allow: /$
+Disallow: /app.html
+Disallow: /auth.html
 
 Sitemap: https://findajob.pro/sitemap.xml

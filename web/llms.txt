@@ -1,0 +1,36 @@
+# findajob.pro
+
+> findajob.pro is an AI-assisted job tracking and application platform. It pulls listings from
+> multiple job boards, scores each one against the candidate's CV by skill match, and drafts the
+> email and cover letter for every application. The candidate reviews before anything is sent.
+> GDPR-compliant and hosted in Germany. Available in English, German and Romanian.
+
+Built by George Sebastian Cucuiet (https://georgeai.dev/).
+
+## What it does
+- **Aggregation** — one isolated module per platform: RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed. Each module carries its own rate limits and legal risk profile.
+- **Skill match scoring** — every listing is scored against the candidate's parsed profile, so the highest-matching roles are applied to first.
+- **AI drafting that adapts its tone** — a formal email for job boards, a short note for Easy Apply, a personal message for startup founders. One engine, the right register per channel.
+- **Documents with ATS scores** — CVs, certificates and diplomas, tag-matched per job and generated into Canva templates.
+- **Human review by design** — the candidate always clicks send. High-risk platforms stay manual deliberately, which avoids account bans and spam folders.
+- **German-market compliance** — GDPR, TTDSG cookie consent, Impressum, AVV for teams. Encrypted at rest, hosted in the EU.
+
+## Onboarding
+1. Create an account.
+2. Upload a CV — it is parsed into a master profile of skills, experience and languages, all editable.
+3. State the desired job title and location type, which drives the platform filters and skill matching.
+
+## Pricing
+- **Free — $0/month**: 10 applications, 20 AI generations, 2 platform modules, manual send only.
+- **Pro — $20/month**: 100 applications, 500 AI generations, all modules plus auto-send, Canva templates.
+- **Max — $100/month**: 1,000 applications, 5,000 AI generations, priority AI queue, API access.
+- **Team — $30 per seat/month** (minimum 5 seats): central admin and roles, client workspaces, DPA (AVV) included.
+
+## Privacy
+Hosted in Germany. AI drafting may use processors outside the EU under EU Standard Contractual Clauses.
+See the Privacy Policy, accepted at sign-in.
+
+## Links
+- [Home](https://findajob.pro/)
+- [Live demo](https://findajob.pro/app.html?demo=1)
+- [Built by GeorgeAI](https://georgeai.dev/)
