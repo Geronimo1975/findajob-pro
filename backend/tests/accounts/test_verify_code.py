@@ -14,7 +14,7 @@ from apps.accounts.models import (
     EmailOTP,
     User,
 )
-from apps.tenancy.models import Membership, Organization, Role
+from apps.tenancy.models import AuditLog, Membership, Organization, Role
 from tests.accounts.support import (
     ME_URL,
     TERMS_VERSION,
@@ -517,3 +517,65 @@ class SecrecyTests(AuthTestCase):
         _, code = services.issue_code(email=EMAIL)
         response = self.verify(EMAIL, code, accepts_terms=True)
         self.assertNotIn(code, response.content.decode())
+
+
+class AuditTrailTests(AuthTestCase):
+    """Login events reach ``AuditLog`` via ``apps.tenancy.services.record_security_event``."""
+
+    def setUp(self):
+        super().setUp()
+        seed_legal_documents()
+
+    def test_a_successful_login_writes_a_login_succeeded_event(self):
+        code = self.request_and_read_code(EMAIL)
+        self.verify(EMAIL, code, accepts_terms=True)
+
+        user = User.objects.get(email=EMAIL)
+        membership = Membership.objects.for_user(user).get()
+        row = AuditLog.all_objects.get()
+        self.assertEqual(row.action, "auth.login_succeeded")
+        self.assertEqual(row.actor_id, user.pk)
+        self.assertEqual(row.org_id, membership.org_id)
+        self.assertEqual(row.ip, "127.0.0.1")
+        self.assertEqual(row.target_type, "accounts.emailotp")
+
+    def test_a_wrong_code_writes_a_login_failed_event_with_no_org(self):
+        services.issue_code(email=EMAIL)
+        self.verify(EMAIL, "000000")
+
+        row = AuditLog.all_objects.get()
+        self.assertEqual(row.action, "auth.login_failed")
+        self.assertIsNone(row.org_id)
+        self.assertIsNone(row.actor_id)
+        self.assertEqual(row.target_type, "email")
+        self.assertEqual(row.target_id, EMAIL)
+        self.assertEqual(row.payload["reason"], "invalid_code")
+
+    def test_exhausting_a_code_writes_a_too_many_attempts_reason(self):
+        services.issue_code(email=EMAIL)
+        for _ in range(MAX_OTP_ATTEMPTS):
+            self.verify(EMAIL, "000000")
+
+        rows = list(AuditLog.all_objects.order_by("id"))
+        self.assertEqual(len(rows), MAX_OTP_ATTEMPTS)
+        self.assertEqual(rows[-1].payload["reason"], "too_many_attempts")
+
+    def test_the_subnet_rate_limit_writes_a_rate_limited_reason(self):
+        services.issue_code(email=EMAIL)
+        for _ in range(ratelimit.VERIFY_FAILURE_LIMIT):
+            self.verify(EMAIL, "000000")
+        self.verify(EMAIL, "000000")
+
+        newest = AuditLog.all_objects.first()
+        self.assertEqual(newest.payload["reason"], "rate_limited")
+
+    def test_a_broken_audit_log_never_blocks_a_successful_login(self):
+        from unittest import mock
+
+        code = self.request_and_read_code(EMAIL)
+        with mock.patch(
+            "apps.tenancy.models.AuditLog.objects.record",
+            side_effect=RuntimeError("db is down"),
+        ):
+            response = self.verify(EMAIL, code, accepts_terms=True)
+        self.assertEqual(response.status_code, 200)

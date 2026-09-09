@@ -24,6 +24,7 @@ from django.db import IntegrityError, transaction
 from apps.common.errors import NotOrgMember
 from apps.tenancy.models import (
     MAX_ORG_NAME_LENGTH,
+    AuditLog,
     Membership,
     Organization,
     Role,
@@ -173,3 +174,45 @@ def current_org(request):
     """The :class:`~apps.tenancy.models.Organization` this request is scoped to."""
     membership = current_membership(request)
     return membership.org if membership is not None else None
+
+
+def record_security_event(
+    *,
+    action: str,
+    user=None,
+    org=None,
+    ip: str | None = None,
+    user_agent: str = "",
+    target=None,
+    target_type: str = "",
+    target_id: str = "",
+    payload: dict | None = None,
+) -> None:
+    """Write one immutable :class:`~apps.tenancy.models.AuditLog` row.
+
+    The one door ``apps.accounts`` is allowed to call through for audit
+    logging — it may not import ``AuditLog``, ``Organization`` or
+    ``Membership`` itself
+    (``tests.accounts.test_models.ModuleBoundaryTests``), so every
+    accounts-originated security event (a login, a logout, a wrong code)
+    reaches the audit trail by calling this function by name, exactly the way
+    it already calls :func:`bootstrap_workspace`.
+
+    Never raises. An audit-log outage is a real problem, but it must never be
+    able to turn into a login or logout outage, so any failure here is logged
+    and swallowed rather than propagated.
+    """
+    try:
+        AuditLog.objects.record(
+            action=action,
+            org=org,
+            actor=user,
+            target=target,
+            target_type=target_type,
+            target_id=target_id,
+            payload=payload,
+            ip=ip,
+            user_agent=user_agent,
+        )
+    except Exception:  # noqa: BLE001 - any DB/config failure must not break auth
+        logger.exception("Failed to write audit log for action=%s", action)

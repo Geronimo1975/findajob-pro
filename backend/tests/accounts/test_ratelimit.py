@@ -164,6 +164,70 @@ class BudgetTests(SimpleTestCase):
         self.assertTrue(ratelimit.check_verify_budget("a@b.de", "203.0.113.4").allowed)
 
 
+class ProgressiveBackoffTests(SimpleTestCase):
+    """Past a soft budget the first rejections get a short, escalating wait.
+
+    The budgets used to be binary: one request under the limit was free, the
+    next was told to wait out the rest of a one-hour window. That is a wall for
+    an honest user who needed one more code (German greylisting, a typo, a
+    second device) and barely an inconvenience for an attacker, who was never
+    going to sit through it either way.
+    """
+
+    IP = "203.0.113.4"
+
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def _exhaust_per_email(self, email: str = "a@b.de") -> None:
+        for _ in range(ratelimit.PER_EMAIL_LIMIT):
+            ratelimit.check_request_budgets(email, self.IP)
+
+    def test_the_first_rejections_climb_the_ladder(self):
+        self._exhaust_per_email()
+        for expected in ratelimit.BACKOFF_LADDER:
+            decision = ratelimit.check_request_budgets("a@b.de", self.IP)
+            self.assertFalse(decision.allowed)
+            self.assertEqual(decision.budget, "per_email")
+            self.assertEqual(decision.retry_after, expected)
+
+    def test_after_the_ladder_the_full_window_returns(self):
+        self._exhaust_per_email()
+        for _ in ratelimit.BACKOFF_LADDER:
+            ratelimit.check_request_budgets("a@b.de", self.IP)
+        decision = ratelimit.check_request_budgets("a@b.de", self.IP)
+        self.assertFalse(decision.allowed)
+        self.assertGreater(decision.retry_after, max(ratelimit.BACKOFF_LADDER))
+
+    def test_the_ladder_never_quotes_longer_than_the_window(self):
+        # The whole point of min(rung, remaining): backoff may only ever be
+        # more permissive than the behaviour it replaced, never less.
+        self._exhaust_per_email()
+        decision = ratelimit.check_request_budgets("a@b.de", self.IP)
+        self.assertLessEqual(decision.retry_after, ratelimit.PER_EMAIL_WINDOW)
+
+    def test_a_budget_without_backoff_stays_hard(self):
+        # The global budget protects the sending domain's reputation and the
+        # provider bill; softening it would let a flood keep trickling through.
+        # `_consume` defaults to backoff=False, so this is that default.
+        for _ in range(3):
+            ratelimit._consume("test:hard", limit=1, window=600, budget="global")
+        decision = ratelimit._consume("test:hard", limit=1, window=600, budget="global")
+        self.assertFalse(decision.allowed)
+        self.assertGreater(decision.retry_after, max(ratelimit.BACKOFF_LADDER))
+
+    def test_the_verify_budget_stays_hard(self):
+        # Spec §5: this is the online-guessing oracle defence. No grace.
+        for _ in range(ratelimit.VERIFY_FAILURE_LIMIT):
+            ratelimit.record_verify_failure("a@b.de", self.IP)
+        decision = ratelimit.check_verify_budget("a@b.de", self.IP)
+        self.assertFalse(decision.allowed)
+        self.assertGreater(decision.retry_after, max(ratelimit.BACKOFF_LADDER))
+
+
 class DegradedCacheTests(SimpleTestCase):
     """Redis down must degrade, not 500 (spec §5)."""
 

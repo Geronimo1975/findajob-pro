@@ -69,6 +69,13 @@ class ErrorCode:
     TERMS_OUTDATED = "terms_outdated"
     DELIVERY_UNAVAILABLE = "delivery_unavailable"
 
+    # --- trusted devices (docs/2026-08-22-trusted-device-spec.md §4) -----
+    #: The single rejection for `POST /auth/device-login/`. Covers every cause
+    #: — no cookie, malformed, unknown, wrong secret, expired, revoked, wrong
+    #: owner — because the client's only correct response to all of them is the
+    #: same: fall back to the normal OTP flow.
+    DEVICE_NOT_TRUSTED = "device_not_trusted"
+
     # --- transport / framework ------------------------------------------
     NOT_AUTHENTICATED = "not_authenticated"
     PERMISSION_DENIED = "permission_denied"

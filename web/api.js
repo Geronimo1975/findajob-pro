@@ -6,7 +6,8 @@ export const ENDPOINTS = {
   // --- auth / session (M1) ---
   authCsrf: '/auth/csrf/',                  // GET  -> sets the csrftoken cookie
   authRequest: '/auth/request-code/',       // POST {email, lang} -> 202 {masked_email, expires_in, resend_in}
-  authVerify: '/auth/verify-code/',         // POST {email, code, accepts_terms} -> 200 + session
+  authVerify: '/auth/verify-code/',         // POST {email, code, accepts_terms, remember_device} -> 200 + session
+  authDeviceLogin: '/auth/device-login/',   // POST {email} -> 200 + session, or 401 device_not_trusted
   authLogout: '/auth/logout/',              // POST -> 204
   me: '/me/',                               // GET  -> {user, org, membership_role, memberships, lang}
 
@@ -109,8 +110,26 @@ export async function bootstrapCsrf() {
 export const requestCode = (email, lang) =>
   request(ENDPOINTS.authRequest, { method: 'POST', body: { email, lang } });
 
-export const verifyCode = (email, code, accepts_terms) =>
-  request(ENDPOINTS.authVerify, { method: 'POST', body: { email, code, accepts_terms } });
+export const verifyCode = (email, code, accepts_terms, remember_device) =>
+  request(ENDPOINTS.authVerify, {
+    method: 'POST',
+    body: { email, code, accepts_terms, remember_device: !!remember_device },
+  });
+
+/**
+ * Try the trusted-device shortcut before falling back to an emailed code.
+ * The cookie is HttpOnly, so the page cannot tell whether it holds one — it
+ * simply asks, and treats every rejection the same way: run the normal flow.
+ * Resolves to the /me/ payload on success, or null when a code is needed.
+ */
+export async function deviceLogin(email) {
+  try {
+    return await request(ENDPOINTS.authDeviceLogin, { method: 'POST', body: { email } });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return null;
+    throw err;    // 429 and network failures are real and must surface
+  }
+}
 
 export const logout = () => request(ENDPOINTS.authLogout, { method: 'POST' });
 

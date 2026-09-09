@@ -44,8 +44,37 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.serializers import RequestCodeSerializer, VerifyCodeSerializer
-from apps.accounts.services import request_login_code, verify_login_code
+from apps.accounts.serializers_device import DeviceLoginSerializer
+from apps.accounts.services import (
+    device_login,
+    logout_user,
+    request_login_code,
+    verify_login_code,
+)
 from apps.common.errors import ApiError, ErrorCode
+
+
+def _me_payload(request, user) -> dict:
+    """The ``GET /api/v1/me/`` body, so a login can redirect without a round trip.
+
+    Imported lazily, not at module import time: ``apps.tenancy`` is a sibling
+    app and a top-level import would make the two packages load in a fixed order
+    for no benefit. The rule this respects is spec §2 — accounts may call
+    tenancy's *services and serializers*, never its models.
+    """
+    from apps.tenancy.serializers import MeSerializer  # noqa: PLC0415
+    from apps.tenancy.services import memberships_for, resolve_membership  # noqa: PLC0415
+
+    memberships = list(memberships_for(user))
+    membership = resolve_membership(user, None, memberships=memberships)
+    return MeSerializer(
+        user,
+        context={
+            "request": request,
+            "memberships": memberships,
+            "membership": membership,
+        },
+    ).data
 
 
 def _reject(serializer, *, email_code: str, fallback_code: str) -> ApiError:
@@ -153,25 +182,63 @@ class VerifyCodeView(APIView):
             terms_version=data.get("terms_version") or "",
         )
 
-        # Imported here, not at module import time: `apps.tenancy` is a sibling
-        # app and a top-level import would make the two packages load in a fixed
-        # order for no benefit. The rule this respects is spec §2 — accounts may
-        # call tenancy's *services and serializers*, never its models.
-        from apps.tenancy.serializers import MeSerializer  # noqa: PLC0415
-        from apps.tenancy.services import memberships_for, resolve_membership  # noqa: PLC0415
-
-        memberships = list(memberships_for(user))
-        membership = resolve_membership(user, None, memberships=memberships)
-        payload = MeSerializer(
-            user,
-            context={
-                "request": request,
-                "memberships": memberships,
-                "membership": membership,
-            },
-        ).data
+        payload = _me_payload(request, user)
         payload["created"] = created
-        return Response(payload, status=status.HTTP_200_OK)
+        response = Response(payload, status=status.HTTP_200_OK)
+
+        if data.get("remember_device"):
+            # Trusted-device spec §6. Minted only on an explicit opt-in, and
+            # only after the code was already proven good.
+            from apps.accounts.services import trust_this_device  # noqa: PLC0415
+
+            trust_this_device(request=request, response=response, user=user)
+
+        return response
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class DeviceLoginView(APIView):
+    """``POST /api/v1/auth/device-login/`` — ``{email}`` -> ``200`` + session.
+
+    The fifth auth route, and a deliberate deviation from auth spec §3's four;
+    ``docs/2026-08-22-trusted-device-spec.md`` §7 records why. The short version:
+    the alternative was to let ``request-code`` sometimes return a session, and
+    ``request-code`` being branch-free is the most security-critical property in
+    this module.
+
+    On any rejection the stale cookie is cleared, so a browser holding a revoked
+    or expired device stops presenting it on every subsequent login.
+    """
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request) -> Response:
+        serializer = DeviceLoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise _reject(
+                serializer,
+                email_code=ErrorCode.INVALID_EMAIL,
+                fallback_code=ErrorCode.INVALID_EMAIL,
+            )
+
+        from apps.devices.services import clear_device_cookie  # noqa: PLC0415
+
+        try:
+            user = device_login(
+                request=request, email=serializer.validated_data["email"]
+            )
+        except ApiError as exc:
+            if exc.error_code != ErrorCode.DEVICE_NOT_TRUSTED:
+                raise
+            response = Response(
+                {"error": {"code": exc.error_code, "detail": str(exc.detail)}},
+                status=exc.status_code,
+            )
+            clear_device_cookie(response)
+            return response
+
+        return Response(_me_payload(request, user), status=status.HTTP_200_OK)
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -181,15 +248,14 @@ class LogoutView(APIView):
     CSRF is enforced twice over: by ``SessionAuthentication.enforce_csrf`` (this
     is a cookie-authenticated request) and by the explicit decorator. Belt and
     braces, because a logout CSRF is a real, if minor, nuisance attack.
+
+    All of the actual work — resolving the org for the audit trail, then
+    ending the session — lives in ``apps.accounts.services.logout_user``; see
+    that docstring for why the ordering matters.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
-        from django.contrib.auth import logout as auth_logout  # noqa: PLC0415
-
-        # The underlying Django request, for the same reason the login path
-        # needs it: session and CSRF state is written onto the real request,
-        # and DRF's wrapper proxies reads but not writes.
-        auth_logout(getattr(request, "_request", request))
+        logout_user(request)
         return Response(status=status.HTTP_204_NO_CONTENT)

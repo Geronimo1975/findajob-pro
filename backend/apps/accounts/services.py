@@ -441,6 +441,20 @@ def _match_or_charge(address: str, code: str, now) -> tuple[int | None, bool]:
         return None, exhausted
 
 
+def _record_login_failure(request, email: str, ip: str | None, reason: str) -> None:
+    """Audit a failed verify attempt. No org, no actor: neither is known yet."""
+    from apps.tenancy.services import record_security_event  # noqa: PLC0415
+
+    record_security_event(
+        action="auth.login_failed",
+        ip=ip,
+        user_agent=user_agent_of(request),
+        target_type="email",
+        target_id=email,
+        payload={"reason": reason},
+    )
+
+
 def verify_login_code(
     *,
     request,
@@ -468,6 +482,7 @@ def verify_login_code(
     #    verify endpoint is an online oracle against a 10^6 keyspace.
     budget = ratelimit.check_verify_budget(address, ip)
     if not budget.allowed:
+        _record_login_failure(request, address, ip, ErrorCode.RATE_LIMITED)
         raise RateLimited(budget.retry_after)
 
     matched_pk, exhausted = _match_or_charge(address, code, now)
@@ -476,12 +491,15 @@ def verify_login_code(
         ratelimit.record_verify_failure(address, ip)
         if exhausted:
             logger.info("All live login codes exhausted for one address.")
-            raise ApiError(
+            error = ApiError(
                 ErrorCode.TOO_MANY_ATTEMPTS,
                 "Too many wrong attempts for that code. Request a new one.",
                 429,
             )
-        raise _classify_failure(address, code, now)
+        else:
+            error = _classify_failure(address, code, now)
+        _record_login_failure(request, address, ip, error.error_code)
+        raise error
 
     return _complete_login(
         request=request,
@@ -576,11 +594,14 @@ def _complete_login(
             ErrorCode.PERMISSION_DENIED, "This account cannot sign in.", 403
         )
 
-    # Their own workspace. Idempotent, and the only call this app is allowed to
-    # make into apps.tenancy (spec §2).
-    from apps.tenancy.services import bootstrap_workspace  # noqa: PLC0415
+    # Their own workspace. Idempotent, and (together with `record_security_event`)
+    # the only calls this app is allowed to make into apps.tenancy (spec §2).
+    from apps.tenancy.services import (  # noqa: PLC0415
+        bootstrap_workspace,
+        record_security_event,
+    )
 
-    bootstrap_workspace(user)
+    membership = bootstrap_workspace(user)
 
     # Session. `login()` cycles the session key and rotates the CSRF token,
     #    which is what makes session fixation across the anonymous -> logged-in
@@ -601,7 +622,168 @@ def _complete_login(
 
     ratelimit.reset_verify_failures(address, ip)
     logger.info("Login succeeded (new account: %s).", created)
+    record_security_event(
+        action="auth.login_succeeded",
+        user=user,
+        org=membership.org,
+        ip=ip,
+        user_agent=user_agent_of(request),
+        target=matched,
+    )
     return user, created
+
+
+# ---------------------------------------------------------------------------
+# Trusted devices (docs/2026-08-22-trusted-device-spec.md)
+# ---------------------------------------------------------------------------
+
+
+def trust_this_device(*, request, response, user) -> None:
+    """Mint a trusted device for ``user`` and set the cookie on ``response``.
+
+    Called only from the ``verify-code`` view, only when the client sent
+    ``remember_device: true``, and only after the code was proven good.
+
+    Never raises. A failure to remember a device must not turn a successful
+    login into an error — the user is already authenticated by the time this
+    runs, and the worst case is that they type a code again next time.
+    """
+    from apps.devices.services import set_device_cookie, trust_device  # noqa: PLC0415
+    from apps.tenancy.services import record_security_event  # noqa: PLC0415
+
+    ip = client_ip(request)
+    agent = user_agent_of(request)
+    try:
+        device, secret = trust_device(user=user, ip=ip, user_agent=agent)
+        set_device_cookie(response, device, secret)
+    except Exception:  # noqa: BLE001 - see docstring
+        logger.exception("Failed to remember a trusted device.")
+        return
+    finally:
+        # The plaintext secret lives in one process for one request.
+        secret = None
+
+    record_security_event(
+        action="auth.device_trusted",
+        user=user,
+        ip=ip,
+        user_agent=agent,
+        target=device,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/auth/device-login/
+# ---------------------------------------------------------------------------
+
+
+def device_login(*, request, email: str) -> User:
+    """Mint a session from a trusted-device cookie. See the trusted-device spec.
+
+    Every rejection is the same ``401 device_not_trusted`` — no cookie, a
+    malformed one, an unknown device, a wrong secret, an expired or revoked row,
+    an inactive user, or an email that is not the device's owner. The client's
+    only correct response to all of them is to fall back to the OTP flow, so a
+    finer taxonomy would leak without buying anything (spec §4).
+
+    Unlike ``verify-code`` this never creates an account and never records
+    consent: a device can only exist because a full OTP login already did both.
+    """
+    from apps.devices.services import mark_device_used, resolve_device  # noqa: PLC0415
+    from apps.tenancy.services import (  # noqa: PLC0415
+        record_security_event,
+        resolve_membership,
+    )
+
+    address = normalize_email(email)
+    ip = client_ip(request)
+    agent = user_agent_of(request)
+
+    def reject(reason: str) -> ApiError:
+        ratelimit.record_device_login_failure(address, ip)
+        record_security_event(
+            action="auth.device_login_failed",
+            ip=ip,
+            user_agent=agent,
+            target_type="email",
+            target_id=address,
+            payload={"reason": reason},
+        )
+        return ApiError(
+            ErrorCode.DEVICE_NOT_TRUSTED,
+            "This device is not recognised. Please sign in with a code.",
+            401,
+        )
+
+    # Fails CLOSED, on its own budget (spec §5).
+    budget = ratelimit.check_device_login_budget(address, ip)
+    if not budget.allowed:
+        raise RateLimited(budget.retry_after)
+
+    device = resolve_device(request)
+    if device is None:
+        raise reject("no_device")
+
+    # The email must name the device's owner. This adds no cryptographic
+    # strength — whoever holds the cookie could read the address off the app —
+    # but it keeps a deliberate human action in the flow, which is the whole
+    # difference between this and a silent auto-login.
+    if normalize_email(device.user.email) != address:
+        raise reject("email_mismatch")
+
+    user = device.user
+    membership = resolve_membership(user, None)
+
+    http_request = getattr(request, "_request", request)
+    auth_login(http_request, user, backend=AUTH_BACKEND)
+    if http_request is not request:
+        request.user = user
+
+    mark_device_used(device, ip=ip, user_agent=agent)
+    ratelimit.reset_device_login_failures(address, ip)
+    record_security_event(
+        action="auth.device_login_succeeded",
+        user=user,
+        org=membership.org if membership is not None else None,
+        ip=ip,
+        user_agent=agent,
+        target=device,
+    )
+    logger.info("Trusted-device login succeeded.")
+    return user
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/auth/logout/
+# ---------------------------------------------------------------------------
+
+
+def logout_user(request) -> None:
+    """Audit the logout, then end the session.
+
+    Org resolution has to happen *before* the session is wiped: it reads
+    ``request.user`` and the ``?org=``/``X-FindaJob-Org`` the client sent, both
+    of which are meaningless once ``auth_logout`` runs.
+    """
+    from django.contrib.auth import logout as auth_logout  # noqa: PLC0415
+
+    from apps.tenancy.services import current_org, record_security_event  # noqa: PLC0415
+
+    user = request.user
+    org = current_org(request)
+    record_security_event(
+        action="auth.logout",
+        user=user,
+        org=org,
+        ip=client_ip(request),
+        user_agent=user_agent_of(request),
+    )
+
+    # Same reasoning as in `_complete_login`: `logout()` must see the real
+    # Django request, not the DRF wrapper, or session/CSRF state written by it
+    # never reaches the response.
+    http_request = getattr(request, "_request", request)
+    auth_logout(http_request)
 
 
 def _burn_attempts(rows: list[EmailOTP]) -> None:

@@ -152,6 +152,11 @@
           <label for="accepts_terms" id="t-terms"></label>
         </div>
 
+        <div class="terms" id="remember-wrap">
+          <input type="checkbox" id="remember_device">
+          <label for="remember_device" id="t-remember"></label>
+        </div>
+
         <button class="primary" type="submit" id="btn-verify"></button>
         <div class="row">
           <button class="link" type="button" id="btn-back"></button>
@@ -180,7 +185,7 @@
 <script type="module">
 // The only HTTP owner is api.js (spec §8) — this file never calls fetch() itself,
 // so there is exactly one CSRF implementation and one error shape in web/.
-import { bootstrapCsrf, requestCode, verifyCode, ApiError } from './api.js';
+import { bootstrapCsrf, requestCode, verifyCode, deviceLogin, ApiError } from './api.js';
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 // Same T-table shape index.html uses: T[lang] = {…}, every string present in all
@@ -206,6 +211,7 @@ const T = {
     resent: 'A new code is on its way. Older codes still work.',
     signedOut: 'You are signed out.',
     terms: 'I accept the <a href="app.html#legal-terms" target="_blank" rel="noopener">Terms (AGB)</a> and the <a href="app.html#legal-privacy" target="_blank" rel="noopener">Privacy Policy</a>.',
+    remember: 'Remember this device for 30 days. Do not tick this on a shared or public computer.',
     legalNote: 'Login and session storage are strictly necessary (§ 25(2) TTDSG) and need no consent banner.',
     privacy: 'Privacy', terms_link: 'Terms', impressum: 'Impressum',
     errors: {
@@ -243,6 +249,7 @@ const T = {
     resent: 'Ein neuer Code ist unterwegs. Ältere Codes gelten weiterhin.',
     signedOut: 'Sie sind abgemeldet.',
     terms: 'Ich akzeptiere die <a href="app.html#legal-terms" target="_blank" rel="noopener">AGB</a> und die <a href="app.html#legal-privacy" target="_blank" rel="noopener">Datenschutzerklärung</a>.',
+    remember: 'Dieses Gerät 30 Tage lang merken. Auf einem gemeinsam genutzten oder öffentlichen Computer bitte nicht ankreuzen.',
     legalNote: 'Anmeldung und Sitzungsspeicher sind unbedingt erforderlich (§ 25 Abs. 2 TTDSG) und einwilligungsfrei.',
     privacy: 'Datenschutz', terms_link: 'AGB', impressum: 'Impressum',
     errors: {
@@ -280,6 +287,7 @@ const T = {
     resent: 'Un cod nou este pe drum. Codurile mai vechi rămân valabile.',
     signedOut: 'Te-ai deconectat.',
     terms: 'Accept <a href="app.html#legal-terms" target="_blank" rel="noopener">Termenii (AGB)</a> și <a href="app.html#legal-privacy" target="_blank" rel="noopener">Politica de confidențialitate</a>.',
+    remember: 'Ține minte acest dispozitiv 30 de zile. Nu bifa pe un calculator public sau folosit în comun.',
     legalNote: 'Autentificarea și stocarea sesiunii sunt strict necesare (§ 25(2) TTDSG) și nu necesită consimțământ.',
     privacy: 'Confidențialitate', terms_link: 'Termeni', impressum: 'Impressum',
     errors: {
@@ -309,6 +317,7 @@ const els = {
   langs: $('langs'), eyebrow: $('eyebrow'), msg: $('msg'), expiry: $('expiry'),
   stepEmail: $('step-email'), stepCode: $('step-code'),
   email: $('email'), code: $('code'), terms: $('accepts_terms'), termsWrap: $('terms-wrap'),
+  remember: $('remember_device'),
   btnSend: $('btn-send'), btnVerify: $('btn-verify'), btnBack: $('btn-back'), btnResend: $('btn-resend'),
 };
 
@@ -364,6 +373,7 @@ function applyLang() {
   $('t-code-title').textContent = t.codeTitle;
   $('t-code-label').textContent = t.codeLabel;
   $('t-terms').innerHTML = t.terms;          // trusted literal from the table above
+  $('t-remember').textContent = t.remember;  // plain text: no markup in this one
   $('t-legal-note').textContent = t.legalNote + ' ';
   $('t-privacy').textContent = t.privacy;
   $('t-terms-link').textContent = t.terms_link;
@@ -617,6 +627,32 @@ els.stepEmail.addEventListener('submit', async e => {
     els.email.focus();
     return;
   }
+
+  // Trusted-device shortcut. The cookie is HttpOnly, so this page cannot tell
+  // whether one exists — it asks, and a null answer simply means "send a code".
+  // Any other failure (429, offline) is reported rather than swallowed, because
+  // silently falling through would spend a rate-limit budget the user is
+  // already out of.
+  if (!submitting) {
+    submitting = true;
+    els.btnSend.disabled = true;
+    try {
+      const me = await withCsrfRetry(() => deviceLogin(email));
+      if (me) {
+        clearPending();
+        stopTicker();
+        location.assign(safeNext());
+        return;
+      }
+    } catch (err) {
+      showApiError(err);
+      return;
+    } finally {
+      submitting = false;
+      els.btnSend.disabled = false;
+    }
+  }
+
   await sendCode(email);
 });
 
@@ -647,7 +683,9 @@ els.stepCode.addEventListener('submit', async e => {
   els.btnVerify.textContent = T[lang].verifying;
   clearMessage();
   try {
-    await withCsrfRetry(() => verifyCode(pending.email, code, true));
+    await withCsrfRetry(() =>
+      verifyCode(pending.email, code, true, els.remember.checked)
+    );
     clearPending();
     stopTicker();
     // Full navigation, not history.pushState: the session cookie was just set and

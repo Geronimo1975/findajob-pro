@@ -130,6 +130,9 @@ LOCAL_APPS = [
     "apps.outbox",
     # Platform catalog, scraped listings, applications, documents.
     "apps.jobs",
+    # Remembered machines that may skip the OTP round trip; see
+    # docs/2026-08-22-trusted-device-spec.md.
+    "apps.devices",
 ]
 
 # ORDER IS LOAD-BEARING, in exactly one place: `apps.common` must precede the
