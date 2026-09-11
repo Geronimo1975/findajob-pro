@@ -58,6 +58,9 @@ export function readCookie(name) {
 
 export async function request(path, { method = 'GET', body } = {}) {
   let res;
+  // FormData (document upload) must ride with its own multipart boundary —
+  // setting Content-Type ourselves or JSON.stringify-ing it would corrupt it.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
     res = await fetch(BASE + path, {
       method,
@@ -65,12 +68,12 @@ export async function request(path, { method = 'GET', body } = {}) {
       // so the session cookie rides along without opening a CORS surface.
       credentials: 'same-origin',
       headers: {
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
         // DRF's APIView is csrf_exempt, so the token is the only thing standing
         // between an anonymous POST and cross-site login CSRF.
         ...(method !== 'GET' ? { 'X-CSRFToken': readCookie('csrftoken') } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? body : (body ? JSON.stringify(body) : undefined),
     });
   } catch {
     // Kept distinct from an HTTP error on purpose: callers must be able to tell
@@ -126,6 +129,18 @@ export const getJobs = (params = {}) => {
   ).toString();
   return request(ENDPOINTS.jobs + (qs ? '?' + qs : ''));
 };
+
+export const getDocuments = () => request(ENDPOINTS.documents);
+
+export const uploadDocument = (file, kind) => {
+  const form = new FormData();
+  form.append('file', file);
+  if (kind) form.append('kind', kind);
+  return request(ENDPOINTS.documents, { method: 'POST', body: form });
+};
+
+export const deleteDocument = (id) =>
+  request(ENDPOINTS.documents + id + '/', { method: 'DELETE' });
 
 // SaaS plans — Claude.ai-style tier structure (per-seat for Team/Enterprise)
 export const PLANS = [
