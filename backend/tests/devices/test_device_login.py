@@ -6,6 +6,7 @@ See ``docs/2026-08-22-trusted-device-spec.md`` §§4–6.
 from __future__ import annotations
 
 from datetime import timedelta
+from unittest import mock
 
 from django.utils import timezone
 
@@ -70,6 +71,31 @@ class RememberDeviceTests(AuthTestCase):
         )
         secret = response.cookies[DEVICE_COOKIE_NAME].value.split(".", 1)[1]
         self.assertNotIn(secret, response.content.decode())
+
+    def test_a_failed_cookie_write_leaves_no_orphaned_device_row(self):
+        """Regression: the row must not outlive the cookie that proves it.
+
+        Before the fix, ``trust_device()`` committing the row before
+        ``set_device_cookie()`` ran meant a cookie-write failure left an
+        unrevoked ``TrustedDevice`` sitting in the DB for the full 30-day TTL
+        — one the browser could never present, since it never got the
+        cookie — with no audit trail explaining why. The login itself must
+        still succeed (spec: never turn a successful login into an error).
+        """
+        code = self.request_and_read_code(EMAIL)
+        with mock.patch(
+            "apps.devices.services.set_device_cookie",
+            side_effect=RuntimeError("cookie write blew up"),
+        ):
+            response = self.verify(
+                EMAIL, code, accepts_terms=True, remember_device=True
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(TrustedDevice.objects.count(), 0)
+        self.assertNotIn(DEVICE_COOKIE_NAME, response.cookies)
+
+        row = AuditLog.all_objects.filter(action="auth.device_trust_failed").get()
+        self.assertIn("device_id", row.payload)
 
 
 class DeviceLoginHappyPathTests(AuthTestCase):
