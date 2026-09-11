@@ -201,18 +201,27 @@ def record_security_event(
     Never raises. An audit-log outage is a real problem, but it must never be
     able to turn into a login or logout outage, so any failure here is logged
     and swallowed rather than propagated.
+
+    The write happens inside its own nested ``transaction.atomic()`` (the same
+    savepoint pattern :func:`bootstrap_workspace` uses for its org-create
+    retry). Callers such as ``_complete_login`` invoke this from *inside* a
+    wider ``@transaction.atomic`` block, and a bare DB exception marks the
+    whole outer transaction for rollback (``connection.needs_rollback``) even
+    once caught here — silently discarding the login it was supposed to be
+    auditing. The nested block confines that rollback to the savepoint alone.
     """
     try:
-        AuditLog.objects.record(
-            action=action,
-            org=org,
-            actor=user,
-            target=target,
-            target_type=target_type,
-            target_id=target_id,
-            payload=payload,
-            ip=ip,
-            user_agent=user_agent,
-        )
+        with transaction.atomic():
+            AuditLog.objects.record(
+                action=action,
+                org=org,
+                actor=user,
+                target=target,
+                target_type=target_type,
+                target_id=target_id,
+                payload=payload,
+                ip=ip,
+                user_agent=user_agent,
+            )
     except Exception:  # noqa: BLE001 - any DB/config failure must not break auth
         logger.exception("Failed to write audit log for action=%s", action)

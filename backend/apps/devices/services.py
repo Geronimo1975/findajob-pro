@@ -130,6 +130,7 @@ def resolve_device(request, *, user=None, now=None) -> TrustedDevice | None:
     try:
         device = (
             TrustedDevice.objects.select_related("user")
+            .live(now=now)
             .filter(device_id=device_id)
             .first()
         )
@@ -138,7 +139,7 @@ def resolve_device(request, *, user=None, now=None) -> TrustedDevice | None:
         # raises `ValidationError`; older paths raise `ValueError`. Either way
         # it is just an untrusted cookie, not a server error.
         return None
-    if device is None or not device.is_live(now):
+    if device is None:
         return None
     if not device.matches(secret):
         return None

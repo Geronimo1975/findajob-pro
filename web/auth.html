@@ -630,9 +630,11 @@ els.stepEmail.addEventListener('submit', async e => {
 
   // Trusted-device shortcut. The cookie is HttpOnly, so this page cannot tell
   // whether one exists — it asks, and a null answer simply means "send a code".
-  // Any other failure (429, offline) is reported rather than swallowed, because
-  // silently falling through would spend a rate-limit budget the user is
-  // already out of.
+  // The device-login budget (spec §5) is entirely separate from the
+  // request-code budgets, so a failure here — a 429 from a flagged device
+  // cookie, a transient network error — must never stop the user from still
+  // getting an emailed code: fall through to sendCode() and let its own error
+  // handling speak, rather than dead-ending the login page on this shortcut.
   if (!submitting) {
     submitting = true;
     els.btnSend.disabled = true;
@@ -644,9 +646,8 @@ els.stepEmail.addEventListener('submit', async e => {
         location.assign(safeNext());
         return;
       }
-    } catch (err) {
-      showApiError(err);
-      return;
+    } catch {
+      // fall through to sendCode() below
     } finally {
       submitting = false;
       els.btnSend.disabled = false;

@@ -570,8 +570,6 @@ class AuditTrailTests(AuthTestCase):
         self.assertEqual(newest.payload["reason"], "rate_limited")
 
     def test_a_broken_audit_log_never_blocks_a_successful_login(self):
-        from unittest import mock
-
         code = self.request_and_read_code(EMAIL)
         with mock.patch(
             "apps.tenancy.models.AuditLog.objects.record",
@@ -579,3 +577,32 @@ class AuditTrailTests(AuthTestCase):
         ):
             response = self.verify(EMAIL, code, accepts_terms=True)
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(email=EMAIL, is_verified=True).exists())
+
+    def test_a_real_db_error_writing_the_audit_log_never_discards_the_login(self):
+        """Regression for a savepoint bug: mocking ``AuditLog.objects.record``
+        itself (as above) never touches Django's transaction machinery, so it
+        cannot catch a real DB failure marking the *outer* ``_complete_login``
+        transaction for rollback (``connection.needs_rollback``) even after the
+        exception is caught. Fail the actual INSERT instead, exactly like a
+        genuine audit-table outage would, and confirm the user this login
+        created is still there afterwards, not silently rolled back behind a
+        200 response.
+        """
+        from django.db import DatabaseError
+        from django.db.backends.utils import CursorWrapper
+
+        original_execute = CursorWrapper.execute
+
+        def flaky_execute(self, sql, params=None):
+            if "tenancy_auditlog" in sql:
+                raise DatabaseError("db is down")
+            return original_execute(self, sql, params)
+
+        code = self.request_and_read_code(EMAIL)
+        with mock.patch.object(CursorWrapper, "execute", flaky_execute):
+            response = self.verify(EMAIL, code, accepts_terms=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(email=EMAIL, is_verified=True).exists())
+        self.assertTrue(Membership.objects.unscoped().filter(user__email=EMAIL).exists())

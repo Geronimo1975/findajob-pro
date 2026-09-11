@@ -653,11 +653,31 @@ def trust_this_device(*, request, response, user) -> None:
 
     ip = client_ip(request)
     agent = user_agent_of(request)
+    device = None
     try:
         device, secret = trust_device(user=user, ip=ip, user_agent=agent)
-        set_device_cookie(response, device, secret)
+        try:
+            set_device_cookie(response, device, secret)
+        except Exception:
+            # `trust_device` already committed the row; the plaintext secret
+            # only ever lived in this process, so the browser has no way to
+            # ever present it again. Left alone this is a silent, unrevoked
+            # 30-day orphan with no audit trail explaining it — delete it
+            # rather than let a cookie-write failure mint an unusable device.
+            try:
+                device.delete()
+            except Exception:
+                logger.exception("Also failed to clean up an orphaned trusted device row.")
+            raise
     except Exception:  # noqa: BLE001 - see docstring
         logger.exception("Failed to remember a trusted device.")
+        record_security_event(
+            action="auth.device_trust_failed",
+            user=user,
+            ip=ip,
+            user_agent=agent,
+            payload={"device_id": str(device.device_id)} if device is not None else None,
+        )
         return
     finally:
         # The plaintext secret lives in one process for one request.
@@ -689,7 +709,11 @@ def device_login(*, request, email: str) -> User:
     Unlike ``verify-code`` this never creates an account and never records
     consent: a device can only exist because a full OTP login already did both.
     """
-    from apps.devices.services import mark_device_used, resolve_device  # noqa: PLC0415
+    from apps.devices.services import (  # noqa: PLC0415
+        DEVICE_COOKIE_NAME,
+        mark_device_used,
+        resolve_device,
+    )
     from apps.tenancy.services import (  # noqa: PLC0415
         record_security_event,
         resolve_membership,
@@ -698,6 +722,12 @@ def device_login(*, request, email: str) -> User:
     address = normalize_email(email)
     ip = client_ip(request)
     agent = user_agent_of(request)
+
+    not_trusted = ApiError(
+        ErrorCode.DEVICE_NOT_TRUSTED,
+        "This device is not recognised. Please sign in with a code.",
+        401,
+    )
 
     def reject(reason: str) -> ApiError:
         ratelimit.record_device_login_failure(address, ip)
@@ -709,20 +739,26 @@ def device_login(*, request, email: str) -> User:
             target_id=address,
             payload={"reason": reason},
         )
-        return ApiError(
-            ErrorCode.DEVICE_NOT_TRUSTED,
-            "This device is not recognised. Please sign in with a code.",
-            401,
-        )
+        return not_trusted
 
-    # Fails CLOSED, on its own budget (spec §5).
+    # No cookie at all is the ordinary "no remembered device" path — most
+    # logins take it, not just attackers. It must not touch the hard,
+    # fail-closed budget below: that budget exists to blunt cookie-guessing
+    # (spec §5), and spending it on every cookie-less login would rate-limit
+    # ordinary users out of their own login page, and turn a cache outage into
+    # a site-wide login outage the moment the very first visitor arrives.
+    if not request.COOKIES.get(DEVICE_COOKIE_NAME):
+        raise not_trusted
+
+    # Fails CLOSED, on its own budget (spec §5) — only once a device cookie
+    # was actually presented, i.e. there is something to defend against.
     budget = ratelimit.check_device_login_budget(address, ip)
     if not budget.allowed:
         raise RateLimited(budget.retry_after)
 
     device = resolve_device(request)
     if device is None:
-        raise reject("no_device")
+        raise reject("bad_device")
 
     # The email must name the device's owner. This adds no cryptographic
     # strength — whoever holds the cookie could read the address off the app —

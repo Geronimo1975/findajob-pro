@@ -206,10 +206,20 @@ class DeviceLoginRejectionTests(AuthTestCase):
         self.assertEqual(response.cookies[DEVICE_COOKIE_NAME].value, "")
 
     def test_a_rejection_is_audited(self):
+        self.client.cookies[DEVICE_COOKIE_NAME] = f"{self.device.device_id}.wrong"
         self.post_json(DEVICE_URL, {"email": EMAIL})
         row = AuditLog.all_objects.filter(action="auth.device_login_failed").get()
         self.assertIsNone(row.actor_id)
-        self.assertEqual(row.payload["reason"], "no_device")
+        self.assertEqual(row.payload["reason"], "bad_device")
+
+    def test_no_cookie_at_all_is_not_audited_or_counted(self):
+        # The ordinary "no remembered device" path must not look like an
+        # attack: no security event, and it must not spend the fail-closed
+        # device-login budget (see DeviceLoginRateLimitTests below).
+        self.post_json(DEVICE_URL, {"email": EMAIL})
+        self.assertFalse(
+            AuditLog.all_objects.filter(action="auth.device_login_failed").exists()
+        )
 
     def test_a_malformed_email_is_invalid_email_not_device_not_trusted(self):
         response = self.post_json(DEVICE_URL, {"email": "not-an-email"})
@@ -229,11 +239,26 @@ class DeviceLoginRateLimitTests(AuthTestCase):
         self.device, self.secret = trust_device(user=self.user)
 
     def test_repeated_failures_eventually_return_429(self):
+        # Must actually present a device cookie: the budget defends against
+        # cookie-guessing, so only a presented-but-wrong cookie should spend it.
+        # Each rejection clears the cookie from the response, so it has to be
+        # re-presented before every attempt, exactly as a guessing script would.
         for _ in range(ratelimit.DEVICE_LOGIN_FAILURE_LIMIT):
+            self.client.cookies[DEVICE_COOKIE_NAME] = f"{self.device.device_id}.wrong"
             self.post_json(DEVICE_URL, {"email": EMAIL})
+        self.client.cookies[DEVICE_COOKIE_NAME] = f"{self.device.device_id}.wrong"
         blocked = self.post_json(DEVICE_URL, {"email": EMAIL})
         self.assertEqual(blocked.status_code, 429)
         self.assertEqual(blocked.json()["error"]["code"], "rate_limited")
+
+    def test_cookie_less_requests_never_exhaust_the_device_budget(self):
+        # Root-cause regression: ordinary logins without a remembered device
+        # (shared IPs, offices, first-time visitors) must never be able to
+        # trip a budget sized for cookie-guessing attacks.
+        for _ in range(ratelimit.DEVICE_LOGIN_FAILURE_LIMIT * 3):
+            response = self.post_json(DEVICE_URL, {"email": EMAIL})
+            self.assertEqual(response.status_code, 401)
+        self.assertTrue(ratelimit.check_device_login_budget(EMAIL, "127.0.0.1").allowed)
 
     def test_burning_the_device_budget_leaves_the_otp_budget_alone(self):
         # The DoS this separation exists to prevent: junk device cookies must
