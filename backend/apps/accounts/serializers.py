@@ -133,6 +133,10 @@ class VerifyCodeSerializer(serializers.Serializer):
     email = NormalizedEmailField(max_length=MAX_EMAIL_LENGTH)
     code = OtpCodeField(max_length=MAX_RAW_CODE_LENGTH, trim_whitespace=True)
     accepts_terms = serializers.BooleanField(required=False, default=False)
+    #: Opt-in, never automatic (trusted-device spec §6): marking a library or
+    #: internet-cafe machine as trusted without being asked is exactly what this
+    #: checkbox exists to prevent.
+    remember_device = serializers.BooleanField(required=False, default=False)
     lang = serializers.CharField(
         required=False, allow_blank=True, max_length=16, default=""
     )

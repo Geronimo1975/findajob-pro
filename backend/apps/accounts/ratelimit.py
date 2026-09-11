@@ -3,15 +3,20 @@
 The budgets
 -----------
 
-=====================  ===========  ==========================================
-Budget                 Limit        Key namespace
-=====================  ===========  ==========================================
-Resend cooldown        60 s         ``otp:cd:{email}``
-Per email              5 / hour     ``otp:req:{email}``
-Per IP                 20 / hour    ``otp:ip:{ip}``
-Global                 500 / hour   ``otp:global``
-Verify failures        10 / 15 min  ``otp:vf:{email}:{subnet}``  (email, /24)
-=====================  ===========  ==========================================
+=====================  ===========  ============  ===============================
+Budget                 Limit        Past limit    Key namespace
+=====================  ===========  ============  ===============================
+Resend cooldown        60 s         hard          ``otp:cd:{email}``
+Per email              5 / hour     **soft**      ``otp:req:{email}``
+Per IP                 20 / hour    **soft**      ``otp:ip:{ip}``
+Global                 500 / hour   hard          ``otp:global``
+Verify failures        10 / 15 min  hard          ``otp:vf:{email}:{subnet}``
+Device-login failures  10 / 15 min  hard          ``otp:dl:{email}:{subnet}``
+=====================  ===========  ============  ===============================
+
+*Soft* means the first rejections past the limit quote a short escalating wait
+(:data:`BACKOFF_LADDER`) instead of the rest of the window; *hard* means the
+rest of the window, always. See :func:`_consume`.
 
 Three things about this module are deliberate and should not be "simplified".
 
@@ -79,6 +84,23 @@ GLOBAL_WINDOW = 3600
 
 VERIFY_FAILURE_LIMIT = 10
 VERIFY_FAILURE_WINDOW = 15 * 60
+
+#: Trusted-device login failures, per (email, /24). Deliberately a **separate**
+#: budget from the verify one (trusted-device spec §5): sharing it would let an
+#: attacker burn a victim's OTP verify budget by posting junk device cookies,
+#: which is a denial of service against the legitimate login path. Two
+#: credentials, two budgets.
+DEVICE_LOGIN_FAILURE_LIMIT = 10
+DEVICE_LOGIN_FAILURE_WINDOW = 15 * 60
+
+#: Escalating grace waits handed out on the first rejections past a *soft*
+#: budget, in seconds. See :func:`_consume`'s ``backoff`` argument.
+#:
+#: Only the two ``request-code`` budgets are soft. The global budget and the
+#: verify-failure budget stay hard: the first protects the sending domain's
+#: reputation and the provider bill, the second is the online-guessing oracle
+#: defence, and neither has a user-experience problem worth trading for.
+BACKOFF_LADDER = (30, 120, 300)
 
 #: Suffix of the sibling key that stores the window deadline as a unix
 #: timestamp. See the module docstring, point 1.
@@ -160,6 +182,10 @@ def verify_failure_key(email: str, ip: str | None) -> str:
     return f"otp:vf:{_digest(email)}:{_digest(subnet_of(ip))}"
 
 
+def device_login_failure_key(email: str, ip: str | None) -> str:
+    return f"otp:dl:{_digest(email)}:{_digest(subnet_of(ip))}"
+
+
 # ---------------------------------------------------------------------------
 # Cache primitives — every one of them survives a dead Redis
 # ---------------------------------------------------------------------------
@@ -209,13 +235,29 @@ def _remaining(key: str, window: int) -> int:
     return remaining if remaining > 0 else window
 
 
-def _consume(key: str, limit: int, window: int, *, budget: str) -> Decision:
+def _consume(
+    key: str, limit: int, window: int, *, budget: str, backoff: bool = False
+) -> Decision:
     """Count one hit against a fixed window budget.
 
     Returns an allowed decision while the counter is at or below ``limit``, and
     a 429-worthy one after. ``degraded`` is set when the cache could not be
     reached, in which case the decision is **allowed** — the caller decides
     whether that is acceptable.
+
+    ``backoff`` softens *how long* a rejection is quoted for, never *whether*
+    one happens. With it, the first ``len(BACKOFF_LADDER)`` rejections past the
+    limit are told to wait 30 s, then 2 min, then 5 min; afterwards the caller
+    waits out the rest of the window exactly as it did before. Every rung is
+    clamped with ``min(rung, remaining)``, so a soft budget can only ever quote
+    a *shorter* wait than a hard one — it never extends a block.
+
+    Why only quoting changes: the counter still increments on every rejected
+    request, so an attacker who retries the instant each grace wait expires
+    climbs the ladder and lands on the full window regardless. What the ladder
+    buys is the honest case — one more code after 30 s instead of after 40
+    minutes. A client that retries *before* its wait expires spends a rung on
+    nothing, which is the correct treatment for hammering.
     """
     created = _safe(lambda: cache.add(key, 0, window), what=f"add({key})")
     if created is _FAILED:
@@ -243,9 +285,17 @@ def _consume(key: str, limit: int, window: int, *, budget: str) -> Decision:
 
     if count <= limit:
         return ALLOWED
-    return Decision(
-        allowed=False, retry_after=max(1, _remaining(key, window)), budget=budget
-    )
+
+    remaining = max(1, _remaining(key, window))
+    if backoff:
+        overage = count - limit  # 1 on the first rejection, 2 on the next…
+        if overage <= len(BACKOFF_LADDER):
+            return Decision(
+                allowed=False,
+                retry_after=min(BACKOFF_LADDER[overage - 1], remaining),
+                budget=budget,
+            )
+    return Decision(allowed=False, retry_after=remaining, budget=budget)
 
 
 def _peek(key: str, limit: int, window: int, *, budget: str,
@@ -317,9 +367,12 @@ def check_request_budgets(email: str, ip: str | None) -> Decision:
     consumed for an allowed request. Fails OPEN throughout (spec §5).
     """
     decisions = [
+        # Soft: these two are the ones an honest user trips.
         _consume(per_email_key(email), PER_EMAIL_LIMIT, PER_EMAIL_WINDOW,
-                 budget="per_email"),
-        _consume(per_ip_key(ip), PER_IP_LIMIT, PER_IP_WINDOW, budget="per_ip"),
+                 budget="per_email", backoff=True),
+        _consume(per_ip_key(ip), PER_IP_LIMIT, PER_IP_WINDOW, budget="per_ip",
+                 backoff=True),
+        # Hard: a circuit breaker for the whole deployment, not a user's budget.
         _consume(global_key(), GLOBAL_LIMIT, GLOBAL_WINDOW, budget="global"),
     ]
     degraded = any(decision.degraded for decision in decisions)
@@ -368,6 +421,44 @@ def record_verify_failure(email: str, ip: str | None) -> Decision:
         VERIFY_FAILURE_WINDOW,
         budget="verify_failures",
     )
+
+
+# ---------------------------------------------------------------------------
+# device-login — fails CLOSED, on its own budget
+# ---------------------------------------------------------------------------
+
+
+def check_device_login_budget(email: str, ip: str | None) -> Decision:
+    """Is this ``(email, /24)`` pair still allowed to present a device cookie?
+
+    Read-only, fail-closed, and on its own key namespace — see
+    :data:`DEVICE_LOGIN_FAILURE_LIMIT` for why it must not share the verify
+    budget.
+    """
+    return _peek(
+        device_login_failure_key(email, ip),
+        DEVICE_LOGIN_FAILURE_LIMIT,
+        DEVICE_LOGIN_FAILURE_WINDOW,
+        budget="device_login_failures",
+        fail_closed=True,
+    )
+
+
+def record_device_login_failure(email: str, ip: str | None) -> Decision:
+    """Count one rejected device cookie."""
+    return _consume(
+        device_login_failure_key(email, ip),
+        DEVICE_LOGIN_FAILURE_LIMIT,
+        DEVICE_LOGIN_FAILURE_WINDOW,
+        budget="device_login_failures",
+    )
+
+
+def reset_device_login_failures(email: str, ip: str | None) -> None:
+    """Clear the budget after a successful device login."""
+    key = device_login_failure_key(email, ip)
+    _safe(lambda: cache.delete(key), what=f"delete({key})")
+    _safe(lambda: cache.delete(_deadline_key(key)), what=f"delete({key}:exp)")
 
 
 def reset_verify_failures(email: str, ip: str | None) -> None:

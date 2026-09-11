@@ -64,23 +64,57 @@ class LogoutTests(AuthTestCase):
         response = client.post(LOGOUT_URL, HTTP_X_CSRFTOKEN=token)
         self.assertEqual(response.status_code, 204)
 
+    def test_logout_writes_an_audit_row(self):
+        from apps.tenancy.models import AuditLog
+
+        self.client.force_login(self.user)
+        self.client.post(LOGOUT_URL)
+
+        row = AuditLog.all_objects.get()
+        self.assertEqual(row.action, "auth.logout")
+        self.assertEqual(row.actor_id, self.user.pk)
+        self.assertIsNone(row.org_id)
+
+    def test_logout_resolves_the_current_org_when_the_user_has_one(self):
+        from apps.tenancy.models import AuditLog
+        from apps.tenancy.services import bootstrap_workspace
+
+        membership = bootstrap_workspace(self.user)
+        self.client.force_login(self.user)
+        self.client.post(LOGOUT_URL)
+
+        row = AuditLog.all_objects.get()
+        self.assertEqual(row.org_id, membership.org_id)
+
 
 class EndpointInventoryTests(AuthTestCase):
-    """Spec §3 is the *complete, exclusive* list."""
+    """Spec §3's four routes, plus the one additive fifth.
+
+    ``device-login/`` is a deliberate deviation from spec §3, recorded in
+    ``docs/2026-08-22-trusted-device-spec.md`` §7: the alternative was to let
+    ``request-code`` sometimes return a session, and ``request-code`` being
+    branch-free is the most security-critical property in the module. The list
+    stays *exclusive* — anything beyond these five needs its own justification.
+    """
+
+    ROUTE_NAMES = ("csrf", "request-code", "verify-code", "device-login", "logout")
 
     def test_there_is_no_auth_me_or_auth_session(self):
         for path in ("/api/v1/auth/me/", "/api/v1/auth/session/"):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 404)
 
-    def test_the_four_auth_routes_resolve(self):
+    def test_the_auth_routes_resolve(self):
         from django.urls import reverse
 
-        for name in ("csrf", "request-code", "verify-code", "logout"):
+        for name in self.ROUTE_NAMES:
             with self.subTest(name=name):
                 self.assertTrue(reverse(f"accounts:{name}").startswith("/api/v1/auth/"))
 
-    def test_accounts_registers_exactly_four_routes(self):
+    def test_accounts_registers_exactly_those_routes(self):
         from apps.accounts import urls as accounts_urls
 
-        self.assertEqual(len(accounts_urls.urlpatterns), 4)
+        self.assertEqual(
+            [pattern.name for pattern in accounts_urls.urlpatterns],
+            list(self.ROUTE_NAMES),
+        )

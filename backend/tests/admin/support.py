@@ -182,6 +182,12 @@ class AdminTestCase(TestCase):
         )
         cls.group = Group.objects.create(name="Support")
 
+        from apps.devices.services import trust_device
+
+        cls.trusted_device, _ = trust_device(
+            user=cls.member, ip="203.0.113.7", user_agent="Mozilla/5.0 (admin tests)"
+        )
+
         from apps.outbox import crypto as outbox_crypto
         from apps.outbox.models import MailboxConnection
 
