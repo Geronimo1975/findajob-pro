@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.jobs.models import Application, JobListing, Platform
+from apps.jobs.models import Application, Document, JobListing, Platform
 
 
 def _epoch_ms(dt) -> int | None:
@@ -95,3 +95,28 @@ class JobRowSerializer(serializers.ModelSerializer):
     def get_sent_at(self, obj: JobListing) -> int | None:
         app = self._application(obj)
         return _epoch_ms(app.sent_at) if app else None
+
+
+def _format_size(num_bytes: int) -> str:
+    """``184320`` -> ``"184 KB"``, ``2202009`` -> ``"2.1 MB"`` — the fixture's
+    display style (``web/api.js``'s ``DOCUMENTS``), not raw byte counts."""
+    if num_bytes >= 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.1f} MB"
+    return f"{max(1, round(num_bytes / 1024))} KB"
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+    """One document row. Same shape for the list and the upload response."""
+
+    size = serializers.SerializerMethodField()
+    updated = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = ("id", "name", "kind", "tags", "size", "updated", "ats_score")
+
+    def get_size(self, obj: Document) -> str:
+        return _format_size(obj.size_bytes)
+
+    def get_updated(self, obj: Document) -> str:
+        return obj.updated_at.strftime("%b %d, %Y")
