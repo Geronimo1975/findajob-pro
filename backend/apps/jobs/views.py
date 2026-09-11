@@ -11,14 +11,21 @@ exception handler; nothing here raises bespoke shapes.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
+from django.http import FileResponse
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.errors import ApiError
-from apps.jobs.models import Application, ApplicationStatus, JobListing, Platform
-from apps.jobs.serializers import JobRowSerializer, PlatformSerializer
+from apps.jobs.models import (
+    Application, ApplicationStatus, Document, DocumentKind, JobListing, Platform,
+)
+from apps.jobs.serializers import DocumentSerializer, JobRowSerializer, PlatformSerializer
 from apps.tenancy.permissions import IsOrgMember
 from apps.tenancy.services import current_membership
 
@@ -81,3 +88,91 @@ class JobListView(APIView):
         if status_param is not None:
             rows = [row for row in rows if row["status"] == status_param]
         return Response(rows)
+
+
+#: Matches the ``accept`` attribute on the file input in ``web/app.html``.
+DOCUMENT_ALLOWED_EXTENSIONS = (".pdf", ".doc", ".docx")
+DOCUMENT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB — 2026-09-11 spec
+
+
+def _infer_kind(filename: str) -> str:
+    """Same heuristic ``web/app.html``'s client-side ``onUpload`` used, so
+    behavior is unchanged for a client that omits the (optional) ``kind``
+    field: cv/resume in the name -> CV, cert -> certificate, else other."""
+    if re.search(r"cv|resume", filename, re.IGNORECASE):
+        return DocumentKind.CV
+    if re.search(r"cert", filename, re.IGNORECASE):
+        return DocumentKind.CERTIFICATE
+    return DocumentKind.OTHER
+
+
+def _owned_document_or_404(request: Request, pk: int) -> Document:
+    """Fetch a document, scoped to the requesting member, or raise a 404.
+
+    Used by both the delete and download views. Re-checks ``user_id`` even
+    though ``for_org()`` already guarantees it — cheap insurance against a
+    future refactor accidentally querying personal documents unscoped.
+    """
+    membership = current_membership(request)
+    try:
+        document = Document.objects.for_org(membership.org).get(pk=pk)
+    except Document.DoesNotExist as exc:
+        raise ApiError("not_found", "Not found.", 404) from exc
+    if document.user_id != request.user.id:
+        raise ApiError("not_found", "Not found.", 404)
+    return document
+
+
+class DocumentListCreateView(APIView):
+    """``GET`` lists the member's documents; ``POST`` uploads one.
+
+        GET  /api/v1/documents/    session   list, newest-updated first
+        POST /api/v1/documents/    session   multipart {file, kind?}
+
+    ``/media/`` is never served by nginx (``deploy/nginx.conf``) — this view
+    and ``DocumentDownloadView`` are the only ways a document's bytes move.
+    """
+
+    permission_classes = [IsOrgMember]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request: Request) -> Response:
+        membership = current_membership(request)
+        documents = (
+            Document.objects.for_org(membership.org)
+            .filter(user=request.user)
+            .order_by("-updated_at", "-id")
+        )
+        return Response(DocumentSerializer(documents, many=True).data)
+
+    def post(self, request: Request) -> Response:
+        membership = current_membership(request)
+        upload = request.FILES.get("file")
+        if upload is None:
+            raise ApiError("missing_file", "No file was uploaded.", 400)
+
+        extension = Path(upload.name).suffix.lower()
+        if extension not in DOCUMENT_ALLOWED_EXTENSIONS:
+            raise ApiError(
+                "unsupported_document_type",
+                f"Only {', '.join(DOCUMENT_ALLOWED_EXTENSIONS)} files are accepted.",
+                400,
+            )
+        if upload.size > DOCUMENT_MAX_UPLOAD_BYTES:
+            raise ApiError(
+                "document_too_large", "Files larger than 10 MB are not accepted.", 413
+            )
+
+        kind = request.data.get("kind") or _infer_kind(upload.name)
+        if kind not in DocumentKind.values:
+            raise ApiError("invalid_kind", "Unknown document kind.", 400)
+
+        document = Document.objects.create(
+            org=membership.org,
+            user=request.user,
+            name=upload.name,
+            kind=kind,
+            file=upload,
+            size_bytes=upload.size,
+        )
+        return Response(DocumentSerializer(document).data, status=201)

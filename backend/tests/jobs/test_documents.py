@@ -50,3 +50,62 @@ class DocumentApiTests(TestCase):
         response = self.client.get(DOCUMENTS_URL)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
+
+    def test_another_members_documents_never_leak(self):
+        other = make_user()
+        other_org = bootstrap_workspace(other).org
+        Document.all_objects.create(
+            org=other_org, user=other, name="Other CV.pdf", kind=DocumentKind.CV,
+            file=_pdf(), size_bytes=2048,
+        )
+        self.assertEqual(self.client.get(DOCUMENTS_URL).json(), [])
+
+    def test_upload_returns_the_fixture_shape(self):
+        response = self.client.post(DOCUMENTS_URL, {"file": _pdf("CV — Backend (EN).pdf")})
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertEqual(
+            set(body), {"id", "name", "kind", "tags", "size", "updated", "ats_score"}
+        )
+        self.assertEqual(body["name"], "CV — Backend (EN).pdf")
+        self.assertEqual(body["kind"], "cv")
+        self.assertIsNone(body["ats_score"])
+        self.assertTrue(body["size"].endswith("KB"))
+
+    def test_upload_persists_ownership_and_size(self):
+        self.client.post(DOCUMENTS_URL, {"file": _pdf(size=4096)})
+        document = Document.objects.for_org(self.org).get(user=self.user)
+        self.assertEqual(document.org_id, self.org.pk)
+        self.assertEqual(document.user_id, self.user.pk)
+        self.assertGreaterEqual(document.size_bytes, 4096)
+
+    def test_kind_is_inferred_from_filename_when_omitted(self):
+        response = self.client.post(DOCUMENTS_URL, {"file": _pdf("AWS Certificate.pdf")})
+        self.assertEqual(response.json()["kind"], "certificate")
+
+    def test_explicit_kind_overrides_the_heuristic(self):
+        response = self.client.post(
+            DOCUMENTS_URL, {"file": _pdf("random-name.pdf"), "kind": "diploma"}
+        )
+        self.assertEqual(response.json()["kind"], "diploma")
+
+    def test_invalid_kind_is_rejected(self):
+        response = self.client.post(
+            DOCUMENTS_URL, {"file": _pdf(), "kind": "not-a-real-kind"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"]["code"], "invalid_kind")
+
+    def test_unsupported_extension_is_rejected(self):
+        upload = SimpleUploadedFile(
+            "script.exe", b"MZ", content_type="application/octet-stream"
+        )
+        response = self.client.post(DOCUMENTS_URL, {"file": upload})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"]["code"], "unsupported_document_type")
+
+    def test_oversized_file_is_rejected(self):
+        upload = _pdf(size=11 * 1024 * 1024)
+        response = self.client.post(DOCUMENTS_URL, {"file": upload})
+        self.assertEqual(response.status_code, 413)
+        self.assertEqual(response.json()["error"]["code"], "document_too_large")
