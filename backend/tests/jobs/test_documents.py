@@ -109,3 +109,53 @@ class DocumentApiTests(TestCase):
         response = self.client.post(DOCUMENTS_URL, {"file": upload})
         self.assertEqual(response.status_code, 413)
         self.assertEqual(response.json()["error"]["code"], "document_too_large")
+
+    def test_download_streams_the_owners_file(self):
+        upload_response = self.client.post(DOCUMENTS_URL, {"file": _pdf()})
+        doc_id = upload_response.json()["id"]
+        response = self.client.get(f"{DOCUMENTS_URL}{doc_id}/download/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"%PDF-1.4", b"".join(response.streaming_content))
+
+    def test_download_404s_for_another_members_document(self):
+        other = make_user()
+        other_org = bootstrap_workspace(other).org
+        other_doc = Document.all_objects.create(
+            org=other_org, user=other, name="Other.pdf", kind=DocumentKind.CV,
+            file=_pdf(), size_bytes=2048,
+        )
+        response = self.client.get(f"{DOCUMENTS_URL}{other_doc.pk}/download/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_anonymous_is_401(self):
+        upload_response = self.client.post(DOCUMENTS_URL, {"file": _pdf()})
+        doc_id = upload_response.json()["id"]
+        self.client.logout()
+        response = self.client.get(f"{DOCUMENTS_URL}{doc_id}/download/")
+        self.assertEqual(response.status_code, 401)
+
+    def test_delete_removes_row_and_file(self):
+        upload_response = self.client.post(DOCUMENTS_URL, {"file": _pdf()})
+        doc_id = upload_response.json()["id"]
+        document = Document.objects.for_org(self.org).get(pk=doc_id)
+        self.assertTrue(document.file.storage.exists(document.file.name))
+
+        response = self.client.delete(f"{DOCUMENTS_URL}{doc_id}/")
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Document.all_objects.filter(pk=doc_id).exists())
+        self.assertFalse(document.file.storage.exists(document.file.name))
+
+    def test_delete_404s_for_another_members_document(self):
+        other = make_user()
+        other_org = bootstrap_workspace(other).org
+        other_doc = Document.all_objects.create(
+            org=other_org, user=other, name="Other.pdf", kind=DocumentKind.CV,
+            file=_pdf(), size_bytes=2048,
+        )
+        response = self.client.delete(f"{DOCUMENTS_URL}{other_doc.pk}/")
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Document.all_objects.filter(pk=other_doc.pk).exists())
+
+    def test_unscoped_query_still_raises(self):
+        with self.assertRaises(OrgScopeError):
+            list(Document.objects.all())

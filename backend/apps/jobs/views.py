@@ -176,3 +176,31 @@ class DocumentListCreateView(APIView):
             size_bytes=upload.size,
         )
         return Response(DocumentSerializer(document).data, status=201)
+
+
+class DocumentDetailView(APIView):
+    """``DELETE /api/v1/documents/:id/`` removes a document and its file."""
+
+    permission_classes = [IsOrgMember]
+
+    def delete(self, request: Request, pk: int) -> Response:
+        document = _owned_document_or_404(request, pk)
+        document.file.delete(save=False)
+        document.delete()
+        return Response(status=204)
+
+
+class DocumentDownloadView(APIView):
+    """``GET /api/v1/documents/:id/download/`` streams the file's bytes.
+
+    The only read path for a document's content: ``/media/`` carries no
+    nginx ``location`` on purpose (``deploy/nginx.conf``).
+    """
+
+    permission_classes = [IsOrgMember]
+
+    def get(self, request: Request, pk: int) -> FileResponse:
+        document = _owned_document_or_404(request, pk)
+        return FileResponse(
+            document.file.open("rb"), as_attachment=True, filename=document.name
+        )
