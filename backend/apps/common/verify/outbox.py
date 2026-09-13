@@ -15,7 +15,7 @@ from apps.common.verify.gmail import GmailClient
 
 SECRET_KEYS = {"password", "credentials", "credentials_encrypted", "username", "refresh_token"}
 #: substring of send_test_email's actual subject "findajob.pro — mailbox test"
-#: (apps/outbox/services.py::send_test_email). The mail is sent to the
+#: (apps/tenancy/outbox/services.py::send_test_email). The mail is sent to the
 #: mailbox's own address (message["To"] = from_address). The Inbox check
 #: below only runs when that address matches VERIFY_GMAIL_USER — otherwise
 #: we'd be polling a Gmail inbox that will never receive the test mail.
@@ -40,7 +40,7 @@ def run(ctx: VerifyContext) -> ModuleReport:
     if resp.status_code == 404:
         # handler404 (apps/common/errors.py::api_page_not_found) wraps *every*
         # unmatched /api/ route in the same error shape as a real view's 404,
-        # so an unmounted apps.outbox.urls (module absent on this deploy
+        # so an unmounted apps.tenancy.outbox.urls (module absent on this deploy
         # target) is indistinguishable from a genuinely missing sub-path other
         # than by the generic "not_found" code used here.
         results.append(skipped("mailbox endpoint", "not deployed on this target"))

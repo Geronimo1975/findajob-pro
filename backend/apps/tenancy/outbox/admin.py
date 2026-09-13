@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.outbox.models import MailboxConnection
+from apps.tenancy.outbox.models import MailboxConnection
 
 
 @admin.register(MailboxConnection)

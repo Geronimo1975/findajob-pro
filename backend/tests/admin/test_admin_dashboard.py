@@ -52,7 +52,7 @@ class KpiEmptyDatabaseTests(AdminTestCase):
     def test_zero_counts_render(self):
         from apps.accounts.models import EmailOTP, SuppressedAddress
         from apps.jobs.models import Application, JobListing
-        from apps.outbox.models import MailboxConnection
+        from apps.tenancy.outbox.models import MailboxConnection
 
         MailboxConnection.all_objects.all().delete()
         Application.all_objects.all().delete()

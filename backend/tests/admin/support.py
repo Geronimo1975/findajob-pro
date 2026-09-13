@@ -182,8 +182,8 @@ class AdminTestCase(TestCase):
         )
         cls.group = Group.objects.create(name="Support")
 
-        from apps.outbox import crypto as outbox_crypto
-        from apps.outbox.models import MailboxConnection
+        from apps.tenancy.outbox import crypto as outbox_crypto
+        from apps.tenancy.outbox.models import MailboxConnection
 
         cls.mailbox = MailboxConnection.objects.create(
             org=cls.org,

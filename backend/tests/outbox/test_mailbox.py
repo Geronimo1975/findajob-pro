@@ -7,9 +7,9 @@ from unittest import mock
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from apps.outbox import crypto
-from apps.outbox.models import MailboxConnection, MailboxStatus
-from apps.outbox.services import SmtpCheckError
+from apps.tenancy.outbox import crypto
+from apps.tenancy.outbox.models import MailboxConnection, MailboxStatus
+from apps.tenancy.outbox.services import SmtpCheckError
 from apps.tenancy.services import bootstrap_workspace
 from tests.support import make_user
 
@@ -45,7 +45,7 @@ class MailboxLifecycleTests(TestCase):
         self.client.force_login(self.user)
 
     def _connect(self):
-        with mock.patch("apps.outbox.views.verify_smtp"):
+        with mock.patch("apps.tenancy.outbox.views.verify_smtp"):
             return self.client.post(URL, SMTP_BODY, format="json")
 
     def test_get_without_mailbox_is_404_mailbox_not_connected(self):
@@ -77,7 +77,7 @@ class MailboxLifecycleTests(TestCase):
 
     def test_failed_verification_stores_nothing(self):
         with mock.patch(
-            "apps.outbox.views.verify_smtp",
+            "apps.tenancy.outbox.views.verify_smtp",
             side_effect=SmtpCheckError("auth_failed", "bad login"),
         ):
             response = self.client.post(URL, SMTP_BODY, format="json")
@@ -90,7 +90,7 @@ class MailboxLifecycleTests(TestCase):
     def test_reconnect_updates_in_place_one_mailbox_per_member(self):
         self._connect()
         body = dict(SMTP_BODY, email_address="ion@web.de")
-        with mock.patch("apps.outbox.views.verify_smtp"):
+        with mock.patch("apps.tenancy.outbox.views.verify_smtp"):
             self.client.post(URL, body, format="json")
         self.assertEqual(MailboxConnection.all_objects.count(), 1)
         self.assertEqual(
@@ -114,7 +114,7 @@ class MailboxLifecycleTests(TestCase):
 
     def test_test_send_success_is_202_and_marks_verified(self):
         self._connect()
-        with mock.patch("apps.outbox.views.send_test_email") as send:
+        with mock.patch("apps.tenancy.outbox.views.send_test_email") as send:
             response = self.client.post(TEST_URL)
         self.assertEqual(response.status_code, 202)
         send.assert_called_once()
@@ -127,7 +127,7 @@ class MailboxLifecycleTests(TestCase):
     def test_test_send_failure_is_502_and_marks_error(self):
         self._connect()
         with mock.patch(
-            "apps.outbox.views.send_test_email",
+            "apps.tenancy.outbox.views.send_test_email",
             side_effect=SmtpCheckError("send_failed", "boom"),
         ):
             response = self.client.post(TEST_URL)

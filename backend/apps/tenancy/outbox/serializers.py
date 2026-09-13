@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.outbox.models import MailboxConnection, Provider
+from apps.tenancy.outbox.models import MailboxConnection, Provider
 
 
 class MailboxSerializer(serializers.ModelSerializer):

@@ -65,7 +65,7 @@ api_v1_patterns = [
     *_include_if_present("apps.accounts.urls", "auth/"),
     # apps.legal — versioned legal documents (anonymous) …
     *_include_if_present("apps.legal.urls", "legal/"),
-    *_include_if_present("apps.outbox.urls", "outbox/"),
+    *_include_if_present("apps.tenancy.outbox.urls", "outbox/"),
     # apps.jobs — /platforms/ and /jobs/ live at the API root per ENDPOINTS.
     *_include_if_present("apps.jobs.urls", ""),
     # … and the consent ledger, which spec §3/§10 puts at /api/v1/consent/,

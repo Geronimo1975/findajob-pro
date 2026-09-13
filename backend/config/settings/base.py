@@ -127,7 +127,9 @@ LOCAL_APPS = [
     # migrations and nothing else may import from it.
     "apps.automation",
     # Send-as-user mailbox connections; see docs/2026-08-02-outbox-spec.md.
-    "apps.outbox",
+    # Nested under apps.tenancy because a mailbox is always org-scoped, but it
+    # keeps its own app label ("outbox") and its own migrations.
+    "apps.tenancy.outbox",
     # Platform catalog, scraped listings, applications, documents.
     "apps.jobs",
 ]

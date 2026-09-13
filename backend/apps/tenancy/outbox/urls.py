@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.outbox.views import MailboxTestView, MailboxView
+from apps.tenancy.outbox.views import MailboxTestView, MailboxView
 
 app_name = "outbox"
 

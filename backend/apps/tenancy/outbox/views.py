@@ -13,10 +13,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.errors import ApiError
-from apps.outbox import crypto
-from apps.outbox.models import MailboxConnection, MailboxStatus
-from apps.outbox.serializers import ConnectMailboxSerializer, MailboxSerializer
-from apps.outbox.services import SmtpCheckError, send_test_email, verify_smtp
+from apps.tenancy.outbox import crypto
+from apps.tenancy.outbox.models import MailboxConnection, MailboxStatus
+from apps.tenancy.outbox.serializers import ConnectMailboxSerializer, MailboxSerializer
+from apps.tenancy.outbox.services import SmtpCheckError, send_test_email, verify_smtp
 from apps.tenancy.permissions import IsOrgMember
 from apps.tenancy.services import current_org
 

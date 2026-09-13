@@ -154,7 +154,7 @@ class FindajobAdminSite(admin.AdminSite):
 
         from apps.accounts.models import EmailOTP, SuppressedAddress, User
         from apps.jobs.models import JobListing
-        from apps.outbox.models import MailboxConnection
+        from apps.tenancy.outbox.models import MailboxConnection
         from apps.tenancy.models import Organization
 
         today = timezone.localdate()

@@ -318,7 +318,7 @@ class TestOutbox:
         """Any canonical-shaped 404 other than mailbox_not_connected is also
         "not deployed" — handler404 (apps/common/errors.py::api_page_not_found)
         wraps every unmatched /api/ route in the same error shape as a real
-        view's 404, so an unmounted apps.outbox.urls looks identical to a
+        view's 404, so an unmounted apps.tenancy.outbox.urls looks identical to a
         genuinely-missing sub-path.
         """
         from apps.common.verify import outbox as outbox_mod

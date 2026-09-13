@@ -30,7 +30,7 @@ class MailboxConnection(models.Model):
     """One member's connected mailbox in one organization.
 
     Secrets live only in ``credentials_encrypted`` (Fernet, see
-    :mod:`apps.outbox.crypto`) and are never serialized back out.
+    :mod:`apps.tenancy.outbox.crypto`) and are never serialized back out.
     """
 
     org = models.ForeignKey(
