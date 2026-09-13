@@ -39,3 +39,18 @@ db.sqlite3
 
 # graphify knowledge-graph output (regenerate with /graphify, do not version)
 graphify-out/
+
+# Third-party skills pulled in by `npx skills add` (higgsfield, imagekit …) and their
+# lockfile / mirror dirs. Personal tooling, not project knowledge — the findajob-* and
+# voltagent-design skills above stay committed.
+skills-lock.json
+/.agents/
+/agent/
+.claude/skills/ai-tasks
+.claude/skills/higgsfield-*
+.claude/skills/imagekit-*
+.claude/skills/mcp-preflight
+.claude/skills/search-assets
+.claude/skills/search-docs
+.claude/skills/transformation-builder
+.claude/skills/upload-files
