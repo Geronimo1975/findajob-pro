@@ -230,6 +230,24 @@ class ShippedCorpusVersionTests(TestCase):
         self.assertEqual(shipped_version("dpa", "de"), "2026-08-02")
 
     def test_the_untouched_documents_are_still_on_their_original_version(self):
-        for doc_id in ("privacy", "cookies", "impressum", "withdrawal"):
+        for doc_id in ("impressum", "withdrawal"):
             with self.subTest(doc=doc_id):
                 self.assertEqual(shipped_version(doc_id, "de"), "2026-08-01")
+
+    def test_the_analytics_disclosure_bumped_privacy_and_cookies(self):
+        """Re-versioned on 2026-08-08 when Google Analytics 4 was introduced.
+
+        This is the contractual event this class exists to make visible, so the
+        reason is recorded here rather than only in the diff: the Cookie Policy
+        previously described self-hosted Matomo and promised no third-party
+        sharing, which stopped being true. Both documents now name Google Ireland
+        Limited, the G-5SH3ZXQD6C measurement ID and the US transfer.
+
+        Consent given against the OLD text does not cover the new processing, so
+        this bump is what forces re-consent. `manage.py seed_legal` MUST be re-run
+        on prod — until it is, the hash on disk and the hash in LegalDocument
+        disagree and first login fails closed with 503.
+        """
+        for doc_id in ("privacy", "cookies"):
+            with self.subTest(doc=doc_id):
+                self.assertEqual(shipped_version(doc_id, "de"), "2026-08-08")

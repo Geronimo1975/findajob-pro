@@ -14,21 +14,21 @@ export const LEGAL = {
       ['6. Liability', 'We are liable without limitation for intent and gross negligence. For slight negligence we are liable only for breach of essential contractual duties (Kardinalpflichten), limited to the foreseeable, contract-typical damage. Liability under the Product Liability Act remains unaffected.'],
       ['7. Final provisions', 'German law applies, excluding the UN Sales Convention. If you are a merchant, the place of jurisdiction is Hamburg. Should individual clauses be invalid, the remainder stays in force.'],
     ]},
-    privacy: { title: 'Privacy Policy (Datenschutzerklärung)', updated: 'Aug 1, 2026', sections: [
+    privacy: { title: 'Privacy Policy (Datenschutzerklärung)', updated: 'Aug 8, 2026', sections: [
       ['1. Controller', 'George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germany. E-mail: george.cucuiet@gmx.de. Data Protection Officer: george.cucuiet@gmx.de.'],
       ['2. Data we process', 'Account data (name, e-mail), your master profile (CV data, skills, employment history), uploaded documents (CVs, certificates, diplomas), job preferences, application content, usage data and technical log data (IP address, browser).'],
       ['3. Purposes & legal bases (Art. 6 GDPR)', 'Contract performance — providing the tracker, generating applications (Art. 6 (1) b). Consent — sending applications on your behalf, connecting third-party APIs, optional cookies (Art. 6 (1) a, revocable at any time). Legitimate interest — service security and abuse prevention (Art. 6 (1) f).'],
       ['4. AI processing', 'Job descriptions and relevant profile data are transmitted to AI providers (Anthropic; optionally OpenAI) solely to generate your application drafts. We have data processing agreements (Art. 28 GDPR) in place; your data is not used to train their models.'],
-      ['5. Recipients & processors', 'Hosting: IONOS SE (Germany). Payment: Stripe Payments Europe Ltd. Optional integrations you connect yourself: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — each only after your explicit consent.'],
+      ['5. Recipients & processors', 'Hosting: IONOS SE (Germany). Payment: Stripe Payments Europe Ltd. Analytics: Google Ireland Limited (Google Analytics 4), only with your consent. Optional integrations you connect yourself: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — each only after your explicit consent.'],
       ['6. Third-country transfers', 'Where processors are located outside the EEA (e.g. USA), transfers rely on EU Standard Contractual Clauses and the EU-US Data Privacy Framework (Art. 44 et seq. GDPR).'],
       ['7. Storage & security', 'Documents are encrypted at rest (AES-256) and in transit (TLS 1.3). Data is deleted upon account deletion, at the latest 30 days after, unless statutory retention duties apply (§ 147 AO, § 257 HGB).'],
       ['8. Your rights', 'Access (Art. 15), rectification (Art. 16), erasure (Art. 17), restriction (Art. 18), data portability (Art. 20), objection (Art. 21) and revocation of consent. Complaints: Hamburg Commissioner for Data Protection (HmbBfDI), Ludwig-Erhard-Str. 22, 20459 Hamburg.'],
     ]},
-    cookies: { title: 'Cookie Policy', updated: 'Aug 1, 2026', sections: [
+    cookies: { title: 'Cookie Policy', updated: 'Aug 8, 2026', sections: [
       ['1. Legal basis', 'Cookies and similar storage require consent under § 25 TTDSG, except those strictly necessary for the service (§ 25 (2) TTDSG).'],
       ['2. Essential cookies', 'Session cookie (login), CSRF protection, language preference, cookie-consent status. Lifetime: session up to 12 months. No consent required.'],
       ['3. Functional cookies (consent)', 'Saved dashboard view (table/board), collapsed sidebar state, last selected platform tab.'],
-      ['4. Analytics (consent)', 'Self-hosted, cookieless-capable analytics (Matomo) with IP anonymisation. No data is shared with advertising networks. We use no marketing or tracking cookies.'],
+      ['4. Analytics (consent)', 'Google Analytics 4 (measurement ID G-5SH3ZXQD6C), provided by Google Ireland Limited, with IP anonymisation enabled. It is loaded only after you click "Accept all" — if you choose "Essential only", no request is made to Google at all. Google Consent Mode keeps all advertising purposes (ad storage, ad user data, ad personalisation) permanently denied, so your data is not used for advertising or remarketing. Processing may involve transfer to Google LLC in the USA; see section 6 of the Privacy Policy.'],
       ['5. Managing consent', 'You can change or revoke your choices at any time via "Cookie settings" in the footer. Revocation does not affect the lawfulness of prior processing.'],
     ]},
     impressum: { title: 'Impressum (§ 5 DDG)', updated: 'Aug 1, 2026', sections: [
@@ -57,21 +57,21 @@ export const LEGAL = {
       ['6. Haftung', 'Wir haften unbeschränkt für Vorsatz und grobe Fahrlässigkeit. Bei einfacher Fahrlässigkeit haften wir nur für die Verletzung wesentlicher Vertragspflichten (Kardinalpflichten), begrenzt auf den vorhersehbaren, vertragstypischen Schaden. Die Haftung nach dem ProdHaftG bleibt unberührt.'],
       ['7. Schlussbestimmungen', 'Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Ist der Nutzer Kaufmann, ist Gerichtsstand Hamburg. Die Unwirksamkeit einzelner Klauseln berührt die Wirksamkeit im Übrigen nicht.'],
     ]},
-    privacy: { title: 'Datenschutzerklärung', updated: '1. Aug. 2026', sections: [
+    privacy: { title: 'Datenschutzerklärung', updated: '8. Aug. 2026', sections: [
       ['1. Verantwortlicher', 'George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen. E-Mail: george.cucuiet@gmx.de. Datenschutzbeauftragter: george.cucuiet@gmx.de.'],
       ['2. Verarbeitete Daten', 'Kontodaten (Name, E-Mail), Master-Profil (Lebenslaufdaten, Skills, Berufserfahrung), hochgeladene Dokumente (Lebensläufe, Zertifikate, Zeugnisse), Jobpräferenzen, Bewerbungsinhalte, Nutzungs- und technische Protokolldaten (IP-Adresse, Browser).'],
       ['3. Zwecke & Rechtsgrundlagen (Art. 6 DSGVO)', 'Vertragserfüllung — Bereitstellung des Trackers, Erstellung von Bewerbungen (Art. 6 Abs. 1 lit. b). Einwilligung — Versand von Bewerbungen in Ihrem Namen, Anbindung von Dritt-APIs, optionale Cookies (Art. 6 Abs. 1 lit. a, jederzeit widerruflich). Berechtigtes Interesse — Sicherheit und Missbrauchsprävention (Art. 6 Abs. 1 lit. f).'],
       ['4. KI-Verarbeitung', 'Stellenbeschreibungen und relevante Profildaten werden ausschließlich zur Erstellung Ihrer Bewerbungsentwürfe an KI-Anbieter (Anthropic; optional OpenAI) übermittelt. Auftragsverarbeitungsverträge (Art. 28 DSGVO) bestehen; Ihre Daten werden nicht zum Training der Modelle verwendet.'],
-      ['5. Empfänger & Auftragsverarbeiter', 'Hosting: IONOS SE (Deutschland). Zahlungen: Stripe Payments Europe Ltd. Optionale, von Ihnen selbst verbundene Integrationen: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — jeweils nur nach ausdrücklicher Einwilligung.'],
+      ['5. Empfänger & Auftragsverarbeiter', 'Hosting: IONOS SE (Deutschland). Zahlungen: Stripe Payments Europe Ltd. Analyse: Google Ireland Limited (Google Analytics 4), nur mit Ihrer Einwilligung. Optionale, von Ihnen selbst verbundene Integrationen: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — jeweils nur nach ausdrücklicher Einwilligung.'],
       ['6. Drittlandübermittlung', 'Soweit Auftragsverarbeiter außerhalb des EWR sitzen (z. B. USA), erfolgt die Übermittlung auf Grundlage der EU-Standardvertragsklauseln und des EU-US Data Privacy Framework (Art. 44 ff. DSGVO).'],
       ['7. Speicherung & Sicherheit', 'Dokumente werden verschlüsselt gespeichert (AES-256) und übertragen (TLS 1.3). Löschung bei Kontolöschung, spätestens nach 30 Tagen, soweit keine gesetzlichen Aufbewahrungspflichten bestehen (§ 147 AO, § 257 HGB).'],
       ['8. Ihre Rechte', 'Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21), Widerruf von Einwilligungen. Beschwerde: Hamburgischer Beauftragter für Datenschutz und Informationsfreiheit (HmbBfDI), Ludwig-Erhard-Str. 22, 20459 Hamburg.'],
     ]},
-    cookies: { title: 'Cookie-Richtlinie', updated: '1. Aug. 2026', sections: [
+    cookies: { title: 'Cookie-Richtlinie', updated: '8. Aug. 2026', sections: [
       ['1. Rechtsgrundlage', 'Cookies und ähnliche Speichertechniken bedürfen der Einwilligung nach § 25 TTDSG, ausgenommen unbedingt erforderliche (§ 25 Abs. 2 TTDSG).'],
       ['2. Essenzielle Cookies', 'Session-Cookie (Login), CSRF-Schutz, Spracheinstellung, Consent-Status. Laufzeit: Session bis 12 Monate. Keine Einwilligung erforderlich.'],
       ['3. Funktionale Cookies (Einwilligung)', 'Gespeicherte Dashboard-Ansicht (Tabelle/Board), eingeklappte Seitenleiste, zuletzt gewählter Plattform-Tab.'],
-      ['4. Analyse (Einwilligung)', 'Selbst gehostetes Matomo mit IP-Anonymisierung. Keine Weitergabe an Werbenetzwerke. Es werden keine Marketing- oder Tracking-Cookies eingesetzt.'],
+      ['4. Analyse (Einwilligung)', 'Google Analytics 4 (Mess-ID G-5SH3ZXQD6C) der Google Ireland Limited, mit aktivierter IP-Anonymisierung. Das Laden erfolgt ausschließlich nach Klick auf „Alle akzeptieren" — bei „Nur essenzielle" wird keinerlei Anfrage an Google gesendet. Über den Google Consent Mode bleiben sämtliche Werbezwecke (ad_storage, ad_user_data, ad_personalization) dauerhaft abgelehnt; eine Nutzung für Werbung oder Remarketing findet nicht statt. Die Verarbeitung kann eine Übermittlung an die Google LLC in den USA umfassen; siehe Ziffer 6 der Datenschutzerklärung.'],
       ['5. Verwaltung der Einwilligung', 'Ihre Auswahl können Sie jederzeit über „Cookie-Einstellungen" im Footer ändern oder widerrufen. Der Widerruf berührt nicht die Rechtmäßigkeit der bisherigen Verarbeitung.'],
     ]},
     impressum: { title: 'Impressum (§ 5 DDG)', updated: '1. Aug. 2026', sections: [
@@ -100,21 +100,21 @@ export const LEGAL = {
       ['6. Răspundere', 'Răspundem nelimitat pentru intenție și neglijență gravă; pentru neglijență ușoară doar la încălcarea obligațiilor contractuale esențiale, limitat la prejudiciul previzibil, tipic contractului.'],
       ['7. Dispoziții finale', 'Se aplică legea germană, cu excluderea Convenției ONU privind vânzarea. Pentru comercianți, instanța competentă este Hamburg.'],
     ]},
-    privacy: { title: 'Politica de confidențialitate (Datenschutzerklärung)', updated: '1 aug. 2026', sections: [
+    privacy: { title: 'Politica de confidențialitate (Datenschutzerklärung)', updated: '8 aug. 2026', sections: [
       ['1. Operator', 'George Sebastian Cucuiet, Greuner Brook 1, 21271 Hanstedt, Niedersachsen, Germania. E-mail: george.cucuiet@gmx.de. Responsabil cu protecția datelor: george.cucuiet@gmx.de.'],
       ['2. Date prelucrate', 'Date de cont (nume, e-mail), profilul master (CV, competențe, experiență), documente încărcate (CV-uri, certificate, diplome), preferințe de job, conținutul aplicărilor, date de utilizare și jurnal tehnic (IP, browser).'],
       ['3. Scopuri & temeiuri legale (art. 6 RGPD)', 'Executarea contractului — furnizarea trackerului, generarea aplicărilor (art. 6 (1) b). Consimțământ — trimiterea aplicărilor în numele dvs., conectarea API-urilor terțe, cookie-uri opționale (art. 6 (1) a, revocabil oricând). Interes legitim — securitate și prevenirea abuzului (art. 6 (1) f).'],
       ['4. Prelucrare AI', 'Descrierile joburilor și datele de profil relevante sunt transmise furnizorilor AI (Anthropic; opțional OpenAI) exclusiv pentru generarea drafturilor. Există acorduri de prelucrare (art. 28 RGPD); datele dvs. nu sunt folosite la antrenarea modelelor.'],
-      ['5. Destinatari & împuterniciți', 'Găzduire: IONOS SE (Germania). Plăți: Stripe Payments Europe Ltd. Integrări opționale conectate de dvs.: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — doar cu consimțământ explicit.'],
+      ['5. Destinatari & împuterniciți', 'Găzduire: IONOS SE (Germania). Plăți: Stripe Payments Europe Ltd. Analiză: Google Ireland Limited (Google Analytics 4), doar cu consimțământul dvs. Integrări opționale conectate de dvs.: Canva, Telegram, WhatsApp (Meta), Jotform, Slack — doar cu consimțământ explicit.'],
       ['6. Transferuri în țări terțe', 'Pentru împuterniciți din afara SEE (ex. SUA), transferurile se bazează pe Clauzele Contractuale Standard UE și EU-US Data Privacy Framework (art. 44 și urm. RGPD).'],
       ['7. Stocare & securitate', 'Documentele sunt criptate în repaus (AES-256) și în tranzit (TLS 1.3). Ștergere la închiderea contului, cel târziu după 30 de zile, cu excepția obligațiilor legale de păstrare.'],
       ['8. Drepturile dvs.', 'Acces (art. 15), rectificare (art. 16), ștergere (art. 17), restricționare (art. 18), portabilitate (art. 20), opoziție (art. 21), revocarea consimțământului. Plângeri: HmbBfDI, Ludwig-Erhard-Str. 22, 20459 Hamburg.'],
     ]},
-    cookies: { title: 'Politica privind cookie-urile', updated: '1 aug. 2026', sections: [
+    cookies: { title: 'Politica privind cookie-urile', updated: '8 aug. 2026', sections: [
       ['1. Temei legal', 'Cookie-urile necesită consimțământ conform § 25 TTDSG, cu excepția celor strict necesare (§ 25 (2) TTDSG).'],
       ['2. Cookie-uri esențiale', 'Sesiune (login), protecție CSRF, limba, statusul consimțământului. Durată: sesiune până la 12 luni. Fără consimțământ necesar.'],
       ['3. Funcționale (consimțământ)', 'Vizualizarea salvată (tabel/board), starea sidebar-ului, ultimul tab de platformă.'],
-      ['4. Analiză (consimțământ)', 'Matomo self-hosted cu anonimizarea IP-ului. Fără rețele de publicitate, fără cookie-uri de marketing sau tracking.'],
+      ['4. Analiză (consimțământ)', 'Google Analytics 4 (ID de măsurare G-5SH3ZXQD6C), furnizat de Google Ireland Limited, cu anonimizarea IP-ului activată. Se încarcă exclusiv după ce apăsați „Acceptă toate" — dacă alegeți „Doar esențiale", nu se face nicio cerere către Google. Prin Google Consent Mode, toate scopurile publicitare (ad_storage, ad_user_data, ad_personalization) rămân permanent refuzate, deci datele nu sunt folosite pentru publicitate sau remarketing. Prelucrarea poate implica transfer către Google LLC în SUA; vezi secțiunea 6 din Politica de confidențialitate.'],
       ['5. Gestionarea consimțământului', 'Puteți modifica sau revoca alegerile oricând din „Setări cookie" (footer). Revocarea nu afectează legalitatea prelucrării anterioare.'],
     ]},
     impressum: { title: 'Impressum (§ 5 DDG)', updated: '1 aug. 2026', sections: [

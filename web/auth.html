@@ -181,6 +181,8 @@
 // The only HTTP owner is api.js (spec §8) — this file never calls fetch() itself,
 // so there is exactly one CSRF implementation and one error shape in web/.
 import { bootstrapCsrf, requestCode, verifyCode, ApiError } from './api.js';
+import { initAnalytics } from './analytics.js';
+import { mountConsentBanner } from './consent-banner.js';
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 // Same T-table shape index.html uses: T[lang] = {…}, every string present in all
@@ -206,7 +208,7 @@ const T = {
     resent: 'A new code is on its way. Older codes still work.',
     signedOut: 'You are signed out.',
     terms: 'I accept the <a href="app.html#legal-terms" target="_blank" rel="noopener">Terms (AGB)</a> and the <a href="app.html#legal-privacy" target="_blank" rel="noopener">Privacy Policy</a>.',
-    legalNote: 'Login and session storage are strictly necessary (§ 25(2) TTDSG) and need no consent banner.',
+    legalNote: 'Login and session storage are strictly necessary (§ 25(2) TTDSG) and need no consent. Optional analytics does — see the banner.',
     privacy: 'Privacy', terms_link: 'Terms', impressum: 'Impressum',
     errors: {
       invalid_email: 'That does not look like a valid e-mail address.',
@@ -243,7 +245,7 @@ const T = {
     resent: 'Ein neuer Code ist unterwegs. Ältere Codes gelten weiterhin.',
     signedOut: 'Sie sind abgemeldet.',
     terms: 'Ich akzeptiere die <a href="app.html#legal-terms" target="_blank" rel="noopener">AGB</a> und die <a href="app.html#legal-privacy" target="_blank" rel="noopener">Datenschutzerklärung</a>.',
-    legalNote: 'Anmeldung und Sitzungsspeicher sind unbedingt erforderlich (§ 25 Abs. 2 TTDSG) und einwilligungsfrei.',
+    legalNote: 'Anmeldung und Sitzungsspeicher sind unbedingt erforderlich (§ 25 Abs. 2 TTDSG) und einwilligungsfrei. Optionale Analyse nicht — siehe Banner.',
     privacy: 'Datenschutz', terms_link: 'AGB', impressum: 'Impressum',
     errors: {
       invalid_email: 'Das sieht nicht nach einer gültigen E-Mail-Adresse aus.',
@@ -280,7 +282,7 @@ const T = {
     resent: 'Un cod nou este pe drum. Codurile mai vechi rămân valabile.',
     signedOut: 'Te-ai deconectat.',
     terms: 'Accept <a href="app.html#legal-terms" target="_blank" rel="noopener">Termenii (AGB)</a> și <a href="app.html#legal-privacy" target="_blank" rel="noopener">Politica de confidențialitate</a>.',
-    legalNote: 'Autentificarea și stocarea sesiunii sunt strict necesare (§ 25(2) TTDSG) și nu necesită consimțământ.',
+    legalNote: 'Autentificarea și stocarea sesiunii sunt strict necesare (§ 25(2) TTDSG) și nu necesită consimțământ. Analiza opțională necesită — vezi bannerul.',
     privacy: 'Confidențialitate', terms_link: 'Termeni', impressum: 'Impressum',
     errors: {
       invalid_email: 'Adresa de e-mail nu pare validă.',
@@ -753,6 +755,13 @@ window.addEventListener('pageshow', e => {
 });
 
 mount();
+
+// This page's own storage (session, CSRF, pending-OTP) is strictly necessary and
+// needs no consent — see legalNote. Analytics is not, so the banner appears here
+// too. Note that GA never receives the email address: no form value is passed to
+// trackPageView, and the OTP step is not reported as a separate screen.
+initAnalytics();
+mountConsentBanner();
 </script>
 </body>
 </html>

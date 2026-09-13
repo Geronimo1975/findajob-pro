@@ -458,6 +458,14 @@ class Component extends DCLogic {
   // always carries a token, even if auth.html's own bootstrap is still in flight.
   import { bootstrapCsrf } from './api.js';
   bootstrapCsrf();
+
+  // Analytics is gated: initAnalytics() only revives GA for a visitor who already
+  // accepted, and the banner is what grants it in the first place. Nothing is
+  // requested from googletagmanager.com before that click — see analytics.js.
+  import { initAnalytics } from './analytics.js';
+  import { mountConsentBanner } from './consent-banner.js';
+  initAnalytics();
+  mountConsentBanner();
 </script>
 </body>
 </html>

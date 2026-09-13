@@ -19,7 +19,7 @@ Python 3.12 with identical packages; either works, the working directory is what
 
 ```bash
 cd backend
-../.venv/bin/pytest                                   # 574 tests, ~3s
+../.venv/bin/pytest                                   # whole suite, ~3s
 ../.venv/bin/pytest tests/accounts/test_ratelimit.py  # one file
 ../.venv/bin/pytest tests/test_boot_checks.py::SharedCacheCheckTests::test_shared_cache_is_accepted
 ../.venv/bin/pytest -k subnet                         # by name
@@ -42,9 +42,15 @@ cd backend
   Prod is Postgres 16 + Redis.
 - Env loading: `backend/.env` then repo-root `.env`, both `override=False`, so the first file to
   define a key wins and the real process environment beats both.
-- The two management commands you are most likely to need: `issue_login_code --email <addr>`
-  (break-glass; writes a real OTP row and prints the code, mails nothing) and `seed_legal`
-  (see below). `ls backend/apps/*/management/commands/` for the current set.
+- Management commands, by owning app (`ls backend/apps/*/management/commands/` for the live set):
+  `issue_login_code --email <addr>` (accounts; break-glass — writes a real OTP row and prints the
+  code, mails nothing), `seed_legal` (legal; see below), `seed_platforms` + `ingest_jobs` (jobs;
+  the adapter registry's entry point), `check_login_flow` and `verify_platform` (common).
+- `verify_platform` is an **external** smoke test of prod, not a unit test: it drives the real
+  site over HTTPS. Its check modules live in `backend/apps/common/verify/` (`api_gate`,
+  `auth_otp`, `frontend`, `outbox`, `automation`, `n8n`, `deliverability`, `gmail`), each
+  returning `PASS`/`FAIL`/`SKIP` — a check that cannot run (missing credential, feature not
+  deployed) must SKIP, never FAIL. `--module <name>` runs one.
 - `web/` has no build, no tests and no linter. Deploy is `rsync -az --delete web/ …` with no
   restart. To preview locally you need an HTTP server (`python3 -m http.server` from inside
   `web/`) because the pages use ES modules, which `file://` blocks.
@@ -96,6 +102,45 @@ owner Membership and **nothing else**; a test reads its source with `inspect.get
 asserts the words `Invitation`, `Subscription` and `UsageQuota` never appear, because
 auto-accepting an invitation at login would be a cross-tenant account-capture hole.
 
+### Jobs: platforms are adapters, and the risk table decides who gets one
+
+`apps.jobs` owns `Platform` and `Job`, mounted at the API root (`/api/v1/platforms/`,
+`/api/v1/jobs/`) because that is what `web/api.js`'s `ENDPOINTS` expects — not under a `jobs/`
+prefix. Ingestion is the platform-adapter pattern: one isolated module per source under
+`apps/jobs/adapters/`, each filling `BaseAdapter` and returning `NormalizedJob`, registered in
+the `ADAPTERS` dict in `adapters/__init__.py`. **Never write per-platform logic into the core.**
+
+Only LOW-risk feed/API sources get an adapter at all (today: RemoteOK, WeWorkRemotely). LinkedIn,
+Indeed and Wellfound are semi-manual by the risk table and have **no registry entry on purpose** —
+adding one is the hard rule below, not an oversight.
+
+### Outbox: application mail leaves from the user's own mailbox
+
+Application emails are sent through the user's `MailboxConnection` (SMTP today; OAuth Gmail/
+Outlook specified but unbuilt), never from findajob infrastructure — sending "on behalf of" from
+Brevo fails SPF/DKIM/DMARC, and the user's own mailbox also puts the message in their Sent folder
+so replies arrive naturally. Brevo stays transactional-only (OTP mail). Auto-send is permitted
+only where `apply_mechanism = email` and `auto_send = True`; the semi-manual platforms get
+"copy & mark as sent" (`{"sent_manually": true}`) and dispatch nothing. Credentials are encrypted
+via the app's `crypto.py`. Spec: `docs/2026-08-02-outbox-spec.md`.
+
+Note the app is mid-relocation from `apps/outbox/` into `apps/tenancy/outbox/`; `INSTALLED_APPS`,
+the `AppConfig.name` and `tests/outbox/` still say `apps.outbox`. Check the working tree before
+assuming an import path.
+
+### The admin is a first-class operator surface
+
+`apps.common` is pinned **ahead of** the admin in `INSTALLED_APPS` (order is load-bearing —
+`APP_DIRS` template lookup returns the first match, and `apps.common` ships overrides). The admin
+is a custom `AdminSite` (`apps/common/admin_site.py`) that overrides `get_app_list` to order the
+index along the path an operator actually walks — never cheat the sort by prefixing verbose names,
+which corrupts every label downstream. `apps.automation` is a **read-only** n8n panel mounted at
+`admin/automation/` and wrapped in `admin.site.admin_view`; it must stay listed **before**
+`admin.site.urls`, whose catch-all would otherwise swallow it. It claims `index_template` only if
+still unset — the hand-off point between the two owners is the `admin/_n8n_panel.html` include.
+The n8n instance is the **personal** account (app.n8n-studio.com), and its API key must never be
+logged (`apps.common.logging.RedactingFilter` is the backstop).
+
 ### One error shape
 
 Every failure is `{"error": {"code": "<machine_code>", "detail": "<human>"}}`, produced by
@@ -115,8 +160,9 @@ its page script through `new Function`.
 
 `web/api.js` has two jobs: the **single owner of HTTP** (one `request()`, CSRF, `ApiError`,
 `bootstrapCsrf`) and the demo fixture store. Do not add a second fetch helper. Its `ENDPOINTS`
-map is mostly aspirational — only the auth routes and `/me/` exist server-side today; every
-screen is still fixture-driven.
+map is still partly aspirational — auth, `/me/`, `/platforms/`, `/jobs/` and the outbox routes
+exist server-side; the rest do not, and most screens remain fixture-driven. Check
+`config/urls.py` before assuming an endpoint is real.
 
 ### legal.js is the single source for legal text
 
@@ -131,7 +177,9 @@ compose mounts `./web:/web:ro` into the api container.
 
 1. `docs/2026-08-01-auth-implementation-spec.md` — self-declared AUTHORITATIVE; code docstrings
    cite it by section ("spec §5"). `docs/2026-08-01-database-schema.md` records the live schema,
-   where the database wins over the models.
+   where the database wins over the models. Narrower specs govern their own subsystem:
+   `docs/2026-08-02-outbox-spec.md`, `docs/2026-08-02-login-healthcheck.md`, and
+   `docs/superpowers/specs/2026-08-02-verify-platform-design.md`.
 2. `main_prompt.md` — the product architecture (platform-adapter pattern, per-platform risk,
    MVP list). Written in Romanian. Its stack section says Django 5.x and is **superseded**: the
    decision is Django 6.0, pinned `>=6.0,<6.2`.
@@ -154,9 +202,17 @@ compose mounts `./web:/web:ro` into the api container.
   wires in underneath. This is why the API gate degrades instead of redirecting.
 - **Never automate submission on LinkedIn or Indeed** — account ban and legal risk respectively.
   Semi-manual flows only, per `main_prompt.md` §10.
-- **The frontend contacts no third-party origin.** React and fonts are self-hosted under
-  `web/vendor/` and `web/fonts/`; nginx sends `default-src 'self'`. A Germany-targeted site must
-  not ship a visitor's IP to a US CDN before consent. Never re-introduce a CDN tag.
+- **The frontend contacts no third-party origin, with exactly one consent-gated exception.**
+  React and fonts are self-hosted under `web/vendor/` and `web/fonts/`; nginx sends
+  `default-src 'self'`. A Germany-targeted site must not ship a visitor's IP to a US CDN. Never
+  re-introduce a CDN tag. The single exception is GA4, owned solely by `web/analytics.js`, which
+  touches the network **only after** the visitor clicks "Accept all" — § 25 (1) TTDSG requires
+  consent *before* access to the device. Never paste the raw `gtag.js` snippet into any `.html`:
+  a `<script async src>` in markup fires on load, before the banner can be answered, which is the
+  exact violation the module exists to prevent. `web/consent-banner.js` is the banner for
+  `index.html` and `auth.html`; `app.html` has its own inside the `.dc.html` template and writes
+  the same localStorage key. Changing the vendor or measurement ID means editing `web/legal.js`
+  and re-running `seed_legal`.
 - **The published Impressum carries a real person's real address** (§ 5 DDG requires it, and it
   was supplied deliberately). Never replace it with placeholder or invented company data, and
   never invent an HRB or VAT number.

@@ -921,9 +921,38 @@ class Component extends DCLogic {
     drawerJobId: null, toast: null,
   };
   api = null;
+  analytics = null;   // set in componentDidMount; null until then, hence the ?. calls
+
+  // The 13 screens swap `nav` in state without a navigation, so GA would otherwise
+  // record a single pageview for an entire session. Reported as a synthetic path
+  // (/app/<screen>) rather than the real URL, which is always "/app.html".
+  // Deliberately NOT reporting legalDoc or any job/document id — those would put
+  // user content into a US analytics account.
+  // Tracks the last reported screen in an instance field rather than reading
+  // prevState: support.js's StreamableComponent wraps componentDidUpdate and does
+  // NOT forward React's (prevProps, prevState) arguments, so prevState is
+  // undefined here and any dereference of it throws on every render.
+  lastTrackedNav = null;
+  componentDidUpdate() {
+    const nav = this.state.nav;
+    if (nav === this.lastTrackedNav) return;
+    this.lastTrackedNav = nav;
+    this.analytics?.trackPageView(`/app/${nav}`, `findajob — ${nav}`);
+  }
+
   async componentDidMount() {
     // Mock API mirrors DRF endpoints — swap api.js internals with real fetches to go live.
     this.api = await import('./api.js');
+
+    // Consent is shared with index.html and auth.html through one localStorage key,
+    // so answering the banner on the landing page keeps it closed in here. Seeding
+    // state from storage is what stops the banner re-appearing on every reload —
+    // re-prompting someone who already said "essential only" is both bad UX and a
+    // dark pattern regulators read as pressuring consent.
+    this.analytics = await import('./analytics.js');
+    this.analytics.initAnalytics();
+    const storedConsent = this.analytics.getConsent();
+    if (storedConsent) this.setState({ cookieConsent: storedConsent });
 
     // The landing page's footer deep-links here as app.html#legal-<doc>, so Impressum,
     // Datenschutz, AGB etc. are reachable in one click from the public page.
@@ -1101,7 +1130,7 @@ class Component extends DCLogic {
           settings: ['Platform Modules', 'Each module is an isolated Django app with a common contract'],
           legal: ['Legal', 'German market compliance — GDPR/DSGVO, DDG, TTDSG'],
         },
-        cookie: ['We value your privacy', 'We use essential cookies for login and security. Optional cookies store your dashboard preferences and enable privacy-friendly analytics (§ 25 TTDSG).', 'Cookie Policy →', 'Accept all', 'Essential only'],
+        cookie: ['We value your privacy', 'We use essential cookies for login and security. Optional cookies store your dashboard preferences and enable Google Analytics (§ 25 TTDSG). This sends data to Google in the USA.', 'Cookie Policy →', 'Accept all', 'Essential only'],
       },
       de: {
         nav: { dashboard: 'Dashboard', search: 'Jobsuche', advisor: 'Berater', analytics: 'Analysen', history: 'Verlauf', network: 'Netzwerk', documents: 'Dokumente', profile: 'Profil', integrations: 'APIs', settings: 'Module', org: 'Organisation', billing: 'Abrechnung', legal: 'Rechtliches' },
@@ -1121,7 +1150,7 @@ class Component extends DCLogic {
           settings: ['Plattform-Module', 'Jedes Modul ist eine isolierte Django-App mit gemeinsamem Vertrag'],
           legal: ['Rechtliches', 'Compliance für den deutschen Markt — DSGVO, DDG, TTDSG'],
         },
-        cookie: ['Wir respektieren Ihre Privatsphäre', 'Wir verwenden essenzielle Cookies für Login und Sicherheit. Optionale Cookies speichern Ihre Dashboard-Einstellungen und ermöglichen datenschutzfreundliche Analyse (§ 25 TTDSG).', 'Cookie-Richtlinie →', 'Alle akzeptieren', 'Nur essenzielle'],
+        cookie: ['Wir respektieren Ihre Privatsphäre', 'Wir verwenden essenzielle Cookies für Login und Sicherheit. Optionale Cookies speichern Ihre Dashboard-Einstellungen und aktivieren Google Analytics (§ 25 TTDSG). Dabei werden Daten an Google in den USA übermittelt.', 'Cookie-Richtlinie →', 'Alle akzeptieren', 'Nur essenzielle'],
       },
       ro: {
         nav: { dashboard: 'Dashboard', search: 'Căutare job', advisor: 'Consultant', analytics: 'Analize', history: 'Istoric', network: 'Rețea', documents: 'Documente', profile: 'Profil', integrations: 'API-uri', settings: 'Module', org: 'Organizație', billing: 'Abonament', legal: 'Legal' },
@@ -1141,7 +1170,7 @@ class Component extends DCLogic {
           settings: ['Module platforme', 'Fiecare modul e o aplicație Django izolată, cu contract comun'],
           legal: ['Legal', 'Conformitate pentru piața germană — RGPD/DSGVO, DDG, TTDSG'],
         },
-        cookie: ['Îți respectăm confidențialitatea', 'Folosim cookie-uri esențiale pentru login și securitate. Cookie-urile opționale rețin preferințele de dashboard și permit analiză prietenoasă cu confidențialitatea (§ 25 TTDSG).', 'Politica de cookie-uri →', 'Accept toate', 'Doar esențiale'],
+        cookie: ['Îți respectăm confidențialitatea', 'Folosim cookie-uri esențiale pentru login și securitate. Cookie-urile opționale rețin preferințele de dashboard și activează Google Analytics (§ 25 TTDSG). Astfel se transmit date către Google în SUA.', 'Politica de cookie-uri →', 'Accept toate', 'Doar esențiale'],
       },
     };
     const tr = T[s.lang] || T.en;
@@ -1357,8 +1386,11 @@ class Component extends DCLogic {
       })(),
       cookieBannerOpen: s.cookieConsent === null,
       cookieTitle: tr.cookie[0], cookieText: tr.cookie[1], cookieLink: tr.cookie[2], cookieAcceptAll: tr.cookie[3], cookieEssentialOnly: tr.cookie[4],
-      acceptAllCookies: () => this.setState({ cookieConsent: 'all' }),
-      acceptEssentialCookies: () => this.setState({ cookieConsent: 'essential' }),
+      // The banner is the ONLY thing that may start Google Analytics (§ 25 TTDSG).
+      // analytics.js persists the answer and injects gtag.js; state only mirrors it
+      // so the banner closes. Never load GA outside these two handlers.
+      acceptAllCookies: () => { this.analytics?.setConsent('all'); this.setState({ cookieConsent: 'all' }); },
+      acceptEssentialCookies: () => { this.analytics?.setConsent('essential'); this.setState({ cookieConsent: 'essential' }); },
       openCookiePolicy: () => this.setState({ nav: 'legal', legalDoc: 'cookies' }),
       prefLists: [
         ['titles', 'Job titles', 'Search job titles, e.g. Django Developer', 'titles'],
