@@ -94,6 +94,14 @@ class TestFrontendHelpers:
                 '<link href="https://findajob.pro/fonts/a.woff2">')
         assert third_party_origins(html, "https://findajob.pro") == set()
 
+    def test_anchor_and_jsonld_links_are_not_origins(self):
+        from apps.common.verify.frontend import third_party_origins
+
+        html = ('<script type="application/ld+json">{"sameAs": ["https://georgeai.dev/"]}</script>'
+                '<p>Built by <a href="https://georgeai.dev/">George</a>.</p>'
+                '<link rel="stylesheet" href="https://fonts.example.com/a.css">')
+        assert third_party_origins(html, "https://findajob.pro") == {"https://fonts.example.com"}
+
     def test_resource_urls_parsed(self):
         from apps.common.verify.frontend import resource_urls
 

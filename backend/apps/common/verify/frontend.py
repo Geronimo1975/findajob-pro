@@ -11,14 +11,18 @@ from apps.common.verify.base import (
 
 PAGES = ["/", "/app.html", "/auth.html"]
 SUPPORT_FILES = ["/api.js", "/legal.js"]
-_SRC_HREF = re.compile(r"""(?:src|href)\s*=\s*["']([^"']+)["']""", re.I)
+# Only what the browser FETCHES on load counts: any src=, and href= on <link>.
+# An <a href> is navigation the visitor chooses (the "Built by" credit, JSON-LD
+# sameAs) and contacts nothing until clicked.
+_SRC = re.compile(r"""\bsrc\s*=\s*["']([^"']+)["']""", re.I)
+_LINK_HREF = re.compile(r"""<link\b[^>]*?\bhref\s*=\s*["']([^"']+)["']""", re.I)
 _RESOURCES = re.compile(r"window\.__resources\s*=\s*(\{[^;]*\})", re.S)
 
 
 def third_party_origins(html: str, target: str) -> set[str]:
     own = urlparse(target).netloc
     found = set()
-    for url in _SRC_HREF.findall(html):
+    for url in _SRC.findall(html) + _LINK_HREF.findall(html):
         parsed = urlparse(url)
         if parsed.scheme in ("http", "https") and parsed.netloc != own:
             found.add(f"{parsed.scheme}://{parsed.netloc}")

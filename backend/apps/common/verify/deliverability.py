@@ -7,6 +7,9 @@ from apps.common.verify.base import ModuleReport, VerifyContext, failed, passed,
 from apps.common.verify.gmail import auth_results
 
 DOMAIN = "findajob.pro"
+# OTP mail is sent from noreply@mail.findajob.pro (Brevo sending domain), so SPF
+# lives on the subdomain; the apex has no MX and no SPF on purpose.
+MAIL_DOMAIN = f"mail.{DOMAIN}"
 
 
 class DigError(Exception):
@@ -46,12 +49,12 @@ def run(ctx: VerifyContext) -> ModuleReport:
     # (dkim=pass) already proves signing works end-to-end, so a selector guess
     # would only produce false FAILs. DNS checks stay at SPF + DMARC only.
     try:
-        spf = [r for r in dig_txt(DOMAIN) if r.startswith("v=spf1")]
+        spf = [r for r in dig_txt(MAIL_DOMAIN) if r.startswith("v=spf1")]
         results.append(passed("SPF record published", spf[0]) if spf
-                       else failed("SPF record published", f"no v=spf1 TXT on {DOMAIN}"))
-        dmarc = [r for r in dig_txt(f"_dmarc.{DOMAIN}") if r.startswith("v=DMARC1")]
+                       else failed("SPF record published", f"no v=spf1 TXT on {MAIL_DOMAIN}"))
+        dmarc = [r for r in dig_txt(f"_dmarc.{MAIL_DOMAIN}") if r.startswith("v=DMARC1")]
         results.append(passed("DMARC record published", dmarc[0]) if dmarc
-                       else failed("DMARC record published", f"no v=DMARC1 TXT on _dmarc.{DOMAIN}"))
+                       else failed("DMARC record published", f"no v=DMARC1 TXT on _dmarc.{MAIL_DOMAIN}"))
     except DigError as exc:
         results.append(skipped("DNS SPF/DMARC records", f"dig unavailable: {exc}"))
     return ModuleReport("mail-deliverability", results)
