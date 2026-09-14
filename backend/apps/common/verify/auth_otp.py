@@ -26,7 +26,12 @@ def csrf_headers(session: requests.Session, target: str) -> dict[str, str]:
 
 def run(ctx: VerifyContext) -> ModuleReport:
     results = []
-    test_email = ctx.env.get("VERIFY_TEST_EMAIL", "george@rotocon.world")
+    # No default on purpose: request-code sends a REAL OTP to whatever address
+    # this is, so a hardcoded fallback mails a real person on every run.
+    test_email = ctx.env.get("VERIFY_TEST_EMAIL")
+    if not test_email:
+        return ModuleReport("auth-otp", [skipped(
+            "request-code → 202", "set VERIFY_TEST_EMAIL to a mailbox you own to enable")])
     ctx.session.get(ctx.api("/auth/csrf/"), timeout=TIMEOUT)
 
     # SINCE is date-granular; back off a minute so clock skew can't hide the mail.

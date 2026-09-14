@@ -375,7 +375,7 @@ class TestOutbox:
         session.cookies.get.return_value = "tok"
         ctx = VerifyContext(
             target="https://x", session=session,
-            env={"VERIFY_GMAIL_USER": "george@rotocon.world",
+            env={"VERIFY_GMAIL_USER": "probe@example.invalid",
                  "VERIFY_GMAIL_APP_PASSWORD": "app-pw"},
         )
         report = outbox_mod.run(ctx)
