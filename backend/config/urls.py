@@ -68,6 +68,8 @@ api_v1_patterns = [
     *_include_if_present("apps.tenancy.outbox.urls", "outbox/"),
     # apps.jobs — /platforms/ and /jobs/ live at the API root per ENDPOINTS.
     *_include_if_present("apps.jobs.urls", ""),
+    # apps.leads — anonymous B2B demo-request form (web/unternehmen.html).
+    *_include_if_present("apps.leads.urls", "leads/"),
     # … and the consent ledger, which spec §3/§10 puts at /api/v1/consent/,
     # not under legal/. Same app, different mount point, hence a second module.
     *_include_if_present("apps.legal.consent_urls", "consent/"),

@@ -1503,7 +1503,7 @@ class Component extends DCLogic {
       })),
       planCards: (api ? api.PLANS : []).map(p => {
         const current = p.id === s.plan;
-        const price = p.monthly === null ? 'Custom' : '$' + (s.cycle === 'yearly' ? p.yearly : p.monthly);
+        const price = p.monthly === null ? 'Custom' : '€' + (s.cycle === 'yearly' ? p.yearly : p.monthly);
         return {
           name: p.name, tagline: p.tagline, popular: !!p.popular, features: p.features,
           price, per: p.monthly === null ? 'contact sales' : '/ mo' + (p.seat ? ' / seat' : '') + (s.cycle === 'yearly' ? ', billed yearly' : ''),

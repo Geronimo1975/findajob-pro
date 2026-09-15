@@ -152,6 +152,8 @@
     section[style*="max-width: 1100px"] { padding-top: 40px !important; padding-bottom: 32px !important; }
     h1 { font-size: 32px !important; line-height: 1.14 !important; letter-spacing: -0.4px !important; }
     h2 { font-size: 26px !important; }
+    .hero-card { display: none !important; }
+    .hero-shot { border-radius: 8px !important; }
     [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
   }
 </style>
@@ -163,6 +165,7 @@
     <div style="display: flex; gap: 20px; margin-left: 16px;">
       <a href="#features" style="font-size: 13px; color: #bdbdbd;">{{ tFeatures }}</a>
       <a href="#pricing" style="font-size: 13px; color: #bdbdbd;">{{ tPricing }}</a>
+      <a href="unternehmen.html" style="font-size: 13px; color: #bdbdbd;">{{ tCompanies }}</a>
     </div>
     <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
       <div style="display: flex; gap: 2px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 6px; padding: 2px;">
@@ -185,17 +188,20 @@
       <a href="app.html?demo=1" style="display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; color: #2fd6a1; border: 1px solid #3d3a39; border-radius: 6px; padding: 13px 26px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tDemo }}</a>
     </div>
     <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e; margin-top: 16px;">{{ tNoCard }}</div>
-    <div style="margin: 56px auto 0; max-width: 860px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 10px; padding: 18px; text-align: left;">
-      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-        <span style="width: 10px; height: 10px; border-radius: 50%; background: #3d3a39;"></span>
-        <span style="width: 10px; height: 10px; border-radius: 50%; background: #3d3a39;"></span>
-        <span style="width: 10px; height: 10px; border-radius: 50%; background: #00d992;"></span>
+    <!-- Cinematic hero: self-hosted Higgsfield render (web/img/hero.webp), CSP 'self' intact.
+         Deliberate exception to the "no illustrations" rule — landing hero only, the app stays hairline-dark. -->
+    <div class="hero-shot" style="position: relative; margin: 56px auto 0; max-width: 960px; border: 1px solid #3d3a39; border-radius: 12px; overflow: hidden; background: #1a1a1a; aspect-ratio: 16 / 9;">
+      <img src="img/hero.webp" alt="" width="2048" height="1152" style="display: block; width: 100%; height: 100%; object-fit: cover;">
+      <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,16,16,0) 55%, rgba(16,16,16,0.85) 100%);"></div>
+      <div class="hero-card" style="position: absolute; left: 4%; top: 12%; width: 220px; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(26,26,26,0.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: left;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.07em; color: #8b949e;">REMOTEOK · 2 MIN AGO</div>
+        <div style="font-size: 13px; font-weight: 500; color: #f2f2f2; margin-top: 4px;">Senior Backend Engineer</div>
+        <span style="display: inline-block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #2fd6a1; background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35); border-radius: 9999px; padding: 2px 8px;">MATCH 84%</span>
       </div>
-      <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.9; color: #f5f6f7;">
-        <div><span style="color: #8b949e;">$</span> findajob pull --module remoteok</div>
-        <div><span style="color: #00d992;">✓</span> 12 new listings · skill match ≥ 66%</div>
-        <div><span style="color: #8b949e;">$</span> findajob apply --job 101 --review</div>
-        <div><span style="color: #00d992;">✓</span> email + cover letter generated · awaiting your review</div>
+      <div class="hero-card" style="position: absolute; right: 4%; bottom: 14%; width: 220px; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(26,26,26,0.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: left;">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.07em; color: #8b949e;">COVER LETTER · DRAFT</div>
+        <div style="font-size: 13px; font-weight: 500; color: #f2f2f2; margin-top: 4px;">Ready for your review</div>
+        <span style="display: inline-block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35); border-radius: 9999px; padding: 2px 8px;">REVIEW</span>
       </div>
     </div>
   </section>
@@ -323,7 +329,7 @@ class Component extends DCLogic {
       en: {
         eyebrow: 'AI-ASSISTED JOB APPLICATION PLATFORM', heroTitle: 'Every job board. One tracker. Applications that write themselves.',
         heroSub: 'findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, hosted in Germany.',
-        cta: 'Start free', demo: 'View live demo', noCard: 'Free plan · no credit card required', login: 'Log in', signup: 'Sign up',
+        cta: 'Start free', demo: 'View live demo', companies: 'For companies', noCard: 'Free plan · no credit card required', login: 'Log in', signup: 'Sign up',
         features: 'Features', pricing: 'Pricing', featuresTitle: 'Built like an engineering tool', pricingTitle: 'Simple pricing', choose: 'Choose plan',
         email: 'E-mail address', continue: 'Continue', finish: 'Go to dashboard →',
         gdprNote: 'Hosted in Germany. AI drafting may use processors outside the EU under EU Standard Contractual Clauses — see the Privacy Policy, which you accept when you sign in.',
@@ -343,7 +349,7 @@ class Component extends DCLogic {
       de: {
         eyebrow: 'KI-GESTÜTZTE BEWERBUNGSPLATTFORM', heroTitle: 'Alle Jobbörsen. Ein Tracker. Bewerbungen, die sich selbst schreiben.',
         heroSub: 'findajob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, gehostet in Deutschland.',
-        cta: 'Kostenlos starten', demo: 'Live-Demo ansehen', noCard: 'Free-Tarif · keine Kreditkarte nötig', login: 'Anmelden', signup: 'Registrieren',
+        cta: 'Kostenlos starten', demo: 'Live-Demo ansehen', companies: 'Für Unternehmen', noCard: 'Free-Tarif · keine Kreditkarte nötig', login: 'Anmelden', signup: 'Registrieren',
         features: 'Funktionen', pricing: 'Preise', featuresTitle: 'Gebaut wie ein Engineering-Tool', pricingTitle: 'Einfache Preise', choose: 'Tarif wählen',
         email: 'E-Mail-Adresse', continue: 'Weiter', finish: 'Zum Dashboard →',
         gdprNote: 'Hosting in Deutschland. Für KI-Entwürfe können Auftragsverarbeiter außerhalb der EU eingesetzt werden, auf Basis der EU-Standardvertragsklauseln — siehe Datenschutzerklärung, die Sie bei der Anmeldung akzeptieren.',
@@ -363,7 +369,7 @@ class Component extends DCLogic {
       ro: {
         eyebrow: 'PLATFORMĂ DE APLICARE ASISTATĂ DE AI', heroTitle: 'Toate site-urile de joburi. Un singur tracker. Aplicări care se scriu singure.',
         heroSub: 'findajob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, găzduit în Germania.',
-        cta: 'Începe gratuit', demo: 'Vezi demo live', noCard: 'Plan gratuit · fără card', login: 'Autentificare', signup: 'Înregistrare',
+        cta: 'Începe gratuit', demo: 'Vezi demo live', companies: 'Pentru companii', noCard: 'Plan gratuit · fără card', login: 'Autentificare', signup: 'Înregistrare',
         features: 'Funcții', pricing: 'Prețuri', featuresTitle: 'Construit ca un tool de inginerie', pricingTitle: 'Prețuri simple', choose: 'Alege planul',
         email: 'Adresă de e-mail', continue: 'Continuă', finish: 'Spre dashboard →',
         gdprNote: 'Găzduit în Germania. Pentru redactarea AI pot fi folosiți procesatori din afara UE, pe baza clauzelor contractuale standard ale UE — vezi Politica de confidențialitate, pe care o accepți la autentificare.',
@@ -383,15 +389,15 @@ class Component extends DCLogic {
     };
     const tr = T[s.lang];
     const plans = [
-      ['Free', '$0', false, ['10 applications / month', '20 AI generations', '2 platform modules', 'Manual send only']],
-      ['Pro', '$20', true, ['100 applications / month', '500 AI generations', 'All modules + auto-send', 'Canva templates']],
-      ['Max', '$100', false, ['1,000 applications / month', '5,000 AI generations', 'Priority AI queue', 'API access']],
-      ['Team', '$30', false, ['Per seat, min 5', 'Central admin & roles', 'Client workspaces', 'DPA (AVV) included']],
+      ['Free', '€0', false, ['10 applications / month', '20 AI generations', '2 platform modules', 'Manual send only']],
+      ['Pro', '€19', true, ['100 applications / month', '500 AI generations', 'All modules + auto-send', 'Canva templates']],
+      ['Max', '€99', false, ['1,000 applications / month', '5,000 AI generations', 'Priority AI queue', 'API access']],
+      ['Team', '€29', false, ['Per seat, min 5', 'Central admin & roles', 'Client workspaces', 'DPA (AVV) included']],
     ];
     const ob = tr.obTitles[s.obStep];
     return {
       tEyebrow: tr.eyebrow, tHeroTitle: tr.heroTitle, tHeroSub: tr.heroSub, tCta: tr.cta, tDemo: tr.demo, tNoCard: tr.noCard,
-      tLogin: tr.login, tSignup: tr.signup, tFeatures: tr.features, tPricing: tr.pricing, tFeaturesTitle: tr.featuresTitle,
+      tLogin: tr.login, tSignup: tr.signup, tCompanies: tr.companies, tFeatures: tr.features, tPricing: tr.pricing, tFeaturesTitle: tr.featuresTitle,
       tPricingTitle: tr.pricingTitle, tChoose: tr.choose, tEmail: tr.email, tContinue: tr.continue,
       tFinish: tr.finish, tGdprNote: tr.gdprNote, tTitlePh: tr.titlePh,
       langToggles: ['en', 'de', 'ro'].map(l => ({
