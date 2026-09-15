@@ -1,477 +1,474 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>findajob.pro — AI-assisted job tracking &amp; applications</title>
-<meta name="description" content="Aggregate jobs from LinkedIn, RemoteOK, We Work Remotely, Wellfound and Indeed, score them against your profile, and send AI-tailored applications. EN / DE / RO.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<!-- Serve React from our own origin instead of unpkg.com: no US-CDN request before consent,
-     and the page cannot go blank because a third-party CDN is unreachable. The runtime reads
-     this map in cdnScriptFor(); files are byte-identical to the SRI hashes it ships with. -->
-<script>
-  window.__resources = {
-    "https://unpkg.com/react@18.3.1/umd/react.production.min.js": "vendor/react.production.min.js",
-    "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "vendor/react-dom.production.min.js"
-  };
-</script>
-<script src="./support.js"></script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "SoftwareApplication",
-      "@id": "https://findajob.pro/#app",
-      "name": "findajob.pro",
-      "url": "https://findajob.pro/",
-      "applicationCategory": "BusinessApplication",
-      "applicationSubCategory": "Job search and application automation",
-      "operatingSystem": "Web browser",
-      "description": "findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter. You review, we send. GDPR-compliant, hosted in Germany.",
-      "inLanguage": ["en", "de", "ro"],
-      "author": { "@id": "https://georgeai.dev/#george" },
-      "publisher": { "@id": "https://findajob.pro/#organization" },
-      "featureList": [
-        "One module per platform: RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed",
-        "AI that adapts its tone per channel",
-        "Skill match scoring against your profile",
-        "Documents with ATS scores",
-        "German-market compliant: GDPR, TTDSG, Impressum, AVV",
-        "Human review before every send"
-      ],
-      "offers": [
-        { "@type": "Offer", "name": "Free",  "price": "0",   "priceCurrency": "USD", "description": "10 applications / month, 20 AI generations, 2 platform modules, manual send only" },
-        { "@type": "Offer", "name": "Pro",   "price": "20",  "priceCurrency": "USD", "description": "100 applications / month, 500 AI generations, all modules plus auto-send, Canva templates" },
-        { "@type": "Offer", "name": "Max",   "price": "100", "priceCurrency": "USD", "description": "1,000 applications / month, 5,000 AI generations, priority AI queue, API access" },
-        { "@type": "Offer", "name": "Team",  "price": "30",  "priceCurrency": "USD", "description": "Per seat, minimum 5 seats. Central admin and roles, client workspaces, DPA (AVV) included" }
-      ]
-    },
-    {
-      "@type": "Organization",
-      "@id": "https://findajob.pro/#organization",
-      "name": "findajob.pro",
-      "url": "https://findajob.pro/",
-      "logo": "https://findajob.pro/favicon.svg",
-      "founder": { "@id": "https://georgeai.dev/#george" },
-      "sameAs": ["https://georgeai.dev/"]
-    },
-    {
-      "@type": "Person",
-      "@id": "https://georgeai.dev/#george",
-      "name": "George Sebastian Cucuiet",
-      "url": "https://georgeai.dev/",
-      "jobTitle": "AI Automation & Full-Stack Developer",
-      "sameAs": ["https://github.com/Geronimo1975", "https://www.amazon.com/dp/B0CTFNSPB1"]
-    },
-    {
-      "@type": "WebSite",
-      "@id": "https://findajob.pro/#website",
-      "url": "https://findajob.pro/",
-      "name": "findajob.pro",
-      "inLanguage": "en",
-      "publisher": { "@id": "https://findajob.pro/#organization" }
-    }
-  ]
-}
-</script>
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="findajob.pro">
-<meta property="og:title" content="findajob.pro — AI-assisted job tracking &amp; applications">
-<meta property="og:description" content="Every job board. One tracker. Applications that write themselves. You review, we send. GDPR-compliant, hosted in Germany.">
-<meta property="og:url" content="https://findajob.pro/">
-<meta property="og:image" content="https://findajob.pro/favicon.svg">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="findajob.pro — AI-assisted job tracking &amp; applications">
-<meta name="twitter:description" content="Every job board. One tracker. Applications that write themselves. You review, we send.">
+<title>findajob.pro: Jobbörsen bündeln, Bewerbungen entwerfen, du prüfst und sendest</title>
+<meta name="description" content="Stellen aus RemoteOK, We Work Remotely, Wellfound, LinkedIn und Indeed in einem Tracker, gegen dein Profil bewertet, Anschreiben pro Plattform entworfen. Hosting in Deutschland, DSGVO. Kostenlos starten oder Live-Demo ansehen.">
 <link rel="canonical" href="https://findajob.pro/">
-</head>
-<body>
-<!-- Static fallback for crawlers and clients without JavaScript.
-     Mirrors the English strings in the T.en translation block below. Keep in sync. -->
-<noscript>
-<div id="fjp-static-fallback">
-  <p>AI-ASSISTED JOB APPLICATION PLATFORM</p>
-  <h1>Every job board. One tracker. Applications that write themselves.</h1>
-  <p>findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your
-     skills and drafts every email and cover letter — you review, we send. GDPR-compliant, hosted in Germany.</p>
-  <p>Free plan, no credit card required. Available in English, German and Romanian.</p>
-
-  <h2>Built like an engineering tool</h2>
-  <ul>
-    <li><strong>One module per platform</strong> — RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed. Each isolated, each with its own rate limits and legal risk profile.</li>
-    <li><strong>AI that adapts its tone</strong> — formal email for job boards, short note for Easy Apply, personal message for startup founders. Same engine, right register.</li>
-    <li><strong>Skill match scoring</strong> — every listing scored against your profile, so you apply to the 80%+ matches first.</li>
-    <li><strong>Documents with ATS scores</strong> — CVs, certificates and diplomas, tag-matched per job and generated into Canva templates.</li>
-    <li><strong>German-market compliant</strong> — GDPR, TTDSG cookie consent, Impressum, AVV for teams. Encrypted at rest, hosted in the EU.</li>
-    <li><strong>You always click send</strong> — high-risk platforms stay manual by design. No account bans, no spam folders.</li>
-  </ul>
-
-  <h2>Simple pricing</h2>
-  <ul>
-    <li><strong>Free — $0</strong>: 10 applications / month, 20 AI generations, 2 platform modules, manual send only.</li>
-    <li><strong>Pro — $20</strong>: 100 applications / month, 500 AI generations, all modules plus auto-send, Canva templates.</li>
-    <li><strong>Max — $100</strong>: 1,000 applications / month, 5,000 AI generations, priority AI queue, API access.</li>
-    <li><strong>Team — $30 per seat</strong> (minimum 5): central admin and roles, client workspaces, DPA (AVV) included.</li>
-  </ul>
-
-  <h2>How it works</h2>
-  <p>Create an account, upload your CV — we parse it into a master profile of skills, experience and languages —
-     then tell us the role and location type you want. That drives the platform filters and skill matching from day one.</p>
-
-  <h2>Privacy</h2>
-  <p>Hosted in Germany. AI drafting may use processors outside the EU under EU Standard Contractual Clauses.
-     See the Privacy Policy, which you accept when you sign in.</p>
-
-  <p>Built by <a href="https://georgeai.dev/">George Sebastian Cucuiet</a>.</p>
-</div>
-</noscript>
-<x-dc>
-<helmet>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="fonts/fonts.css">
+<link rel="preload" as="image" href="img/app-dashboard.webp">
+<!-- Plain HTML on purpose. The previous landing was a .dc.html rendered by support.js, so a
+     cold fetch (Googlebot, GPTBot, link previews) saw "{{ tHeroTitle }}" instead of copy.
+     German is the served language (DACH market); EN/RO are swapped in by the switcher below
+     and persisted under the same localStorage key the cookie banner reads. -->
 <style>
-  html, body { margin: 0; padding: 0; background: #101010; }
-  body { font-family: Inter, sans-serif; color: #f2f2f2; }
-  a { color: #10b981; text-decoration: none; } a:hover { color: #2fd6a1; text-decoration: underline; }
-  * { box-sizing: border-box; } input, select, option { color: #f2f2f2; }
-  @keyframes toastin { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #101010; color: #f2f2f2; font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  a { color: #10b981; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #8b949e; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
 
-  /* ── Responsive: the prototype is authored desktop-first with inline styles,
-     so mobile adaptation is applied here per the design spec (hero 56→32px,
-     card grids 1-up, nav collapses). Overrides need !important to beat inline. */
+  nav { position: sticky; top: 0; z-index: 10; background: #101010; border-bottom: 1px solid #3d3a39; }
+  nav .wrap { display: flex; align-items: center; gap: 24px; height: 64px; }
+  nav .brand { font-weight: 700; font-size: 18px; color: #f2f2f2; }
+  nav .brand span { color: #00d992; }
+  nav .links { display: flex; gap: 20px; margin-left: 8px; }
+  nav .links a { font-size: 13px; color: #bdbdbd; }
+  nav .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .lang { display: flex; gap: 2px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 6px; padding: 2px; }
+  .lang button { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #8b949e; background: transparent; border: 0; border-radius: 4px; padding: 5px 8px; cursor: pointer; min-height: 28px; }
+  .lang button[aria-pressed="true"] { background: #00d992; color: #101010; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 11px 18px; border-radius: 6px; font-family: Inter, sans-serif; font-size: 14px; font-weight: 600; border: 1px solid #3d3a39; color: #f2f2f2; background: #101010; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: #00d992; text-decoration: none; }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: #00d992; color: #101010; border-color: #00d992; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-sm { min-height: 36px; padding: 7px 14px; font-size: 13px; }
+  :focus-visible { outline: 2px solid #00d992; outline-offset: -1px; }
+
+  /* Hero: claim left, the product itself right. */
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding: 64px 0 80px; }
+  .seg { display: inline-flex; border: 1px solid #3d3a39; border-radius: 9999px; padding: 3px; margin-bottom: 22px; }
+  .seg button { font-family: Inter, sans-serif; font-size: 13px; font-weight: 500; color: #bdbdbd; background: transparent; border: 0; border-radius: 9999px; padding: 7px 14px; cursor: pointer; min-height: 32px; }
+  .seg button[aria-pressed="true"] { background: rgba(0,217,146,0.10); color: #2fd6a1; box-shadow: inset 0 0 0 1px rgba(0,217,146,0.35); }
+  h1 { font-size: 52px; font-weight: 400; line-height: 1.04; letter-spacing: -0.65px; color: #fff; margin: 0 0 18px; text-wrap: pretty; }
+  .sub { font-size: 17px; color: #bdbdbd; max-width: 520px; margin: 0 0 28px; }
+  .ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+  [data-aud] { display: none; }
+  .hero[data-mode="b2c"] [data-aud="b2c"], .hero[data-mode="b2b"] [data-aud="b2b"] { display: block; }
+  .hero[data-mode="b2c"] .ctas[data-aud="b2c"], .hero[data-mode="b2b"] .ctas[data-aud="b2b"] { display: flex; }
+
+  /* Try-it widget: a real mini version of the Dashboard row + Review drawer. */
+  .try { background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 10px; overflow: hidden; }
+  .try-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #3d3a39; }
+  .try-head strong { font-size: 14px; font-weight: 600; }
+  .try-skills { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #3d3a39; }
+  .try-skills label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #8b949e; white-space: nowrap; }
+  .try-skills input { flex: 1; min-width: 0; background: #101010; border: 1px solid #3d3a39; border-radius: 6px; color: #f2f2f2; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; padding: 8px 10px; min-height: 36px; }
+  .jobs { list-style: none; margin: 0; padding: 0; }
+  .jobs li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #3d3a39; cursor: pointer; }
+  .jobs li:hover { background: #222; }
+  .jobs li[aria-selected="true"] { background: #101010; box-shadow: inset 3px 0 0 #00d992; }
+  .jobs .t { font-size: 13.5px; font-weight: 500; color: #f2f2f2; }
+  .jobs .c { font-size: 12px; color: #8b949e; }
+  .src { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #bdbdbd; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 7px; }
+  .match { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; min-width: 44px; text-align: right; }
+  .m-hi { color: #2fd6a1; } .m-mid { color: #e6b34d; } .m-lo { color: #e5534b; }
+  .out { padding: 14px 16px; min-height: 172px; }
+  .out .row { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; border-radius: 9999px; padding: 2px 8px; border: 1px solid; }
+  .tag.ok { color: #2fd6a1; border-color: rgba(0,217,146,0.35); background: rgba(0,217,146,0.10); }
+  .tag.gap { color: #8b949e; border-color: #3d3a39; }
+  .out pre { margin: 0; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; color: #bdbdbd; }
+  .out .hint { font-size: 13px; color: #8b949e; margin: 0; }
+  .try-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid #3d3a39; background: #101010; }
+  .try-foot small { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e; }
+  .cursor::after { content: "▍"; color: #00d992; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .cursor::after { animation: none; } }
+
+  section { padding: 72px 0; border-top: 1px solid #3d3a39; }
+  h2 { font-size: 30px; font-weight: 400; letter-spacing: -0.35px; line-height: 1.15; color: #fff; margin: 0 0 12px; max-width: 720px; text-wrap: pretty; }
+  .intro { font-size: 16px; color: #bdbdbd; max-width: 640px; margin: 0 0 32px; }
+
+  /* Platform ledger: the contrarian claim, shown as data. */
+  .ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ledger th { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #8b949e; font-weight: 500; padding: 0 12px 10px 0; border-bottom: 1px solid #3d3a39; }
+  .ledger td { padding: 14px 12px 14px 0; border-bottom: 1px solid #3d3a39; color: #bdbdbd; vertical-align: top; }
+  .ledger td:first-child { color: #f2f2f2; font-weight: 500; }
+  .risk { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600; border-radius: 9999px; padding: 2px 8px; border: 1px solid; white-space: nowrap; }
+  .risk.low { color: #2fd6a1; border-color: rgba(0,217,146,0.35); background: rgba(0,217,146,0.10); }
+  .risk.mid { color: #e6b34d; border-color: rgba(230,179,77,0.35); background: rgba(230,179,77,0.12); }
+  .risk.high { color: #e5534b; border-color: rgba(229,83,75,0.35); background: rgba(229,83,75,0.12); }
+  .tablewrap { overflow-x: auto; }
+
+  /* How it works: steps + the real app. */
+  .how { display: grid; grid-template-columns: 5fr 7fr; gap: 48px; align-items: start; }
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  .steps li { position: relative; padding: 16px 0 16px 44px; border-top: 1px solid #3d3a39; font-size: 15px; color: #bdbdbd; }
+  .steps li:last-child { border-bottom: 1px solid #3d3a39; }
+  .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 17px; width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid #3d3a39; border-radius: 9999px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00d992; }
+  .steps strong { display: block; color: #f2f2f2; font-weight: 500; margin-bottom: 2px; }
+  .shot { border: 1px solid #3d3a39; border-radius: 10px; overflow: hidden; background: #1a1a1a; }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  /* B2B band */
+  .band { background: #1a1a1a; }
+  .band .wrap { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; }
+  .band ul { margin: 0 0 24px; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14.5px; color: #bdbdbd; }
+  .band li::before { content: "→"; color: #00d992; font-family: 'JetBrains Mono', monospace; margin-right: 10px; }
+  .band .seats { border: 1px solid #3d3a39; border-radius: 10px; padding: 24px; background: #101010; }
+  .band .seats .big { font-family: 'JetBrains Mono', monospace; font-size: 40px; color: #fff; line-height: 1; margin: 6px 0 4px; }
+  .band .seats .big small { font-size: 14px; color: #8b949e; }
+
+  /* Pricing as rows, not four cards. */
+  .plans { list-style: none; margin: 0; padding: 0; }
+  .plans li { display: grid; grid-template-columns: 120px 150px 1fr auto; gap: 20px; align-items: center; padding: 18px 0; border-top: 1px solid #3d3a39; }
+  .plans li:last-child { border-bottom: 1px solid #3d3a39; }
+  .plans .n { font-weight: 600; color: #f2f2f2; }
+  .plans .p { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #fff; }
+  .plans .p small { font-size: 11px; color: #8b949e; }
+  .plans .d { font-size: 14px; color: #bdbdbd; }
+  .pop { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: #101010; background: #00d992; border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: middle; }
+
+  details { border-top: 1px solid #3d3a39; }
+  details:last-of-type { border-bottom: 1px solid #3d3a39; }
+  summary { cursor: pointer; padding: 16px 0; font-size: 16px; font-weight: 500; color: #f2f2f2; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: 'JetBrains Mono', monospace; color: #00d992; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 0 0 18px; font-size: 14.5px; color: #bdbdbd; max-width: 720px; }
+
+  footer { border-top: 1px solid #3d3a39; padding: 28px 0; }
+  footer .wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #8b949e; }
+  footer a { color: #8b949e; }
+  footer .sp { margin-left: auto; }
+
   @media (max-width: 1023px) {
-    [style*="max-width: 1100px"] { padding-left: 24px !important; padding-right: 24px !important; }
-    [style*="repeat(4, 1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
-    [style*="repeat(3, 1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
+    .hero, .how, .band .wrap { grid-template-columns: 1fr; }
+    h1 { font-size: 42px; }
   }
   @media (max-width: 767px) {
-    nav { flex-wrap: wrap !important; gap: 10px !important; padding: 10px 16px !important; }
-    nav > div:nth-of-type(2) { display: none !important; }
-    nav > div:last-child { gap: 8px !important; }
-    [style*="max-width: 1100px"] { padding-left: 16px !important; padding-right: 16px !important; }
-    section[style*="max-width: 1100px"] { padding-top: 40px !important; padding-bottom: 32px !important; }
-    h1 { font-size: 32px !important; line-height: 1.14 !important; letter-spacing: -0.4px !important; }
-    h2 { font-size: 26px !important; }
-    .hero-card { display: none !important; }
-    .hero-shot { border-radius: 8px !important; }
-    [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+    .wrap { padding: 0 16px; }
+    nav .links, nav .right > a:not(.btn-primary) { display: none; }
+    nav .wrap { gap: 12px; }
+    .hero { padding: 36px 0 56px; gap: 32px; }
+    h1 { font-size: 32px; line-height: 1.14; letter-spacing: -0.4px; }
+    h2 { font-size: 24px; }
+    section { padding: 48px 0; }
+    .plans li { grid-template-columns: 1fr 1fr; }
+    .plans .d { grid-column: 1 / -1; }
+    .jobs li { grid-template-columns: 1fr auto; }
+    .jobs .src { display: none; }
   }
 </style>
-</helmet>
-<div style="min-height: 100vh; background: #101010;">
-  <!-- NAV -->
-  <nav style="display: flex; align-items: center; gap: 24px; padding: 14px 40px; border-bottom: 1px solid #3d3a39; position: sticky; top: 0; background: #101010; z-index: 10;">
-    <div style="font-weight: 700; font-size: 18px;">findajob<span style="color: #00d992;">.pro</span></div>
-    <div style="display: flex; gap: 20px; margin-left: 16px;">
-      <a href="#features" style="font-size: 13px; color: #bdbdbd;">{{ tFeatures }}</a>
-      <a href="#pricing" style="font-size: 13px; color: #bdbdbd;">{{ tPricing }}</a>
-      <a href="unternehmen.html" style="font-size: 13px; color: #bdbdbd;">{{ tCompanies }}</a>
-    </div>
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
-      <div style="display: flex; gap: 2px; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 6px; padding: 2px;">
-        <sc-for list="{{ langToggles }}" as="lg" hint-placeholder-count="3">
-          <button onClick="{{ lg.go }}" style="{{ lg.style }}" style-hover="color: #f2f2f2;">{{ lg.label }}</button>
-        </sc-for>
-      </div>
-      <a href="{{ loginHref }}" style="font-size: 13px; font-weight: 600; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 8px 16px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tLogin }}</a>
-      <button onClick="{{ startOnboarding }}" style="font-family: Inter, sans-serif; font-size: 13px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 9px 18px; cursor: pointer;" style-hover="opacity: 0.9;">{{ tSignup }}</button>
-    </div>
-  </nav>
-
-  <!-- HERO -->
-  <section style="max-width: 1100px; margin: 0 auto; padding: 72px 40px 56px; text-align: center;">
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: #00d992; margin-bottom: 18px;">{{ tEyebrow }}</div>
-    <h1 style="margin: 0 auto; max-width: 780px; font-size: 56px; font-weight: 400; line-height: 1.05; letter-spacing: -0.65px; color: #ffffff; text-wrap: pretty;">{{ tHeroTitle }}</h1>
-    <p style="max-width: 620px; margin: 22px auto 0; font-size: 17px; line-height: 1.65; color: #bdbdbd;">{{ tHeroSub }}</p>
-    <div style="display: flex; gap: 12px; justify-content: center; margin-top: 32px;">
-      <button onClick="{{ startOnboarding }}" style="font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 13px 26px; cursor: pointer;" style-hover="opacity: 0.9;">{{ tCta }}</button>
-      <a href="app.html?demo=1" style="display: inline-flex; align-items: center; font-size: 15px; font-weight: 600; color: #2fd6a1; border: 1px solid #3d3a39; border-radius: 6px; padding: 13px 26px;" style-hover="border-color: #00d992; text-decoration: none;">{{ tDemo }}</a>
-    </div>
-    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e; margin-top: 16px;">{{ tNoCard }}</div>
-    <!-- Cinematic hero: self-hosted Higgsfield render (web/img/hero.webp), CSP 'self' intact.
-         Deliberate exception to the "no illustrations" rule — landing hero only, the app stays hairline-dark. -->
-    <div class="hero-shot" style="position: relative; margin: 56px auto 0; max-width: 960px; border: 1px solid #3d3a39; border-radius: 12px; overflow: hidden; background: #1a1a1a; aspect-ratio: 16 / 9;">
-      <img src="img/hero.webp" alt="" width="2048" height="1152" style="display: block; width: 100%; height: 100%; object-fit: cover;">
-      <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,16,16,0) 55%, rgba(16,16,16,0.85) 100%);"></div>
-      <div class="hero-card" style="position: absolute; left: 4%; top: 12%; width: 220px; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(26,26,26,0.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: left;">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.07em; color: #8b949e;">REMOTEOK · 2 MIN AGO</div>
-        <div style="font-size: 13px; font-weight: 500; color: #f2f2f2; margin-top: 4px;">Senior Backend Engineer</div>
-        <span style="display: inline-block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #2fd6a1; background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35); border-radius: 9999px; padding: 2px 8px;">MATCH 84%</span>
-      </div>
-      <div class="hero-card" style="position: absolute; right: 4%; bottom: 14%; width: 220px; padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(26,26,26,0.55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); text-align: left;">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.07em; color: #8b949e;">COVER LETTER · DRAFT</div>
-        <div style="font-size: 13px; font-weight: 500; color: #f2f2f2; margin-top: 4px;">Ready for your review</div>
-        <span style="display: inline-block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #e6b34d; background: rgba(230,179,77,0.12); border: 1px solid rgba(230,179,77,0.35); border-radius: 9999px; padding: 2px 8px;">REVIEW</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- A social-proof band and two testimonials used to sit here. They were
-       removed: the product has no users, so every figure was a claim about
-       nothing, and on the German market that is UWG § 5 irreführende Werbung.
-       Do not put a usage metric or a testimonial here until it is measured and
-       attributable. (The removed copy is not repeated here on purpose — this
-       file is served publicly.) -->
-
-  <!-- FEATURES -->
-  <section id="features" style="max-width: 1100px; margin: 0 auto; padding: 40px 40px 56px;">
-    <h2 style="margin: 0 0 28px; font-size: 32px; font-weight: 400; letter-spacing: -0.9px; text-align: center;">{{ tFeaturesTitle }}</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
-      <sc-for list="{{ featureCards }}" as="f" hint-placeholder-count="6">
-        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 8px; padding: 22px;">
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00d992; margin-bottom: 10px;">{{ f.tag }}</div>
-          <div style="font-size: 16px; font-weight: 600; margin-bottom: 7px;">{{ f.title }}</div>
-          <div style="font-size: 13.5px; line-height: 1.6; color: #bdbdbd;">{{ f.desc }}</div>
-        </div>
-      </sc-for>
-    </div>
-  </section>
-
-  <!-- PRICING -->
-  <section id="pricing" style="max-width: 1100px; margin: 0 auto; padding: 24px 40px 72px;">
-    <h2 style="margin: 0 0 28px; font-size: 32px; font-weight: 400; letter-spacing: -0.9px; text-align: center;">{{ tPricingTitle }}</h2>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-      <sc-for list="{{ planCards }}" as="pl" hint-placeholder-count="4">
-        <div style="{{ pl.cardStyle }}">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="font-weight: 700; font-size: 16px;">{{ pl.name }}</div>
-            <sc-if value="{{ pl.popular }}" hint-placeholder-val="{{ false }}">
-              <span style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600; color: #101010; background: #00d992; border-radius: 20px; padding: 2px 8px;">POPULAR</span>
-            </sc-if>
-          </div>
-          <div style="margin: 12px 0;">
-            <span style="font-size: 26px; font-weight: 700;">{{ pl.price }}</span>
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;"> {{ pl.per }}</span>
-          </div>
-          <button onClick="{{ pl.select }}" style="width: 100%; font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 9px 0; cursor: pointer;" style-hover="opacity: 0.88;">{{ tChoose }}</button>
-          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 14px; border-top: 1px solid #2a2a2a; padding-top: 12px;">
-            <sc-for list="{{ pl.features }}" as="ft" hint-placeholder-count="4">
-              <div style="display: flex; gap: 7px; font-size: 11.5px; color: #bdbdbd; line-height: 1.4;"><span style="color: #00d992;">✓</span><span>{{ ft }}</span></div>
-            </sc-for>
-          </div>
-        </div>
-      </sc-for>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer style="border-top: 1px solid #3d3a39; padding: 32px 40px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-    <div style="font-weight: 700; font-size: 14px;">findajob<span style="color: #00d992;">.pro</span></div>
-    <span style="font-size: 12px; color: #8b949e;">© 2026 George Sebastian Cucuiet, Hanstedt</span>
-    <div style="margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap;">
-      <sc-for list="{{ footerLinks }}" as="fl" hint-placeholder-count="5">
-        <a href="{{ fl.href }}" style="font-size: 12px; color: #8b949e;" style-hover="color: #2fd6a1;">{{ fl.label }}</a>
-      </sc-for>
-    </div>
-  </footer>
-
-  <!-- ONBOARDING MODAL -->
-  <sc-if value="{{ onboardingOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeOnboarding }}" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 40;"></div>
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 520px; max-width: 94vw; background: #101010; border: 1px solid #3d3a39; border-radius: 12px; z-index: 41; box-shadow: 0 20px 60px rgba(0,0,0,0.7); padding: 26px 28px;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
-        <sc-for list="{{ obSteps }}" as="ob" hint-placeholder-count="3">
-          <div style="{{ ob.dotStyle }}"></div>
-        </sc-for>
-        <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;">{{ obStepLabel }}</span>
-        <button onClick="{{ closeOnboarding }}" style="background: none; border: none; color: #8b949e; font-size: 18px; cursor: pointer; line-height: 1;" style-hover="color: #f2f2f2;">✕</button>
-      </div>
-      <h3 style="margin: 0 0 6px; font-size: 20px; font-weight: 600; letter-spacing: -0.3px;">{{ obTitle }}</h3>
-      <p style="margin: 0 0 18px; font-size: 13px; color: #bdbdbd; line-height: 1.55;">{{ obSub }}</p>
-      <sc-if value="{{ obIsAccount }}" hint-placeholder-val="{{ true }}">
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <input placeholder="{{ tEmail }}" value="{{ obEmail }}" onChange="{{ onObEmail }}" style="font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 13px; background: #1a1a1a;">
-          <!-- No password field. Sign-in is a six-digit e-mail code
-               (apps/accounts: request-code / verify-code), and end-user rows are
-               created with set_unusable_password(). A password box here asked for
-               a credential the product cannot use, most likely one reused from
-               somewhere else, and then dropped it on the floor — obFinishHref only
-               ever carried lang and e-mail. Do not re-add it. -->
-          <div style="font-size: 11px; color: #8b949e; line-height: 1.5;">{{ tGdprNote }}</div>
-        </div>
-      </sc-if>
-      <sc-if value="{{ obIsCv }}" hint-placeholder-val="{{ false }}">
-        <label style="display: flex; flex-direction: column; align-items: center; gap: 8px; border: 1.5px dashed #3d3a39; border-radius: 8px; padding: 28px; cursor: pointer; background: #1a1a1a;" style-hover="border-color: #00d992;">
-          <span style="font-size: 26px;">↑</span>
-          <span style="font-size: 13px; font-weight: 600;">{{ obCvLabel }}</span>
-          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e;">PDF, DOCX · max 10 MB</span>
-          <input type="file" accept=".pdf,.doc,.docx" onChange="{{ onObCv }}" style="display: none;">
-        </label>
-      </sc-if>
-      <sc-if value="{{ obIsPrefs }}" hint-placeholder-val="{{ false }}">
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <input placeholder="{{ tTitlePh }}" value="{{ obTitleDraft }}" onChange="{{ onObTitle }}" style="font-family: Inter, sans-serif; font-size: 13.5px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 13px; background: #1a1a1a;">
-          <div style="display: flex; gap: 7px; flex-wrap: wrap;">
-            <sc-for list="{{ obLocTypes }}" as="lt" hint-placeholder-count="3">
-              <button onClick="{{ lt.toggle }}" style="{{ lt.style }}" style-hover="border-color: #00d992;">{{ lt.label }}</button>
-            </sc-for>
-          </div>
-        </div>
-      </sc-if>
-      <div style="display: flex; gap: 10px; margin-top: 22px;">
-        <sc-if value="{{ obIsLast }}" hint-placeholder-val="{{ false }}">
-          <a href="{{ obFinishHref }}" style="flex: 1; text-align: center; font-size: 13.5px; font-weight: 600; background: #00d992; color: #101010; border-radius: 6px; padding: 11px 0;" style-hover="opacity: 0.9; text-decoration: none;">{{ tFinish }}</a>
-        </sc-if>
-        <sc-if value="{{ obNotLast }}" hint-placeholder-val="{{ true }}">
-          <button onClick="{{ obNext }}" style="flex: 1; font-family: Inter, sans-serif; font-size: 13.5px; font-weight: 600; background: #00d992; color: #101010; border: none; border-radius: 6px; padding: 11px 0; cursor: pointer;" style-hover="opacity: 0.9;">{{ tContinue }}</button>
-        </sc-if>
-      </div>
-    </div>
-  </sc-if>
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script>
-class Component extends DCLogic {
-  state = { lang: 'en', onboardingOpen: false, obStep: 0, obEmail: '', obCvName: '', obTitleDraft: 'Django Developer', obLocTypes: ['Remote'] };
-  renderVals() {
-    const s = this.state;
-    const T = {
-      en: {
-        eyebrow: 'AI-ASSISTED JOB APPLICATION PLATFORM', heroTitle: 'Every job board. One tracker. Applications that write themselves.',
-        heroSub: 'findajob.pro pulls listings from RemoteOK, We Work Remotely, Wellfound and more, matches them to your skills and drafts every email and cover letter — you review, we send. GDPR-compliant, hosted in Germany.',
-        cta: 'Start free', demo: 'View live demo', companies: 'For companies', noCard: 'Free plan · no credit card required', login: 'Log in', signup: 'Sign up',
-        features: 'Features', pricing: 'Pricing', featuresTitle: 'Built like an engineering tool', pricingTitle: 'Simple pricing', choose: 'Choose plan',
-        email: 'E-mail address', continue: 'Continue', finish: 'Go to dashboard →',
-        gdprNote: 'Hosted in Germany. AI drafting may use processors outside the EU under EU Standard Contractual Clauses — see the Privacy Policy, which you accept when you sign in.',
-        titlePh: 'Desired job title, e.g. Django Developer',
-        obTitles: [['Create your account', 'One account, all your applications.'], ['Upload your CV', 'We parse it into your master profile — skills, experience, languages. You can edit everything later.'], ['What are you looking for?', 'This drives the scraping filters and skill matching from day one.']],
-        cvLabel: 'Drop your CV here or click to browse',
-        featureCards: [
-          ['modules', 'One module per platform', 'RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed — each isolated, each with its own rate limits and legal risk profile.'],
-          ['ai-engine', 'AI that adapts its tone', 'Formal email for job boards, short note for Easy Apply, personal message for startup founders — same engine, right register.'],
-          ['skill-match', 'Skill match scoring', 'Every listing scored against your profile. Apply to the 80%+ matches first.'],
-          ['documents', 'Documents with ATS scores', 'CVs, certificates, diplomas — tag-matched per job, generated into Canva templates.'],
-          ['compliance', 'German-market compliant', 'GDPR, TTDSG cookie consent, Impressum, AVV for teams. Encrypted at rest, hosted in the EU.'],
-          ['review', 'You always click send', 'High-risk platforms stay manual by design. No account bans, no spam folders.'],
-        ],
-        footer: ['Terms (AGB)', 'Privacy (Datenschutz)', 'Cookies', 'Impressum', 'Withdrawal'],
-      },
-      de: {
-        eyebrow: 'KI-GESTÜTZTE BEWERBUNGSPLATTFORM', heroTitle: 'Alle Jobbörsen. Ein Tracker. Bewerbungen, die sich selbst schreiben.',
-        heroSub: 'findajob.pro sammelt Stellen von RemoteOK, We Work Remotely, Wellfound u. a., gleicht sie mit Ihren Skills ab und entwirft jede E-Mail und jedes Anschreiben — Sie prüfen, wir versenden. DSGVO-konform, gehostet in Deutschland.',
-        cta: 'Kostenlos starten', demo: 'Live-Demo ansehen', companies: 'Für Unternehmen', noCard: 'Free-Tarif · keine Kreditkarte nötig', login: 'Anmelden', signup: 'Registrieren',
-        features: 'Funktionen', pricing: 'Preise', featuresTitle: 'Gebaut wie ein Engineering-Tool', pricingTitle: 'Einfache Preise', choose: 'Tarif wählen',
-        email: 'E-Mail-Adresse', continue: 'Weiter', finish: 'Zum Dashboard →',
-        gdprNote: 'Hosting in Deutschland. Für KI-Entwürfe können Auftragsverarbeiter außerhalb der EU eingesetzt werden, auf Basis der EU-Standardvertragsklauseln — siehe Datenschutzerklärung, die Sie bei der Anmeldung akzeptieren.',
-        titlePh: 'Wunsch-Jobtitel, z. B. Django Developer',
-        obTitles: [['Konto erstellen', 'Ein Konto, alle Ihre Bewerbungen.'], ['Lebenslauf hochladen', 'Wir lesen ihn in Ihr Master-Profil ein — Skills, Erfahrung, Sprachen. Alles später editierbar.'], ['Wonach suchen Sie?', 'Steuert Scraping-Filter und Skill-Matching vom ersten Tag an.']],
-        cvLabel: 'Lebenslauf hierher ziehen oder klicken',
-        featureCards: [
-          ['modules', 'Ein Modul pro Plattform', 'RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed — isoliert, mit eigenen Rate-Limits und Risikoprofil.'],
-          ['ai-engine', 'KI mit dem richtigen Ton', 'Formelle E-Mail für Jobbörsen, kurze Notiz für Easy Apply, persönliche Nachricht an Gründer — eine Engine, das richtige Register.'],
-          ['skill-match', 'Skill-Match-Score', 'Jede Stelle wird gegen Ihr Profil bewertet. Zuerst die 80%+-Treffer.'],
-          ['documents', 'Dokumente mit ATS-Score', 'Lebensläufe, Zertifikate, Zeugnisse — per Tag zugeordnet, generiert in Canva-Vorlagen.'],
-          ['compliance', 'Konform für den deutschen Markt', 'DSGVO, TTDSG-Consent, Impressum, AVV für Teams. Verschlüsselt, gehostet in der EU.'],
-          ['review', 'Sie klicken immer auf Senden', 'Riskante Plattformen bleiben bewusst manuell. Keine Kontosperren, kein Spam-Ordner.'],
-        ],
-        footer: ['AGB', 'Datenschutz', 'Cookies', 'Impressum', 'Widerruf'],
-      },
-      ro: {
-        eyebrow: 'PLATFORMĂ DE APLICARE ASISTATĂ DE AI', heroTitle: 'Toate site-urile de joburi. Un singur tracker. Aplicări care se scriu singure.',
-        heroSub: 'findajob.pro adună joburi din RemoteOK, We Work Remotely, Wellfound și altele, le potrivește cu skill-urile tale și redactează fiecare email și scrisoare de intenție — tu revizuiești, noi trimitem. Conform GDPR, găzduit în Germania.',
-        cta: 'Începe gratuit', demo: 'Vezi demo live', companies: 'Pentru companii', noCard: 'Plan gratuit · fără card', login: 'Autentificare', signup: 'Înregistrare',
-        features: 'Funcții', pricing: 'Prețuri', featuresTitle: 'Construit ca un tool de inginerie', pricingTitle: 'Prețuri simple', choose: 'Alege planul',
-        email: 'Adresă de e-mail', continue: 'Continuă', finish: 'Spre dashboard →',
-        gdprNote: 'Găzduit în Germania. Pentru redactarea AI pot fi folosiți procesatori din afara UE, pe baza clauzelor contractuale standard ale UE — vezi Politica de confidențialitate, pe care o accepți la autentificare.',
-        titlePh: 'Titlul dorit, ex. Django Developer',
-        obTitles: [['Creează-ți contul', 'Un cont, toate aplicările tale.'], ['Încarcă CV-ul', 'Îl transformăm în profilul tău master — skill-uri, experiență, limbi. Editezi totul ulterior.'], ['Ce cauți?', 'Setează filtrele de scraping și skill matching din prima zi.']],
-        cvLabel: 'Trage CV-ul aici sau apasă pentru a alege',
-        featureCards: [
-          ['modules', 'Un modul per platformă', 'RemoteOK, We Work Remotely, Wellfound, LinkedIn, Indeed — izolate, cu rate limits și profil de risc proprii.'],
-          ['ai-engine', 'AI cu tonul potrivit', 'Email formal pentru job boards, notă scurtă pentru Easy Apply, mesaj personal pentru founderi — același motor, registrul corect.'],
-          ['skill-match', 'Scor de potrivire', 'Fiecare job e evaluat față de profilul tău. Aplici întâi la potrivirile de 80%+.'],
-          ['documents', 'Documente cu scor ATS', 'CV-uri, certificate, diplome — asociate per job, generate în template-uri Canva.'],
-          ['compliance', 'Conform pieței germane', 'GDPR, consimțământ TTDSG, Impressum, AVV pentru echipe. Criptat, găzduit în UE.'],
-          ['review', 'Tu apeși mereu pe Trimite', 'Platformele riscante rămân manuale prin design. Fără conturi blocate, fără spam.'],
-        ],
-        footer: ['Termeni (AGB)', 'Confidențialitate', 'Cookie-uri', 'Impressum', 'Retragere'],
-      },
-    };
-    const tr = T[s.lang];
-    const plans = [
-      ['Free', '€0', false, ['10 applications / month', '20 AI generations', '2 platform modules', 'Manual send only']],
-      ['Pro', '€19', true, ['100 applications / month', '500 AI generations', 'All modules + auto-send', 'Canva templates']],
-      ['Max', '€99', false, ['1,000 applications / month', '5,000 AI generations', 'Priority AI queue', 'API access']],
-      ['Team', '€29', false, ['Per seat, min 5', 'Central admin & roles', 'Client workspaces', 'DPA (AVV) included']],
-    ];
-    const ob = tr.obTitles[s.obStep];
-    return {
-      tEyebrow: tr.eyebrow, tHeroTitle: tr.heroTitle, tHeroSub: tr.heroSub, tCta: tr.cta, tDemo: tr.demo, tNoCard: tr.noCard,
-      tLogin: tr.login, tSignup: tr.signup, tCompanies: tr.companies, tFeatures: tr.features, tPricing: tr.pricing, tFeaturesTitle: tr.featuresTitle,
-      tPricingTitle: tr.pricingTitle, tChoose: tr.choose, tEmail: tr.email, tContinue: tr.continue,
-      tFinish: tr.finish, tGdprNote: tr.gdprNote, tTitlePh: tr.titlePh,
-      langToggles: ['en', 'de', 'ro'].map(l => ({
-        label: l.toUpperCase(),
-        style: 'font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; border: none; border-radius: 4px; padding: 4px 9px; cursor: pointer; ' + (s.lang === l ? 'background: #00d992; color: #101010;' : 'background: none; color: #8b949e;'),
-        // keep <html lang> in step with the switcher — screen readers and translation
-        // tooling read the attribute, not our state
-        go: () => { document.documentElement.lang = l; this.setState({ lang: l }); },
-      })),
-      featureCards: tr.featureCards.map(([tag, title, desc]) => ({ tag, title, desc })),
-      // `statCards` and `quotes` are gone on purpose — see the comment where the
-      // markup used to be. They fed invented usage numbers and two testimonials
-      // from people who do not exist.
-      planCards: plans.map(([name, price, popular, features]) => ({
-        name, price, popular, features,
-        per: name === 'Team' ? '/ mo / seat' : '/ mo',
-        cardStyle: 'background: #101010; border: ' + (popular ? '1px solid rgba(0,217,146,0.5)' : '1px solid #3d3a39') + '; border-radius: 10px; padding: 18px;',
-        select: () => this.setState({ onboardingOpen: true, obStep: 0 }),
-      })),
-      // Deep-link each footer entry at its own legal document. Every link used to point at
-      // bare app.html, which dropped the visitor on the Dashboard — so the Impressum and the
-      // Datenschutzerklärung were effectively unreachable from the public page.
-      footerLinks: tr.footer.map((label, i) => ({
-        label,
-        href: 'app.html#legal-' + ['terms', 'privacy', 'cookies', 'impressum', 'withdrawal'][i],
-      })),
-      // Carry the chosen language into the sign-in screen, and hand it the address
-      // the sign-up modal already collected — otherwise the visitor types the same
-      // e-mail twice in a row. auth.html only PREFILLS it; nothing is sent until
-      // the visitor presses the button there.
-      loginHref: 'auth.html?lang=' + s.lang,
-      obFinishHref: 'auth.html?lang=' + s.lang +
-        (s.obEmail.trim() ? '&email=' + encodeURIComponent(s.obEmail.trim()) : ''),
-      startOnboarding: () => this.setState({ onboardingOpen: true, obStep: 0 }),
-      closeOnboarding: () => this.setState({ onboardingOpen: false }),
-      onboardingOpen: s.onboardingOpen,
-      obSteps: [0, 1, 2].map(i => ({ dotStyle: 'height: 4px; flex: 1; max-width: 60px; border-radius: 2px; background: ' + (i <= s.obStep ? '#00d992' : '#2a2a2a') + ';' })),
-      obStepLabel: (s.obStep + 1) + ' / 3',
-      obTitle: ob[0], obSub: ob[1],
-      obIsAccount: s.obStep === 0, obIsCv: s.obStep === 1, obIsPrefs: s.obStep === 2,
-      obIsLast: s.obStep === 2, obNotLast: s.obStep < 2,
-      obEmail: s.obEmail,
-      onObEmail: e => this.setState({ obEmail: e.target.value }),
-      obCvLabel: s.obCvName || tr.cvLabel,
-      onObCv: e => { const f = e.target.files && e.target.files[0]; if (f) this.setState({ obCvName: '✓ ' + f.name, obStep: 2 }); },
-      obTitleDraft: s.obTitleDraft,
-      onObTitle: e => this.setState({ obTitleDraft: e.target.value }),
-      obLocTypes: ['On-site', 'Hybrid', 'Remote'].map(o => {
-        const on = s.obLocTypes.includes(o);
-        return {
-          label: (on ? '✓ ' : '') + o,
-          style: 'font-family: Inter, sans-serif; font-size: 12.5px; font-weight: 600; border-radius: 20px; padding: 7px 16px; cursor: pointer; border: 1px solid ' + (on ? 'rgba(0,217,146,0.35)' : '#3d3a39') + '; ' + (on ? 'background: rgba(0,217,146,0.10); color: #2fd6a1;' : 'background: #101010; color: #8b949e;'),
-          toggle: () => this.setState(st => ({ obLocTypes: on ? st.obLocTypes.filter(x => x !== o) : [...st.obLocTypes, o] })),
-        };
-      }),
-      obNext: () => this.setState(st => ({ obStep: Math.min(2, st.obStep + 1) })),
-    };
-  }
-}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"findajob.pro","applicationCategory":"BusinessApplication","operatingSystem":"Web","inLanguage":["de","en","ro"],"url":"https://findajob.pro/","description":"Jobbörsen bündeln, Stellen gegen das Profil bewerten, Anschreiben pro Plattform entwerfen. Manueller Review vor jedem Versand.","offers":[{"@type":"Offer","price":"0","priceCurrency":"EUR","name":"Free"},{"@type":"Offer","price":"19","priceCurrency":"EUR","name":"Pro"},{"@type":"Offer","price":"29","priceCurrency":"EUR","name":"Team, pro Sitz"}]}
 </script>
-<script type="module">
-  // Spec §8: api.js is the single owner of HTTP, and the csrftoken cookie is
-  // primed here as well as on auth.html — so the first POST of the sign-in flow
-  // always carries a token, even if auth.html's own bootstrap is still in flight.
-  import { bootstrapCsrf } from './api.js';
-  bootstrapCsrf();
+</head>
+<body>
+<nav aria-label="Hauptnavigation">
+  <div class="wrap">
+    <a class="brand" href="/">findajob<span>.pro</span></a>
+    <div class="links">
+      <a href="#platforms" data-i="nav.platforms">Plattformen</a>
+      <a href="#how" data-i="nav.how">So funktioniert es</a>
+      <a href="#pricing" data-i="nav.pricing">Preise</a>
+      <a href="unternehmen.html" data-i="nav.b2b">Für Unternehmen</a>
+    </div>
+    <div class="right">
+      <div class="lang" role="group" aria-label="Sprache">
+        <button type="button" data-lang="de" aria-pressed="true">DE</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="ro" aria-pressed="false">RO</button>
+      </div>
+      <a class="btn btn-sm" href="auth.html" data-i="nav.login">Anmelden</a>
+      <a class="btn btn-sm btn-primary" href="auth.html" data-i="nav.start">Kostenlos starten</a>
+    </div>
+  </div>
+</nav>
 
-  // Analytics is gated: initAnalytics() only revives GA for a visitor who already
-  // accepted, and the banner is what grants it in the first place. Nothing is
-  // requested from googletagmanager.com before that click — see analytics.js.
+<main>
+  <div class="wrap">
+    <div class="hero" id="hero" data-mode="b2c">
+      <div>
+        <div class="seg" role="group" aria-label="Zielgruppe">
+          <button type="button" data-mode="b2c" aria-pressed="true" data-i="seg.b2c">Für Bewerber</button>
+          <button type="button" data-mode="b2b" aria-pressed="false" data-i="seg.b2b">Für Unternehmen</button>
+        </div>
+
+        <h1 data-aud="b2c" data-i="h1.b2c">Jede Jobbörse. Ein Tracker. Bewerbungen, die du nur noch prüfst.</h1>
+        <p class="sub" data-aud="b2c" data-i="sub.b2c">Stellen aus RemoteOK, We Work Remotely, Wellfound, LinkedIn und Indeed, gegen dein Profil bewertet, Anschreiben pro Plattform entworfen. Du klickst auf Senden.</p>
+        <div class="ctas" data-aud="b2c">
+          <a class="btn btn-primary" href="auth.html" data-i="cta.start">Kostenlos starten</a>
+          <a class="btn" href="app.html?demo=1" data-i="cta.demo">Live-Demo ansehen</a>
+        </div>
+
+        <h1 data-aud="b2b" data-i="h1.b2b">Der Bewerbungs-Workflow Ihrer Kandidaten. Unter Ihrer Marke.</h1>
+        <p class="sub" data-aud="b2b" data-i="sub.b2b">Client-Workspaces für Recruiter, Coaches, Bootcamps und Outplacement. Jeder Kandidat ein Funnel, Sie sehen alle. AVV inklusive, Hosting in Deutschland.</p>
+        <div class="ctas" data-aud="b2b">
+          <a class="btn btn-primary" href="unternehmen.html#demo" data-i="cta.b2bdemo">Demo anfragen</a>
+          <a class="btn" href="unternehmen.html" data-i="cta.b2bmore">Angebot ansehen</a>
+        </div>
+      </div>
+
+      <div class="try" id="try" aria-label="Probier es aus">
+        <div class="try-head">
+          <strong data-i="try.title">Probier es. Ohne Konto.</strong>
+          <span class="eyebrow" data-i="try.step">1 Skills · 2 Stelle wählen</span>
+        </div>
+        <div class="try-skills">
+          <label for="skills" data-i="try.skills">Skills</label>
+          <input id="skills" value="Python, Django, Postgres" autocomplete="off" spellcheck="false">
+        </div>
+        <ul class="jobs" id="jobs" role="listbox" aria-label="Stellen"></ul>
+        <div class="out" id="out"><p class="hint" data-i="try.hint">Wähle eine Stelle. Du siehst den Match zu deinen Skills und den Entwurf, den findajob im passenden Ton schreibt.</p></div>
+        <div class="try-foot">
+          <small data-i="try.note">Beispieldaten. Im Produkt: dein Lebenslauf, echte Stellen, dein Postfach.</small>
+          <a class="btn btn-sm" href="app.html?demo=1" data-i="try.open">Ganze App öffnen</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="platforms">
+    <div class="wrap">
+      <h2 data-i="pl.h2">Nicht jede Plattform verträgt Automatisierung. Wir wissen, welche.</h2>
+      <p class="intro" data-i="pl.intro">Andere Tools versprechen „Auto-Apply überall" und kosten dich das LinkedIn-Konto. findajob hat pro Quelle eine Regel, und hält sie ein.</p>
+      <div class="tablewrap"><table class="ledger">
+        <thead><tr><th data-i="pl.th1">Plattform</th><th data-i="pl.th2">Quelle</th><th data-i="pl.th3">Risiko</th><th data-i="pl.th4">Was findajob tut</th></tr></thead>
+        <tbody>
+          <tr><td>RemoteOK, We Work Remotely</td><td class="mono" data-i="pl.r1s">offizieller Feed</td><td><span class="risk low" data-i="pl.low">niedrig</span></td><td data-i="pl.r1d">Stellen laden, Anschreiben entwerfen, nach deinem Review per E-Mail aus deinem Postfach senden.</td></tr>
+          <tr><td>Wellfound</td><td class="mono" data-i="pl.r2s">API, begrenzt</td><td><span class="risk mid" data-i="pl.mid">mittel</span></td><td data-i="pl.r2d">Persönliche Gründer-Nachricht entwerfen. Du sendest sie selbst.</td></tr>
+          <tr><td>LinkedIn</td><td class="mono" data-i="pl.r3s">Browser</td><td><span class="risk high" data-i="pl.high">hoch</span></td><td data-i="pl.r3d">Kurze Nachricht entwerfen, Easy Apply nie automatisch auslösen. Kontosperre ist real.</td></tr>
+          <tr><td>Indeed</td><td class="mono" data-i="pl.r4s">Feed oder Einfügen</td><td><span class="risk high" data-i="pl.high2">hoch</span></td><td data-i="pl.r4d">Kein Scraping (Rechtsrisiko). Stelle einfügen, Entwurf erhalten, selbst bewerben.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2 data-i="how.h2">Vom Feed zur gesendeten Bewerbung</h2>
+      <div class="how">
+        <ol class="steps">
+          <li><strong data-i="how.s1t">Stellen laufen ein</strong><span data-i="how.s1d">Ein isoliertes Modul pro Plattform, eigenes Tageslimit, eigenes Risiko-Profil. Jede Stelle bekommt einen Match-Score gegen dein Profil.</span></li>
+          <li><strong data-i="how.s2t">findajob entwirft</strong><span data-i="how.s2d">E-Mail plus Anschreiben für Feeds, kurze Notiz für LinkedIn, Gründer-Nachricht für Wellfound. Lebenslauf-Varianten in DE, EN, RO.</span></li>
+          <li><strong data-i="how.s3t">Du prüfst und sendest</strong><span data-i="how.s3d">Review-Drawer, Anhänge, dann Senden aus deinem eigenen Postfach. Antworten landen bei dir, nicht bei uns.</span></li>
+        </ol>
+        <figure class="shot" style="margin:0">
+          <img src="img/app-dashboard.webp" width="1400" height="880" alt="findajob.pro Dashboard: Stellen aus fünf Plattformen mit Match-Score, Gehalt und Status in einer Tabelle" loading="lazy">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="b2b">
+    <div class="wrap">
+      <div>
+        <h2 data-i="b2b.h2">Für Recruiter, Coaches, Bootcamps, Outplacement</h2>
+        <ul>
+          <li data-i="b2b.l1">Ein Workspace pro Kandidat, Sie als Admin mit Rollen</li>
+          <li data-i="b2b.l2">Funnel-Zahlen pro Person statt Excel-Listen</li>
+          <li data-i="b2b.l3">AVV inklusive, Hosting in Deutschland, Impressum in Hamburg</li>
+          <li data-i="b2b.l4">White-Label unter Ihrer Domain auf Anfrage</li>
+        </ul>
+        <a class="btn btn-primary" href="unternehmen.html#demo" data-i="cta.b2bdemo2">Demo anfragen</a>
+      </div>
+      <div class="seats">
+        <div class="eyebrow" data-i="b2b.team">Team-Tarif</div>
+        <div class="big">29 € <small data-i="b2b.seat">/ Sitz / Monat</small></div>
+        <div class="mono" style="font-size:11.5px;color:#8b949e" data-i="b2b.min">mind. 5 Sitze · monatlich kündbar · inkl. USt.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <h2 data-i="pr.h2">Preise in Euro, inkl. USt.</h2>
+      <ul class="plans">
+        <li><span class="n">Free</span><span class="p">0 € <small data-i="pr.mo">/ Monat</small></span><span class="d" data-i="pr.free">10 Bewerbungen, 20 KI-Entwürfe, 2 Plattformen, nur manueller Versand</span><a class="btn btn-sm" href="auth.html" data-i="pr.cta">Starten</a></li>
+        <li><span class="n">Pro<span class="pop" data-i="pr.pop">BELIEBT</span></span><span class="p">19 € <small data-i="pr.mo2">/ Monat</small></span><span class="d" data-i="pr.pro">100 Bewerbungen, 500 KI-Entwürfe, alle Plattformen, Auto-Versand bei Feeds</span><a class="btn btn-sm" href="auth.html" data-i="pr.cta2">Starten</a></li>
+        <li><span class="n">Max</span><span class="p">99 € <small data-i="pr.mo3">/ Monat</small></span><span class="d" data-i="pr.max">1.000 Bewerbungen, 5.000 KI-Entwürfe, Prioritäts-Queue, API</span><a class="btn btn-sm" href="auth.html" data-i="pr.cta3">Starten</a></li>
+        <li><span class="n">Team</span><span class="p">29 € <small data-i="pr.seat">/ Sitz</small></span><span class="d" data-i="pr.team">Ab 5 Sitzen. Admin und Rollen, Client-Workspaces, AVV</span><a class="btn btn-sm" href="unternehmen.html#demo" data-i="pr.ctab">Demo</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2 data-i="faq.h2">Was Bewerber in Deutschland zuerst fragen</h2>
+      <details><summary data-i="faq.q1">Wo liegen meine Daten?</summary><p data-i="faq.a1">Auf Servern in Deutschland (IONOS). Dokumente sind verschlüsselt gespeichert. Für KI-Entwürfe können Auftragsverarbeiter außerhalb der EU eingesetzt werden, auf Basis der EU-Standardvertragsklauseln. Details in der Datenschutzerklärung.</p></details>
+      <details><summary data-i="faq.q2">Sendet findajob Bewerbungen ohne mein Zutun?</summary><p data-i="faq.a2">Nur wenn du es für eine Feed-Quelle ausdrücklich einschaltest. LinkedIn, Indeed und Wellfound sind immer manuell: du kopierst, du klickst. Ein Review-Schritt ist auf jeder Plattform Pflicht.</p></details>
+      <details><summary data-i="faq.q3">Warum aus meinem eigenen Postfach?</summary><p data-i="faq.a3">Weil eine Bewerbung „im Auftrag" von fremder Infrastruktur an SPF und DKIM scheitert und im Spam landet. Aus deinem Postfach liegt sie im Gesendet-Ordner, und die Antwort kommt zu dir.</p></details>
+      <details><summary data-i="faq.q4">Kann ich jederzeit kündigen?</summary><p data-i="faq.a4">Ja, zum Ende des Abrechnungszeitraums. 14 Tage Widerrufsrecht. Der Free-Tarif läuft ohne Karte und ohne Ablauf.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 George Sebastian Cucuiet, Hanstedt</span>
+    <a href="app.html#legal-terms">AGB</a>
+    <a href="app.html#legal-privacy" data-i="ft.privacy">Datenschutz</a>
+    <a href="app.html#legal-cookies">Cookies</a>
+    <a href="app.html#legal-impressum">Impressum</a>
+    <a href="app.html#legal-withdrawal" data-i="ft.withdrawal">Widerruf</a>
+    <a class="sp" href="unternehmen.html" data-i="nav.b2b2">Für Unternehmen</a>
+  </div>
+</footer>
+
+<script type="module">
+  import { JOBS, PROFILE, skillMatch, generateContent } from './api.js';
   import { initAnalytics } from './analytics.js';
   import { mountConsentBanner } from './consent-banner.js';
   initAnalytics();
   mountConsentBanner();
+
+  // ---- i18n: German is in the markup; EN/RO overwrite by data-i key. ----
+  const LANG_KEY = 'findajob.lang';
+  const T = {
+    en: {
+      'nav.platforms':'Platforms','nav.how':'How it works','nav.pricing':'Pricing','nav.b2b':'For companies','nav.b2b2':'For companies','nav.login':'Log in','nav.start':'Start free',
+      'seg.b2c':'For job seekers','seg.b2b':'For companies',
+      'h1.b2c':'Every job board. One tracker. Applications you only review.',
+      'sub.b2c':'Jobs from RemoteOK, We Work Remotely, Wellfound, LinkedIn and Indeed, scored against your profile, cover letters drafted per platform. You click send.',
+      'cta.start':'Start free','cta.demo':'View live demo',
+      'h1.b2b':'Your candidates’ application workflow. Under your brand.',
+      'sub.b2b':'Client workspaces for recruiters, coaches, bootcamps and outplacement. One funnel per candidate, you see them all. DPA included, hosted in Germany.',
+      'cta.b2bdemo':'Request a demo','cta.b2bmore':'See the offer','cta.b2bdemo2':'Request a demo',
+      'try.title':'Try it. No account.','try.step':'1 skills · 2 pick a job','try.skills':'Skills',
+      'try.hint':'Pick a job. You get the match against your skills and the draft findajob writes in the right register.',
+      'try.note':'Sample data. In the product: your CV, real listings, your mailbox.','try.open':'Open the full app',
+      'pl.h2':'Not every platform tolerates automation. We know which.',
+      'pl.intro':'Other tools promise “auto-apply everywhere” and cost you your LinkedIn account. findajob has one rule per source, and keeps it.',
+      'pl.th1':'Platform','pl.th2':'Source','pl.th3':'Risk','pl.th4':'What findajob does',
+      'pl.r1s':'official feed','pl.low':'low','pl.r1d':'Load jobs, draft the application, send by email from your own mailbox after your review.',
+      'pl.r2s':'API, limited','pl.mid':'medium','pl.r2d':'Draft a personal founder message. You send it yourself.',
+      'pl.r3s':'browser','pl.high':'high','pl.r3d':'Draft a short note, never trigger Easy Apply automatically. Account bans are real.',
+      'pl.r4s':'feed or paste','pl.high2':'high','pl.r4d':'No scraping (legal risk). Paste the listing, get a draft, apply yourself.',
+      'how.h2':'From feed to sent application',
+      'how.s1t':'Jobs come in','how.s1d':'One isolated module per platform, its own daily limit, its own risk profile. Every listing gets a match score against your profile.',
+      'how.s2t':'findajob drafts','how.s2d':'Email plus cover letter for feeds, a short note for LinkedIn, a founder message for Wellfound. CV variants in DE, EN, RO.',
+      'how.s3t':'You review and send','how.s3d':'Review drawer, attachments, then send from your own mailbox. Replies reach you, not us.',
+      'b2b.h2':'For recruiters, coaches, bootcamps, outplacement',
+      'b2b.l1':'One workspace per candidate, you as admin with roles','b2b.l2':'Funnel numbers per person instead of spreadsheets','b2b.l3':'DPA included, hosted in Germany, Impressum in Hamburg','b2b.l4':'White-label under your domain on request',
+      'b2b.team':'Team plan','b2b.seat':'/ seat / month','b2b.min':'min. 5 seats · cancel monthly · incl. VAT',
+      'pr.h2':'Prices in euro, incl. VAT','pr.mo':'/ month','pr.mo2':'/ month','pr.mo3':'/ month','pr.seat':'/ seat','pr.pop':'POPULAR',
+      'pr.free':'10 applications, 20 AI drafts, 2 platforms, manual send only','pr.pro':'100 applications, 500 AI drafts, all platforms, auto-send on feeds','pr.max':'1,000 applications, 5,000 AI drafts, priority queue, API','pr.team':'From 5 seats. Admin and roles, client workspaces, DPA',
+      'pr.cta':'Start','pr.cta2':'Start','pr.cta3':'Start','pr.ctab':'Demo',
+      'faq.h2':'What job seekers in Germany ask first',
+      'faq.q1':'Where is my data?','faq.a1':'On servers in Germany (IONOS). Documents are stored encrypted. AI drafting may use processors outside the EU under EU Standard Contractual Clauses. Details in the Privacy Policy.',
+      'faq.q2':'Does findajob send applications without me?','faq.a2':'Only if you explicitly enable it for a feed source. LinkedIn, Indeed and Wellfound are always manual: you copy, you click. A review step is mandatory on every platform.',
+      'faq.q3':'Why from my own mailbox?','faq.a3':'Because an application sent “on behalf of” from foreign infrastructure fails SPF and DKIM and lands in spam. From your mailbox it sits in your Sent folder, and the reply comes to you.',
+      'faq.q4':'Can I cancel anytime?','faq.a4':'Yes, at the end of the billing period. 14-day withdrawal right. The Free plan runs without a card and without expiry.',
+      'ft.privacy':'Privacy','ft.withdrawal':'Withdrawal',
+    },
+    ro: {
+      'nav.platforms':'Platforme','nav.how':'Cum funcționează','nav.pricing':'Prețuri','nav.b2b':'Pentru companii','nav.b2b2':'Pentru companii','nav.login':'Autentificare','nav.start':'Începe gratuit',
+      'seg.b2c':'Pentru candidați','seg.b2b':'Pentru companii',
+      'h1.b2c':'Toate site-urile de joburi. Un singur tracker. Aplicații pe care doar le verifici.',
+      'sub.b2c':'Joburi din RemoteOK, We Work Remotely, Wellfound, LinkedIn și Indeed, evaluate față de profilul tău, scrisori de intenție redactate per platformă. Tu apeși pe Trimite.',
+      'cta.start':'Începe gratuit','cta.demo':'Vezi demo live',
+      'h1.b2b':'Fluxul de aplicare al candidaților tăi. Sub brandul tău.',
+      'sub.b2b':'Spații de lucru per client pentru recrutori, coachi, bootcamp-uri și outplacement. Un funnel per candidat, tu le vezi pe toate. AVV inclus, găzduire în Germania.',
+      'cta.b2bdemo':'Solicită demo','cta.b2bmore':'Vezi oferta','cta.b2bdemo2':'Solicită demo',
+      'try.title':'Încearcă. Fără cont.','try.step':'1 skills · 2 alege jobul','try.skills':'Skills',
+      'try.hint':'Alege un job. Vezi potrivirea cu skill-urile tale și draftul pe care findajob îl scrie în tonul potrivit.',
+      'try.note':'Date exemplu. În produs: CV-ul tău, joburi reale, căsuța ta de e-mail.','try.open':'Deschide aplicația',
+      'pl.h2':'Nu orice platformă suportă automatizare. Noi știm care.',
+      'pl.intro':'Alte tool-uri promit „auto-apply peste tot" și te costă contul de LinkedIn. findajob are o regulă per sursă și o respectă.',
+      'pl.th1':'Platformă','pl.th2':'Sursă','pl.th3':'Risc','pl.th4':'Ce face findajob',
+      'pl.r1s':'feed oficial','pl.low':'scăzut','pl.r1d':'Încarcă joburile, redactează aplicația, trimite prin e-mail din căsuța ta după verificarea ta.',
+      'pl.r2s':'API, limitat','pl.mid':'mediu','pl.r2d':'Redactează un mesaj personal către fondator. Îl trimiți tu.',
+      'pl.r3s':'browser','pl.high':'ridicat','pl.r3d':'Redactează o notă scurtă, nu declanșează niciodată Easy Apply automat. Suspendarea contului e reală.',
+      'pl.r4s':'feed sau lipire','pl.high2':'ridicat','pl.r4d':'Fără scraping (risc legal). Lipești anunțul, primești draftul, aplici tu.',
+      'how.h2':'De la feed la aplicația trimisă',
+      'how.s1t':'Joburile intră','how.s1d':'Un modul izolat per platformă, limită zilnică proprie, profil de risc propriu. Fiecare anunț primește un scor de potrivire cu profilul tău.',
+      'how.s2t':'findajob redactează','how.s2d':'E-mail plus scrisoare de intenție pentru feed-uri, notă scurtă pentru LinkedIn, mesaj către fondator pentru Wellfound. Variante de CV în DE, EN, RO.',
+      'how.s3t':'Tu verifici și trimiți','how.s3d':'Drawer de review, atașamente, apoi trimitere din propria căsuță. Răspunsurile ajung la tine, nu la noi.',
+      'b2b.h2':'Pentru recrutori, coachi, bootcamp-uri, outplacement',
+      'b2b.l1':'Un spațiu de lucru per candidat, tu ca admin cu roluri','b2b.l2':'Cifre de funnel per persoană în loc de Excel','b2b.l3':'AVV inclus, găzduire în Germania, Impressum în Hamburg','b2b.l4':'White-label sub domeniul tău, la cerere',
+      'b2b.team':'Tarif Team','b2b.seat':'/ loc / lună','b2b.min':'min. 5 locuri · anulare lunară · TVA inclus',
+      'pr.h2':'Prețuri în euro, TVA inclus','pr.mo':'/ lună','pr.mo2':'/ lună','pr.mo3':'/ lună','pr.seat':'/ loc','pr.pop':'POPULAR',
+      'pr.free':'10 aplicații, 20 drafturi AI, 2 platforme, doar trimitere manuală','pr.pro':'100 aplicații, 500 drafturi AI, toate platformele, auto-trimitere la feed-uri','pr.max':'1.000 aplicații, 5.000 drafturi AI, coadă prioritară, API','pr.team':'De la 5 locuri. Admin și roluri, spații per client, AVV',
+      'pr.cta':'Începe','pr.cta2':'Începe','pr.cta3':'Începe','pr.ctab':'Demo',
+      'faq.h2':'Ce întreabă candidații din Germania mai întâi',
+      'faq.q1':'Unde sunt datele mele?','faq.a1':'Pe servere în Germania (IONOS). Documentele sunt stocate criptat. Pentru drafturile AI pot fi folosiți procesatori din afara UE, pe baza clauzelor contractuale standard UE. Detalii în Politica de confidențialitate.',
+      'faq.q2':'Trimite findajob aplicații fără mine?','faq.a2':'Doar dacă activezi explicit pentru o sursă de tip feed. LinkedIn, Indeed și Wellfound sunt mereu manuale: tu copiezi, tu apeși. Pasul de review e obligatoriu pe orice platformă.',
+      'faq.q3':'De ce din propria căsuță de e-mail?','faq.a3':'Pentru că o aplicație trimisă „în numele tău" de pe infrastructură străină pică la SPF și DKIM și ajunge în spam. Din căsuța ta stă în Trimise, iar răspunsul vine la tine.',
+      'faq.q4':'Pot anula oricând?','faq.a4':'Da, la sfârșitul perioadei de facturare. Drept de retragere 14 zile. Planul Free rulează fără card și fără expirare.',
+      'ft.privacy':'Confidențialitate','ft.withdrawal':'Retragere',
+    },
+  };
+  const de = {};
+  document.querySelectorAll('[data-i]').forEach(el => { de[el.dataset.i] = el.textContent; });
+  T.de = de;
+  function setLang(l) {
+    if (!T[l]) l = 'de';
+    document.querySelectorAll('[data-i]').forEach(el => { const s = T[l][el.dataset.i]; if (s != null) el.textContent = s; });
+    document.documentElement.lang = l;
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === l)));
+    try { localStorage.setItem(LANG_KEY, l); } catch {}
+    renderJobs();
+  }
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+  // ---- audience toggle ----
+  const hero = document.getElementById('hero');
+  hero.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    hero.dataset.mode = b.dataset.mode;
+    hero.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+
+  // ---- try-it: real skillMatch + generateContent on the demo fixtures ----
+  const SRC = { remoteok: 'RemoteOK', wwr: 'We Work Remotely', linkedin: 'LinkedIn', wellfound: 'Wellfound', indeed: 'Indeed' };
+  const list = document.getElementById('jobs'), out = document.getElementById('out'), skillsEl = document.getElementById('skills');
+  const sample = JOBS.filter(j => j.status === 'pending').slice(0, 5);
+  let selected = null, typing = 0;
+  const profile = () => ({ ...PROFILE, skills: skillsEl.value.split(',').map(s => s.trim()).filter(Boolean) });
+  const cls = s => s >= 66 ? 'm-hi' : s >= 34 ? 'm-mid' : 'm-lo';
+
+  function renderJobs() {
+    const p = profile();
+    list.innerHTML = '';
+    for (const j of sample) {
+      const { score } = skillMatch(j, p);
+      const li = document.createElement('li');
+      li.setAttribute('role', 'option'); li.tabIndex = 0;
+      li.setAttribute('aria-selected', String(selected === j));
+      li.innerHTML = `<div><div class="t"></div><div class="c"></div></div><span class="src"></span><span class="match ${cls(score)}">${score}%</span>`;
+      li.querySelector('.t').textContent = j.title; li.querySelector('.c').textContent = j.company; li.querySelector('.src').textContent = SRC[j.platform] || j.platform;
+      const pick = () => { selected = j; renderJobs(); renderOut(); };
+      li.addEventListener('click', pick);
+      li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      list.appendChild(li);
+    }
+  }
+  function renderOut() {
+    const p = profile(), j = selected;
+    const { score, matched, missing } = skillMatch(j, p);
+    const text = generateContent(j, p).message.split('\n').slice(0, 6).join('\n');
+    out.innerHTML = '';
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<span class="match ${cls(score)}" style="min-width:0;margin-right:6px">${score}%</span>`;
+    for (const t of matched) { const s = document.createElement('span'); s.className = 'tag ok'; s.textContent = t; row.appendChild(s); }
+    for (const t of missing) { const s = document.createElement('span'); s.className = 'tag gap'; s.textContent = t; row.appendChild(s); }
+    out.appendChild(row);
+    const pre = document.createElement('pre'); out.appendChild(pre);
+    // Typewriter = "this is being generated", not decoration. Reduced-motion prints at once.
+    const instant = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const id = ++typing;
+    if (instant) { pre.textContent = text; return; }
+    pre.classList.add('cursor');
+    let i = 0;
+    (function tick() {
+      if (id !== typing) return;
+      pre.textContent = text.slice(0, i += 3);
+      if (i < text.length) setTimeout(tick, 12); else pre.classList.remove('cursor');
+    })();
+  }
+  skillsEl.addEventListener('input', () => { renderJobs(); if (selected) renderOut(); });
+
+  let initial = 'de';
+  try { initial = localStorage.getItem(LANG_KEY) || 'de'; } catch {}
+  setLang(initial);
 </script>
 </body>
 </html>
