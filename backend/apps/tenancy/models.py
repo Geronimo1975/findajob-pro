@@ -334,3 +334,9 @@ def unique_org_slug(name: str, *, max_attempts: int = 50) -> str:
             break
         candidate = f"{base}-{suffix}"
     return candidate[:MAX_ORG_SLUG_LENGTH]
+
+
+# Split-models module: McpToken lives in apps/tenancy/mcp/models.py but belongs
+# to this app's migration history. The import must stay at the bottom so the
+# mcp module can import OrgScopedManager without a cycle.
+from apps.tenancy.mcp.models import McpToken  # noqa: E402,F401

@@ -227,6 +227,18 @@ class AdminTestCase(TestCase):
             cls.job_document, through_defaults={"position": 0}
         )
 
+        from apps.tenancy.mcp.models import McpToken, generate_token
+
+        _raw, prefix, digest = generate_token()
+        cls.mcp_token = McpToken.objects.create(
+            org=cls.org,
+            user=cls.member,
+            name="laptop",
+            prefix=prefix,
+            token_hash=digest,
+            scopes=["jobs:read"],
+        )
+
     def setUp(self) -> None:
         super().setUp()
         self.client.force_login(self.superuser)
