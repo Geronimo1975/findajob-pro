@@ -54,3 +54,4 @@ skills-lock.json
 .claude/skills/search-docs
 .claude/skills/transformation-builder
 .claude/skills/upload-files
+.worktrees/
