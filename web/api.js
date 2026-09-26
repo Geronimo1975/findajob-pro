@@ -21,6 +21,7 @@ export const ENDPOINTS = {
   org: '/org/',                             // GET org, POST /org/invite/ {email, role}
   billing: '/billing/',                     // GET {plan, usage}, POST /billing/subscribe/ {plan, cycle}
   skillmatch: '/jobs/:id/skill-match/',     // GET {score, matched, missing}
+  mcpTokens: '/mcp-tokens/',                // GET list, POST {name, scopes, expires_in_days} -> {token once}, DELETE /mcp-tokens/:id/
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,6 +128,16 @@ export const getJobs = (params = {}) => {
   return request(ENDPOINTS.jobs + (qs ? '?' + qs : ''));
 };
 
+// --- MCP personal access tokens ("Connected assistants" in Settings). Live
+// calls only, like getJobs/getPlatforms: the demo branch lives in app.html,
+// which renders MCP_TOKENS below when there is no session and never calls these.
+// The POST response is the only time the plaintext `token` is ever returned.
+export const MCP_SCOPES = ['jobs:read', 'applications:read', 'applications:write', 'applications:send'];
+
+export const listMcpTokens = () => request(ENDPOINTS.mcpTokens);
+export const createMcpToken = (body) => request(ENDPOINTS.mcpTokens, { method: 'POST', body });
+export const revokeMcpToken = (id) => request(`${ENDPOINTS.mcpTokens}${id}/`, { method: 'DELETE' });
+
 // SaaS plans — Claude.ai-style tier structure (per-seat for Team/Enterprise)
 export const PLANS = [
   { id: 'free',       name: 'Free',       monthly: 0,   yearly: 0,   seat: false, tagline: 'Try the tracker',
@@ -165,6 +176,12 @@ export const INTEGRATIONS = [
   { id: 'whatsapp',  name: 'WhatsApp',   category: 'Notifications',   purpose: 'WhatsApp Business API alerts for high-priority job matches.', connected: false, key_hint: null, used_by: 'n8n workflows' },
   { id: 'jotform',   name: 'Jotform',    category: 'Forms',           purpose: 'Pre-fill external application forms from your master profile.', connected: false, key_hint: null, used_by: 'Apply pipeline' },
   { id: 'slack',     name: 'Slack',      category: 'Notifications',   purpose: 'Channel alerts on skill match + daily aggregated digest.', connected: false, key_hint: null, used_by: 'n8n workflows' },
+];
+
+// Demo fixture for the Connected assistants card — same shape as GET /mcp-tokens/.
+export const MCP_TOKENS = [
+  { id: 1, name: 'Claude Desktop', prefix: 'fjp_demo1234', scopes: MCP_SCOPES.slice(0, 3),
+    expires_at: null, last_used_at: null, status: 'active', created_at: '2026-09-01T09:00:00Z' },
 ];
 
 export const PLATFORMS = [

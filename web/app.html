@@ -68,6 +68,8 @@
   }
   @media (max-width: 560px) {
     [style*="repeat(4, 1fr)"], [style*="repeat(3, 1fr)"] { grid-template-columns: 1fr !important; }
+    /* Connected assistants reveal: token/command block stacks above its Copy button */
+    [style*="grid-template-columns: 1fr auto"] { grid-template-columns: 1fr !important; }
     main > header h1 { font-size: 20px !important; }
   }
 </style>
@@ -764,6 +766,95 @@
             <div style="font-size: 12.5px; color: #8b949e; margin-top: 10px;">{{ pc.note }}</div>
           </div>
         </sc-for>
+        <!-- Connected assistants: MCP personal access tokens (GET/POST/DELETE /api/v1/mcp-tokens/) -->
+        <div style="background: #101010; border: 1px solid #3d3a39; border-radius: 10px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; margin-top: 12px; max-width: 100%; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-family: Inter, sans-serif; font-weight: 600; font-size: 15.5px;">Connected assistants</div>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; border: 1px solid #3d3a39; border-radius: 4px; padding: 2px 7px;">MCP</span>
+            <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e;">{{ mcpCountLine }}</span>
+          </div>
+          <div style="font-size: 12.5px; color: #8b949e; line-height: 1.5;">Give Claude or another MCP client a personal token to read your jobs and work on your applications. Each token only gets the scopes you tick, and you can revoke it at any time.</div>
+
+          <sc-if value="{{ mcpRevealOpen }}" hint-placeholder-val="{{ false }}">
+            <div role="status" style="background: rgba(0,217,146,0.10); border: 1px solid rgba(0,217,146,0.35); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; max-width: 100%;">
+              <div style="font-size: 13px; font-weight: 600; color: #2fd6a1;">Shown once. Store it in your assistant now.</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Token</div>
+              <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
+                <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 10px 11px; color: #f2f2f2; word-break: break-all; user-select: all;">{{ mcpRevealToken }}</code>
+                <button type="button" onClick="{{ copyMcpToken }}" style="min-height: 44px; font-size: 12.5px; font-weight: 600; background: #101010; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 10px 16px; cursor: pointer; white-space: nowrap;" style-hover="background: #1a1a1a;">Copy token</button>
+              </div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Claude Code</div>
+              <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
+                <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 10px 11px; color: #bdbdbd; word-break: break-all; line-height: 1.5; user-select: all;">{{ mcpRevealSnippet }}</code>
+                <button type="button" onClick="{{ copyMcpSnippet }}" style="min-height: 44px; font-size: 12.5px; font-weight: 600; background: #101010; color: #f2f2f2; border: 1px solid #3d3a39; border-radius: 6px; padding: 10px 16px; cursor: pointer; white-space: nowrap;" style-hover="background: #1a1a1a;">Copy command</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 11.5px; color: #8b949e;">Only a hash is kept on our side. Lose it and you create a new one.</span>
+                <button type="button" onClick="{{ dismissMcpReveal }}" style="margin-left: auto; font-size: 12.5px; font-weight: 600; background: none; color: #2fd6a1; border: none; cursor: pointer; min-height: 44px; padding: 0 4px;" style-hover="text-decoration: underline;">I've stored it</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; max-width: 100%;">
+            <div style="display: flex; gap: 12px; align-items: flex-end;">
+              <label style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 5px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Token name</span>
+                <input placeholder="e.g. Claude Desktop" maxlength="100" value="{{ mcpName }}" onChange="{{ onMcpName }}" style="font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 11px; background: #101010;">
+              </label>
+              <label style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px;">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">Expires</span>
+                <select value="{{ mcpExpiry }}" onChange="{{ onMcpExpiry }}" style="font-family: Inter, sans-serif; font-size: 13px; border: 1px solid #3d3a39; border-radius: 6px; padding: 11px 11px; background: #101010; min-width: 140px;">
+                  <sc-for list="{{ mcpExpiryOpts }}" as="eo" hint-placeholder-count="3">
+                    <option value="{{ eo.id }}">{{ eo.label }}</option>
+                  </sc-for>
+                </select>
+              </label>
+              <button type="button" onClick="{{ createMcp }}" style="{{ mcpCreateStyle }}" style-hover="opacity: 0.9;">{{ mcpCreateLabel }}</button>
+            </div>
+            <div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 8px;">Scopes</div>
+              <div style="display: flex; gap: 8px;">
+                <sc-for list="{{ mcpScopeToggles }}" as="sc" hint-placeholder-count="4">
+                  <button type="button" role="checkbox" aria-checked="{{ sc.ariaChecked }}" onClick="{{ sc.toggle }}" title="{{ sc.hint }}" style="{{ sc.style }}" style-hover="opacity: 0.85;"><span style="color: {{ sc.checkColor }};">{{ sc.check }}</span> {{ sc.id }}</button>
+                </sc-for>
+              </div>
+              <div style="font-size: 11.5px; color: #8b949e; margin-top: 8px; line-height: 1.45;">applications:send lets the assistant send application email from your connected mailbox, only where the platform allows auto-send. LinkedIn and Indeed stay manual whatever you tick.</div>
+            </div>
+            <sc-if value="{{ mcpError }}" hint-placeholder-val="{{ false }}">
+              <div role="alert" style="font-size: 12.5px; color: #e5534b; background: rgba(229,83,75,0.12); border: 1px solid rgba(229,83,75,0.35); border-radius: 6px; padding: 9px 12px;">{{ mcpError }}</div>
+            </sc-if>
+          </div>
+
+          <div style="border: 1px solid #3d3a39; border-radius: 8px; overflow-x: auto; max-width: 100%;">
+            <div style="min-width: 820px;">
+              <div style="display: grid; grid-template-columns: minmax(120px, 1fr) 112px minmax(200px, 2fr) 88px 88px 76px 72px; gap: 10px; padding: 10px 16px; background: #1a1a1a; border-bottom: 1px solid #3d3a39; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e;">
+                <div>Name</div><div>Prefix</div><div>Scopes</div><div>Expires</div><div>Last used</div><div>Status</div><div></div>
+              </div>
+              <sc-for list="{{ mcpRows }}" as="mt" hint-placeholder-count="1">
+                <div style="display: grid; grid-template-columns: minmax(120px, 1fr) 112px minmax(200px, 2fr) 88px 88px 76px 72px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; align-items: center; font-size: 13px; opacity: {{ mt.opacity }};">
+                  <div style="font-weight: 600; overflow-wrap: anywhere;">{{ mt.name }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #bdbdbd;">{{ mt.prefix }}…</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    <sc-for list="{{ mt.scopes }}" as="ms" hint-placeholder-count="3">
+                      <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #bdbdbd; background: #1a1a1a; border: 1px solid #3d3a39; border-radius: 9999px; padding: 2px 8px;">{{ ms }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e;">{{ mt.expires }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8b949e;">{{ mt.lastUsed }}</div>
+                  <div><span style="{{ mt.statusStyle }}">{{ mt.statusLabel }}</span></div>
+                  <div>
+                    <sc-if value="{{ mt.revocable }}" hint-placeholder-val="{{ true }}">
+                      <button type="button" onClick="{{ mt.revoke }}" aria-label="{{ mt.revokeLabel }}" style="font-size: 11.5px; font-weight: 600; background: #101010; color: #e5534b; border: 1px solid rgba(229,83,75,0.35); border-radius: 6px; padding: 7px 12px; cursor: pointer; white-space: nowrap;" style-hover="background: rgba(229,83,75,0.12);">Revoke</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ mcpEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 18px 16px; font-size: 12.5px; color: #8b949e;">{{ mcpEmptyLine }}</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
       </div>
     </sc-if>
     <!-- ======= LEGAL ======= -->
@@ -916,6 +1007,10 @@ class Component extends DCLogic {
     q: '', notifs: { digest: true, match: true, followup: false }, notifChannel: 'email',
     jobs: [], platforms: [], docs: [], profile: null,
     integrations: [], keyDrafts: {},
+    // Connected assistants (MCP tokens). mcpReveal holds the plaintext token for
+    // exactly one render cycle of the reveal block and is never persisted.
+    mcpTokens: [], mcpName: '', mcpScopes: ['jobs:read', 'applications:read', 'applications:write'],
+    mcpExpiry: '90', mcpBusy: false, mcpError: null, mcpReveal: null, mcpLoadFailed: false,
     apps: {},           // jobId -> {message, cover_letter, docIds}
     running: {},        // jobId -> phase label
     drawerJobId: null, toast: null,
@@ -1030,10 +1125,15 @@ class Component extends DCLogic {
           }],
         },
       });
+      this.loadMcpTokens();
       return;
     }
+    // Signed in but /jobs/ was unreachable: the rest of the page degrades to the
+    // demo, yet tokens are the account's own and must never show the fixture.
+    if (session) this.loadMcpTokens();
     this.setState({
       session,
+      mcpTokens: session ? [] : this.api.MCP_TOKENS.map(t => ({ ...t, scopes: [...t.scopes] })),
       jobs: this.api.JOBS.map(j => ({ ...j })),
       platforms: this.api.PLATFORMS.map(p => ({ ...p })),
       docs: this.api.DOCUMENTS, profile: { ...this.api.PROFILE },
@@ -1041,6 +1141,74 @@ class Component extends DCLogic {
       contacts: this.api.CONTACTS.map(c => ({ ...c })),
       org: { ...this.api.ORG, members: this.api.ORG.members.map(m => ({ ...m })) },
     });
+  }
+  async loadMcpTokens() {
+    try {
+      const rows = await this.api.listMcpTokens();
+      this.setState({ mcpTokens: Array.isArray(rows) ? rows : [], mcpLoadFailed: false });
+    } catch (err) {
+      // Not deployed or unreachable: keep the card usable-looking but honest.
+      this.setState({ mcpTokens: [], mcpLoadFailed: true });
+    }
+  }
+  flashToast(msg) {
+    this.setState({ toast: msg });
+    setTimeout(() => this.setState({ toast: null }), 3200);
+  }
+  copyText(text, label) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => this.flashToast(label + ' copied.'),
+        () => this.flashToast('Copy blocked by the browser — select the text and copy it manually.'),
+      );
+    } else {
+      this.flashToast('Copy is unavailable here — select the text and copy it manually.');
+    }
+  }
+  async createMcp() {
+    const st = this.state, api = this.api;
+    const name = st.mcpName.trim();
+    if (!api || st.mcpBusy || !name || st.mcpScopes.length === 0) return;
+    const body = {
+      name,
+      scopes: api.MCP_SCOPES.filter(x => st.mcpScopes.includes(x)),
+      expires_in_days: Number(st.mcpExpiry),
+    };
+    if (!st.session) {
+      // Demo: mint a look-alike locally. Nothing leaves the browser.
+      const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+      const token = 'fjp_' + Array.from(crypto.getRandomValues(new Uint8Array(40)), b => abc[b % 64]).join('');
+      const now = new Date();
+      const row = {
+        id: Date.now(), name, prefix: token.slice(0, 12), scopes: body.scopes,
+        expires_at: new Date(now.getTime() + body.expires_in_days * 86400000).toISOString(),
+        last_used_at: null, status: 'active', created_at: now.toISOString(),
+      };
+      this.setState(s2 => ({ mcpTokens: [row, ...s2.mcpTokens], mcpReveal: token, mcpName: '', mcpError: null }));
+      return;
+    }
+    this.setState({ mcpBusy: true, mcpError: null });
+    try {
+      const res = await api.createMcpToken(body);
+      const { token, ...row } = res || {};
+      this.setState(s2 => ({ mcpTokens: [row, ...s2.mcpTokens], mcpReveal: token || null, mcpName: '', mcpBusy: false }));
+    } catch (err) {
+      this.setState({ mcpBusy: false, mcpError: (err && err.message) || 'The token could not be created.' });
+    }
+  }
+  async revokeMcp(t) {
+    if (!window.confirm('Revoke "' + t.name + '"? Any assistant using it loses access immediately.')) return;
+    const mark = () => this.setState(s2 => ({
+      mcpTokens: s2.mcpTokens.map(x => x.id === t.id ? { ...x, status: 'revoked' } : x),
+    }));
+    if (!this.state.session) { mark(); this.flashToast('"' + t.name + '" revoked.'); return; }
+    try {
+      await this.api.revokeMcpToken(t.id);
+      mark();
+      this.flashToast('"' + t.name + '" revoked.');
+    } catch (err) {
+      this.setState({ mcpError: (err && err.message) || 'The token could not be revoked.' });
+    }
   }
   plat(id) {
     const p = this.state.platforms.find(x => x.id === id) || {};
@@ -1685,6 +1853,58 @@ class Component extends DCLogic {
       profileSummary: profile.summary,
       onSummaryChange: e => this.setState(st => ({ profile: { ...st.profile, summary: e.target.value } })),
       profileSkills: profile.skills,
+      // Connected assistants
+      mcpCountLine: s.mcpTokens.filter(t => t.status === 'active').length + ' active',
+      mcpRevealOpen: !!s.mcpReveal,
+      mcpRevealToken: s.mcpReveal || '',
+      mcpRevealSnippet: 'claude mcp add findajob --transport http https://findajob.pro/mcp/ --header "Authorization: Bearer ' + (s.mcpReveal || '') + '"',
+      copyMcpToken: () => this.copyText(this.state.mcpReveal || '', 'Token'),
+      copyMcpSnippet: () => this.copyText('claude mcp add findajob --transport http https://findajob.pro/mcp/ --header "Authorization: Bearer ' + (this.state.mcpReveal || '') + '"', 'Command'),
+      dismissMcpReveal: () => this.setState({ mcpReveal: null }),
+      mcpName: s.mcpName,
+      onMcpName: e => this.setState({ mcpName: e.target.value, mcpError: null }),
+      mcpExpiry: s.mcpExpiry,
+      onMcpExpiry: e => this.setState({ mcpExpiry: e.target.value }),
+      mcpExpiryOpts: [['30', '30 days'], ['90', '90 days'], ['365', '365 days']].map(([id, label]) => ({ id, label })),
+      mcpScopeToggles: (api ? api.MCP_SCOPES : []).map(id => {
+        const on = s.mcpScopes.includes(id);
+        return {
+          id, check: on ? '☑' : '☐', checkColor: on ? '#00d992' : '#8b949e', ariaChecked: on ? 'true' : 'false',
+          hint: {
+            'jobs:read': 'Read jobs and platforms',
+            'applications:read': 'Read applications and their status',
+            'applications:write': 'Draft and edit applications, mark as sent',
+            'applications:send': 'Send application email from your mailbox (auto-send platforms only)',
+          }[id],
+          style: 'display: flex; align-items: center; gap: 6px; min-height: 44px; font-family: "JetBrains Mono", monospace; font-size: 11.5px; border-radius: 9999px; padding: 0 14px; cursor: pointer; ' + (on ? 'background: rgba(0,217,146,0.10); color: #2fd6a1; border: 1px solid rgba(0,217,146,0.35);' : 'background: #101010; color: #bdbdbd; border: 1px solid #3d3a39;'),
+          toggle: () => this.setState(st => ({ mcpScopes: on ? st.mcpScopes.filter(x => x !== id) : [...st.mcpScopes, id], mcpError: null })),
+        };
+      }),
+      mcpCreateLabel: s.mcpBusy ? 'Creating…' : 'New token',
+      mcpCreateStyle: 'min-height: 44px; font-size: 12.5px; font-weight: 600; border: none; border-radius: 6px; padding: 0 16px; white-space: nowrap; ' + (s.mcpName.trim() && s.mcpScopes.length && !s.mcpBusy ? 'background: #00d992; color: #101010; cursor: pointer;' : 'background: #2a2a2a; color: #8b949e; cursor: not-allowed;'),
+      createMcp: () => this.createMcp(),
+      mcpError: s.mcpError,
+      mcpEmpty: s.mcpTokens.length === 0,
+      mcpEmptyLine: s.mcpLoadFailed ? 'Tokens could not be loaded right now. Try again later.' : 'No tokens yet. Create one above to connect an assistant.',
+      mcpRows: s.mcpTokens.map(t => {
+        const st = t.status || 'active';
+        const css = {
+          active: 'color: #2fd6a1; background: rgba(0,217,146,0.12); border: 1px solid rgba(0,217,146,0.35);',
+          revoked: 'color: #e5534b; background: rgba(229,83,75,0.12); border: 1px solid rgba(229,83,75,0.35);',
+          expired: 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;',
+        }[st] || 'color: #8b949e; background: #1a1a1a; border: 1px solid #3d3a39;';
+        return {
+          name: t.name, prefix: t.prefix, scopes: t.scopes || [],
+          expires: t.expires_at ? String(t.expires_at).slice(0, 10) : 'Never',
+          lastUsed: t.last_used_at ? String(t.last_used_at).slice(0, 10) : 'Never',
+          statusLabel: st.toUpperCase(),
+          statusStyle: 'font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 600; border-radius: 20px; padding: 3px 9px; ' + css,
+          opacity: st === 'active' ? '1' : '0.6',
+          revocable: st === 'active',
+          revokeLabel: 'Revoke token ' + t.name,
+          revoke: () => this.revokeMcp(t),
+        };
+      }),
       platformCards: s.platforms.map(p => ({
         name: p.name, risk: p.risk, riskColor: this.riskColor(p.risk), note: p.note,
         opacity: p.is_active ? '1' : '0.55',
