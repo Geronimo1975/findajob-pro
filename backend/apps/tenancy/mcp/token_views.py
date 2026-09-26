@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.common.errors import ApiError, ErrorCode
+from apps.tenancy.mcp.auth import client_ip
 from apps.tenancy.mcp.models import McpToken, generate_token
 from apps.tenancy.mcp.token_serializers import CreateMcpTokenSerializer, McpTokenSerializer
 from apps.tenancy.models import AuditLog
@@ -41,7 +42,7 @@ class McpTokenListView(APIView):
         AuditLog.objects.record(
             action="mcp_token.created", org=org, actor=request.user, target=token,
             payload={"prefix": prefix, "scopes": data["scopes"]},
-            ip=request.META.get("REMOTE_ADDR"),
+            ip=client_ip(request),
         )
         body = McpTokenSerializer(token).data
         body["token"] = raw  # the one and only time the plaintext leaves the server
@@ -61,6 +62,6 @@ class McpTokenDetailView(APIView):
             AuditLog.objects.record(
                 action="mcp_token.revoked", org=token.org, actor=request.user,
                 target=token, payload={"prefix": token.prefix},
-                ip=request.META.get("REMOTE_ADDR"),
+                ip=client_ip(request),
             )
         return Response(status=status.HTTP_204_NO_CONTENT)

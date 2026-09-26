@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from apps.tenancy.mcp.models import McpToken
@@ -42,6 +42,16 @@ class TokenApiTests(TestCase):
         self.assertNotIn("token", listed[0])
         self.assertNotIn("token_hash", listed[0])
         self.assertEqual(listed[0]["status"], "active")
+
+    @override_settings(TRUSTED_PROXY_COUNT=1)
+    def test_audit_ip_is_proxy_aware(self):
+        r = self.client.post(
+            URL, BODY, format="json",
+            HTTP_X_FORWARDED_FOR="203.0.113.7", REMOTE_ADDR="10.0.0.2",
+        )
+        self.assertEqual(r.status_code, 201)
+        row = AuditLog.objects.unscoped().get(action="mcp_token.created")
+        self.assertEqual(row.ip, "203.0.113.7")
 
     def test_unknown_scope_is_400(self):
         r = self.client.post(URL, {"name": "x", "scopes": ["admin:all"]}, format="json")

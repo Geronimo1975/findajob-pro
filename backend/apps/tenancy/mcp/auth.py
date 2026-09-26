@@ -6,15 +6,20 @@ endpoint. Lookup is by prefix, then a constant-time hash compare.
 from __future__ import annotations
 
 import hmac
+import re
 
 from django.utils import timezone
 
 from apps.legal.request_meta import client_ip as _proxy_aware_client_ip
-from apps.tenancy.mcp.models import PREFIX_LENGTH, TOKEN_LENGTH, TOKEN_PREFIX, McpToken, hash_token
+from apps.tenancy.mcp.models import PREFIX_LENGTH, McpToken, hash_token
 from apps.tenancy.models import Membership
 
 #: Update ``last_used_at`` at most this often per token (spec §4).
 TOUCH_INTERVAL_SECONDS = 60
+
+#: The only shape ``generate_token`` emits. Checked before any lookup so a
+#: non-ASCII tail is a clean 401 rather than an error inside ``hash_token``.
+_TOKEN_RE = re.compile(r"^fjp_[A-Za-z0-9_-]{40}$")
 
 
 class McpAuthError(Exception):
@@ -39,7 +44,7 @@ def authenticate(request) -> tuple[McpToken, Membership]:
     raw = raw.strip()
     if scheme.lower() != "bearer" or not raw:
         raise McpAuthError("token_missing", "Send Authorization: Bearer <token>.")
-    if not raw.startswith(TOKEN_PREFIX) or len(raw) != TOKEN_LENGTH:
+    if not _TOKEN_RE.fullmatch(raw):
         raise McpAuthError("token_invalid", "The token is not valid.")
 
     # Pre-auth lookup: there is no org yet, so this is the one blessed

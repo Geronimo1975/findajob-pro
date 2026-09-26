@@ -55,8 +55,9 @@ def check_budget(token_id: int) -> None:
         key = _key(token_id, suffix)
         try:
             count = _hit(key, window)
+            retry_after = _retry_after(key, window) if count > limit else None
         except Exception as exc:  # noqa: BLE001 - any cache failure closes the gate
             logger.warning("MCP rate-limit cache unavailable (%s): %s", suffix, exc)
             raise McpRateLimited(window) from exc
-        if count > limit:
-            raise McpRateLimited(_retry_after(key, window))
+        if retry_after is not None:
+            raise McpRateLimited(retry_after)

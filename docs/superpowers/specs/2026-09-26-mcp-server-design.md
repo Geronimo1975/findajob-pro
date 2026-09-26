@@ -103,7 +103,9 @@ because that would re-open CSRF.
 
 Every accepted request binds `request.user` and `request.org` from the
 token, and the membership is re-checked on each call (a removed member's
-tokens die with the membership: `Membership` delete cascades `McpToken`).
+tokens die with the membership: a `post_delete` signal on `Membership`
+revokes every live `McpToken` for that org and user, so re-adding the member
+later does not resurrect them).
 
 Management endpoints, session-authenticated, under `/api/v1/mcp-tokens/`:
 

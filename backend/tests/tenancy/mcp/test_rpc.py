@@ -143,3 +143,14 @@ class ValidateTests(SimpleTestCase):
             validate(Args, {"inner": {"n": "x"}})
         self.assertEqual(caught.exception.code, "invalid_arguments")
         self.assertTrue(caught.exception.detail.startswith("inner: "))
+
+
+class ToolErrorShapeTests(SimpleTestCase):
+    def test_extras_cannot_override_code_or_detail(self):
+        from apps.tenancy.mcp.tools import tool_error
+
+        out = tool_error("not_found", "Missing.", code="evil", detail="evil", hint="x")
+        self.assertEqual(
+            out["structuredContent"]["error"],
+            {"code": "not_found", "detail": "Missing.", "hint": "x"},
+        )

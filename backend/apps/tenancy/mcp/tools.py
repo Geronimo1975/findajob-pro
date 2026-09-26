@@ -77,8 +77,10 @@ def tool_ok(data: dict[str, Any], text: str | None = None) -> dict[str, Any]:
     }
 
 
-def tool_error(code: str, detail: str, **extra: Any) -> dict[str, Any]:
-    payload = {"error": {"code": code, "detail": detail, **extra}}
+def tool_error(code: str, detail: str, /, **extra: Any) -> dict[str, Any]:
+    # Positional-only + extras first: an extra named ``code``/``detail`` can
+    # never replace the two required keys.
+    payload = {"error": {**extra, "code": code, "detail": detail}}
     return {
         "content": [{"type": "text", "text": f"{code}: {detail}"}],
         "structuredContent": payload,

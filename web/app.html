@@ -813,12 +813,12 @@
             </div>
             <div>
               <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: #8b949e; margin-bottom: 8px;">Scopes</div>
-              <div style="display: flex; gap: 8px;">
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                 <sc-for list="{{ mcpScopeToggles }}" as="sc" hint-placeholder-count="4">
                   <button type="button" role="checkbox" aria-checked="{{ sc.ariaChecked }}" onClick="{{ sc.toggle }}" title="{{ sc.hint }}" style="{{ sc.style }}" style-hover="opacity: 0.85;"><span style="color: {{ sc.checkColor }};">{{ sc.check }}</span> {{ sc.id }}</button>
                 </sc-for>
               </div>
-              <div style="font-size: 11.5px; color: #8b949e; margin-top: 8px; line-height: 1.45;">applications:send lets the assistant send application email from your connected mailbox, only where the platform allows auto-send. LinkedIn and Indeed stay manual whatever you tick.</div>
+              <div style="font-size: 11.5px; color: #8b949e; margin-top: 8px; line-height: 1.45;">applications:send lets the assistant send application email from your connected mailbox, only where the platform allows auto-send. LinkedIn, Indeed and Wellfound stay manual whatever you tick.</div>
             </div>
             <sc-if value="{{ mcpError }}" hint-placeholder-val="{{ false }}">
               <div role="alert" style="font-size: 12.5px; color: #e5534b; background: rgba(229,83,75,0.12); border: 1px solid rgba(229,83,75,0.35); border-radius: 6px; padding: 9px 12px;">{{ mcpError }}</div>
@@ -1873,8 +1873,8 @@ class Component extends DCLogic {
           hint: {
             'jobs:read': 'Read jobs and platforms',
             'applications:read': 'Read applications and their status',
-            'applications:write': 'Draft and edit applications, mark as sent',
-            'applications:send': 'Send application email from your mailbox (auto-send platforms only)',
+            'applications:write': 'Draft and edit applications',
+            'applications:send': 'Mark applications as sent manually on LinkedIn, Indeed and Wellfound; email sending from your mailbox is not available yet',
           }[id],
           style: 'display: flex; align-items: center; gap: 6px; min-height: 44px; font-family: "JetBrains Mono", monospace; font-size: 11.5px; border-radius: 9999px; padding: 0 14px; cursor: pointer; ' + (on ? 'background: rgba(0,217,146,0.10); color: #2fd6a1; border: 1px solid rgba(0,217,146,0.35);' : 'background: #101010; color: #bdbdbd; border: 1px solid #3d3a39;'),
           toggle: () => this.setState(st => ({ mcpScopes: on ? st.mcpScopes.filter(x => x !== id) : [...st.mcpScopes, id], mcpError: null })),

@@ -32,6 +32,13 @@ class BudgetTests(TestCase):
             with self.assertRaises(McpRateLimited):
                 check_budget(3)
 
+    def test_cache_failure_while_reading_deadline_fails_closed(self):
+        for _ in range(PER_MINUTE):
+            check_budget(4)
+        with mock.patch("apps.tenancy.mcp.ratelimit.cache.get", side_effect=RuntimeError("redis down")):
+            with self.assertRaises(McpRateLimited):
+                check_budget(4)
+
 
 class BudgetHttpTests(TestCase):
     def test_429_envelope_with_retry_after(self):

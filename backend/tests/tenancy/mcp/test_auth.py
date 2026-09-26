@@ -46,7 +46,21 @@ class McpAuthTests(TestCase):
 
     def test_membership_removed_kills_token(self):
         Membership.all_objects.filter(pk=self.membership.pk).delete()
-        self._assert_401(rpc(self.client, self.raw, "ping"), "token_invalid")
+        self._assert_401(rpc(self.client, self.raw, "ping"), "token_revoked")
+
+    def test_membership_delete_revokes_token_even_after_rejoin(self):
+        # R9: removal is permanent for the token; re-adding the member must
+        # not resurrect a PAT minted under the old membership.
+        role = self.membership.role
+        Membership.all_objects.filter(pk=self.membership.pk).delete()
+        Membership.all_objects.create(org=self.org, user=self.user, role=role)
+        self.token.refresh_from_db()
+        self.assertIsNotNone(self.token.revoked_at)
+        self._assert_401(rpc(self.client, self.raw, "ping"), "token_revoked")
+
+    def test_non_ascii_tail_is_token_invalid(self):
+        forged = self.raw[:-1] + "\u00e9"
+        self._assert_401(rpc(self.client, forged, "ping"), "token_invalid")
 
     def test_session_cookie_alone_is_rejected(self):
         self.client.force_login(self.user)
