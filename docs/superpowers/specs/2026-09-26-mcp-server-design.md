@@ -1,7 +1,11 @@
 # MCP server — findajob.pro as a tool for Claude / ChatGPT (spec, 2026-09-26)
 
-Status: **proposed**. Nothing implemented. Phase 1 needs one product decision
-(§9) before code is written.
+Status: **Phase 1 implemented 2026-09-26** (PAT auth, 8 tools; send_application
+returns not_implemented until outbox phase 3). Rate limiting fails closed on
+cache error (§7). Tokens record `last_used_ip` from the proxy-aware client IP
+helper `apps.legal.request_meta.client_ip`. The Settings "Connected
+assistants" card lives on the "Modules" settings screen, placed after the
+platform cards.
 
 ## 1. Why
 
@@ -61,7 +65,8 @@ do. The MCP server exposes them without a new UI.
   Everything else → JSON-RPC `-32601 method not found`.
 - `GET /mcp/` → 405. `DELETE /mcp/` → 204 (session teardown is a no-op).
 - Protocol version advertised: `2025-06-18`. Server info
-  `{"name": "findajob.pro", "version": "<git sha>"}`.
+  `{"name": "findajob.pro", "version": "1"}` — a static string, since the
+  deployed image has no git checkout to read a sha from.
 
 ## 4. Authentication
 
@@ -143,7 +148,9 @@ billing, members, legal, or sends OTP mail. No tool takes a URL and fetches
 it (no SSRF surface).
 
 Every tool that mutates writes an `AuditLog` row with
-`action = "mcp.<tool>"`, `actor = token.user`, `payload = {token_prefix, …}`,
+`action = "mcp.<tool>"`, `actor = token.user`, `payload = {prefix, …}`
+(the audit payload key matches the token-management audit rows, which use
+`prefix`, not `token_prefix`),
 so an operator can tell a chat-driven change from a UI one.
 
 ### Resources
@@ -234,8 +241,9 @@ because that is where the SDK's helpers earn their weight.
    `MCP_SERVER_ENABLED` (default False in prod until nginx has the route).
 2. `verify_platform` gains a `mcp` check module: `initialize` with an invalid
    token must return 401 with the envelope; with `MCP_VERIFY_TOKEN` set it
-   calls `tools/list` and asserts the §5 names. SKIP when the env var is
-   absent.
+   calls `tools/list` and asserts the §5 tool names are a **subset** of the
+   names returned — extras are allowed so later phases can add tools without
+   breaking this smoke test. SKIP when the env var is absent.
 3. Docs: this spec, a "Connect to Claude Desktop" section in the help page,
    and the nginx line in the deploy skill.
 
