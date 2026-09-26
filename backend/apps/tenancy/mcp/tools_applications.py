@@ -5,11 +5,13 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from django.db.models import Prefetch
+from django.utils import timezone
 
 from apps.jobs.models import Application, ApplicationDocument, ApplicationStatus, Document, JobListing
 from apps.tenancy.mcp.serializers import application_out
 from apps.tenancy.mcp.tools import ToolContext, ToolError, register, tool_ok, validate
 from apps.tenancy.models import AuditLog
+from apps.tenancy.outbox.models import MailboxConnection, MailboxStatus
 
 _STATUSES = [c for c, _ in ApplicationStatus.choices]
 
@@ -191,3 +193,53 @@ def update_application(ctx: ToolContext, arguments: dict) -> dict:
     _audit(ctx, "update_application", app, fields=changed)
     app = own_application(ctx, app.id)
     return tool_ok(application_out(app), f"Application {app.id} updated.")
+
+
+SENDABLE = (ApplicationStatus.PENDING, ApplicationStatus.REVIEW)
+
+
+def _platform_auto_sends(app: Application) -> bool:
+    p = app.job_listing.platform
+    return bool(p.auto_send and p.apply_mechanism == "email")
+
+
+@register("mark_sent_manually", scope="applications:send",
+          description="Record that the member applied by hand on a platform findajob never "
+                      "automates (LinkedIn, Indeed, Wellfound). Refused on auto-send platforms.",
+          input_schema={"type": "object", "properties": {"application_id": {"type": "integer"}},
+                        "required": ["application_id"], "additionalProperties": False})
+def mark_sent_manually(ctx: ToolContext, arguments: dict) -> dict:
+    args = validate(ApplicationIdArgs, arguments)
+    app = own_application(ctx, args["application_id"])
+    if app.status not in SENDABLE:
+        raise ToolError("application_locked", f"Application is already {app.status}.")
+    if _platform_auto_sends(app):
+        raise ToolError("use_send_application",
+                        "This platform sends by email from the member's mailbox; use send_application.")
+    app.status = ApplicationStatus.SENT
+    app.sent_manually = True
+    app.sent_at = timezone.now()
+    app.save(update_fields=["status", "sent_manually", "sent_at", "updated_at"])
+    _audit(ctx, "mark_sent_manually", app)
+    return tool_ok(application_out(app), f"Application {app.id} marked as sent manually.")
+
+
+@register("send_application", scope="applications:send",
+          description="Send the application email from the member's own connected mailbox. "
+                      "Only on auto-send email platforms (RemoteOK, WeWorkRemotely, …).",
+          input_schema={"type": "object", "properties": {"application_id": {"type": "integer"}},
+                        "required": ["application_id"], "additionalProperties": False})
+def send_application(ctx: ToolContext, arguments: dict) -> dict:
+    args = validate(ApplicationIdArgs, arguments)
+    app = own_application(ctx, args["application_id"])
+    if app.status not in SENDABLE:
+        raise ToolError("application_locked", f"Application is already {app.status}.")
+    if not _platform_auto_sends(app):
+        raise ToolError("manual_only", "This platform is never automated; apply by hand, then call mark_sent_manually.")
+    mailbox = (MailboxConnection.objects.for_org(ctx.org)
+               .filter(user=ctx.user, status=MailboxStatus.CONNECTED).first())
+    if mailbox is None:
+        raise ToolError("mailbox_not_connected", "Connect a mailbox in Settings → Outbox first.")
+    # Outbox spec phase 3 (applications/<id>/send/) is not built yet. The tool is
+    # registered so clients can discover it; it dispatches nothing until then.
+    raise ToolError("not_implemented", "Sending from the mailbox is not available yet.")

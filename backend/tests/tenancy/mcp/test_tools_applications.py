@@ -173,3 +173,59 @@ class UpdateApplicationTests(ApplicationToolsBase):
         app_id = self._draft()
         self.assertEqual(self.sc("update_application", application_id=app_id)["error"]["code"],
                          "invalid_arguments")
+
+
+from apps.tenancy.outbox.models import MailboxConnection, MailboxStatus
+
+
+class SendToolsTests(ApplicationToolsBase):
+    def _draft(self, job):
+        return Application.objects.create(org=self.org, user=self.user, job_listing=job,
+                                          status=ApplicationStatus.REVIEW, subject="s",
+                                          generated_content="c")
+
+    def test_mark_sent_manually_on_high_risk_platform(self):
+        app = self._draft(self.high_job)
+        sc = self.sc("mark_sent_manually", application_id=app.id)
+        self.assertEqual(sc["status"], "sent")
+        self.assertTrue(sc["sent_manually"])
+        self.assertIsNotNone(sc["sent_at"])
+        self.assertIn("mcp.mark_sent_manually",
+                      list(AuditLog.objects.for_org(self.org).values_list("action", flat=True)))
+
+    def test_mark_sent_manually_refused_on_auto_send_platform(self):
+        app = self._draft(self.low_job)
+        self.assertEqual(self.sc("mark_sent_manually", application_id=app.id)["error"]["code"],
+                         "use_send_application")
+        self.assertEqual(Application.all_objects.get(pk=app.id).status, "review")
+
+    def test_mark_sent_manually_twice_is_locked(self):
+        app = self._draft(self.high_job)
+        self.sc("mark_sent_manually", application_id=app.id)
+        self.assertEqual(self.sc("mark_sent_manually", application_id=app.id)["error"]["code"],
+                         "application_locked")
+
+    def test_send_application_refused_on_high_risk(self):
+        app = self._draft(self.high_job)
+        self.assertEqual(self.sc("send_application", application_id=app.id)["error"]["code"],
+                         "manual_only")
+
+    def test_send_application_needs_mailbox(self):
+        app = self._draft(self.low_job)
+        self.assertEqual(self.sc("send_application", application_id=app.id)["error"]["code"],
+                         "mailbox_not_connected")
+
+    def test_send_application_not_implemented_yet(self):
+        MailboxConnection.objects.create(org=self.org, user=self.user, provider="smtp",
+                                         email_address="me@example.de", credentials_encrypted=b"x",
+                                         status=MailboxStatus.CONNECTED)
+        app = self._draft(self.low_job)
+        self.assertEqual(self.sc("send_application", application_id=app.id)["error"]["code"],
+                         "not_implemented")
+        self.assertEqual(Application.all_objects.get(pk=app.id).status, "review")
+
+    def test_send_scope_required(self):
+        raw, _ = make_token(self.user, self.org, scopes=["applications:read", "applications:write"])
+        app = self._draft(self.high_job)
+        r = result_of(call_tool(self.client, raw, "mark_sent_manually", {"application_id": app.id}))
+        self.assertEqual(r["structuredContent"]["error"]["code"], "scope_missing")
