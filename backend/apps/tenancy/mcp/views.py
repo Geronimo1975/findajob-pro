@@ -14,7 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.common.errors import ErrorCode, envelope
 from apps.tenancy.mcp import rpc
-from apps.tenancy.mcp.auth import McpAuthError, authenticate
+from apps.tenancy.mcp.auth import McpAuthError, authenticate, client_ip
 from apps.tenancy.mcp.ratelimit import McpRateLimited, check_budget
 from apps.tenancy.mcp.tools import ToolContext
 
@@ -58,7 +58,7 @@ class McpEndpoint(View):
                              "Too many requests. Please try again later.",
                              Retry_After=str(exc.retry_after))
         ctx = ToolContext(token=token, membership=membership, org=membership.org,
-                          user=token.user, ip=request.META.get("REMOTE_ADDR"))
+                          user=token.user, ip=client_ip(request))
         status, body = rpc.dispatch(request.body, ctx)
         if body is None:
             return HttpResponse(status=status)

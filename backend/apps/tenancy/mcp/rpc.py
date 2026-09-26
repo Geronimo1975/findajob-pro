@@ -76,7 +76,8 @@ def dispatch(body: bytes, ctx: ToolContext) -> tuple[int, dict[str, Any] | None]
     """Return ``(http_status, json_body_or_None)``."""
     try:
         message = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
+        # RecursionError: deeply nested arrays/objects fit well under the body cap.
         return 200, _error(None, PARSE_ERROR, "Parse error")
     if not isinstance(message, dict):
         return 200, _error(None, INVALID_REQUEST, "Batch requests are not supported")

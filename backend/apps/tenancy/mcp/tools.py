@@ -13,6 +13,8 @@ from typing import Any, Callable
 
 from rest_framework import serializers
 
+from apps.common.errors import _stringify
+
 Handler = Callable[["ToolContext", dict[str, Any]], dict[str, Any]]
 
 
@@ -59,8 +61,10 @@ def validate(serializer_class: type[serializers.Serializer], arguments: dict[str
     """Run a DRF serializer over tool arguments; map failure to ``invalid_arguments``."""
     serializer = serializer_class(data=arguments)
     if not serializer.is_valid():
-        first = next(iter(serializer.errors.items()))
-        raise ToolError("invalid_arguments", f"{first[0]}: {first[1][0]}")
+        # Errors may nest (ListField children keyed by index, nested
+        # serializers as dicts); walk down to the first human-readable string.
+        field, errors = next(iter(serializer.errors.items()))
+        raise ToolError("invalid_arguments", f"{field}: {_stringify(errors)}")
     return serializer.validated_data
 
 

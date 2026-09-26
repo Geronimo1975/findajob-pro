@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
 from apps.tenancy.models import Membership
@@ -69,3 +69,27 @@ class McpAuthTests(TestCase):
         self.assertEqual(self.client.get(MCP_URL).status_code, 405)
         r = self.client.delete(MCP_URL, HTTP_AUTHORIZATION=f"Bearer {self.raw}")
         self.assertEqual(r.status_code, 204)
+
+    def test_csrf_enforced_client_bearer_passes_without_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        r = rpc(client, self.raw, "ping")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["result"], {})
+
+    def test_csrf_enforced_client_session_alone_is_401(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        self._assert_401(rpc(client, None, "ping"), "token_missing")
+
+    @override_settings(TRUSTED_PROXY_COUNT=1)
+    def test_last_used_ip_honours_trusted_proxy_count(self):
+        r = self.client.post(
+            MCP_URL, data='{"jsonrpc": "2.0", "id": 1, "method": "ping"}',
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {self.raw}",
+            HTTP_X_FORWARDED_FOR="203.0.113.9", REMOTE_ADDR="10.0.0.2",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.token.refresh_from_db()
+        self.assertEqual(self.token.last_used_ip, "203.0.113.9")

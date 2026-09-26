@@ -9,6 +9,7 @@ import hmac
 
 from django.utils import timezone
 
+from apps.legal.request_meta import client_ip as _proxy_aware_client_ip
 from apps.tenancy.mcp.models import PREFIX_LENGTH, TOKEN_LENGTH, TOKEN_PREFIX, McpToken, hash_token
 from apps.tenancy.models import Membership
 
@@ -23,8 +24,13 @@ class McpAuthError(Exception):
         self.detail = detail
 
 
-def _client_ip(request) -> str | None:
-    return request.META.get("REMOTE_ADDR") or None
+def client_ip(request) -> str | None:
+    """The caller's address, honouring ``TRUSTED_PROXY_COUNT``.
+
+    The single place ``/mcp/`` derives an IP; behind Traefik -> nginx,
+    ``REMOTE_ADDR`` is the proxy for every request.
+    """
+    return _proxy_aware_client_ip(request)
 
 
 def authenticate(request) -> tuple[McpToken, Membership]:
@@ -61,6 +67,6 @@ def authenticate(request) -> tuple[McpToken, Membership]:
 
     if token.last_used_at is None or (now - token.last_used_at).total_seconds() >= TOUCH_INTERVAL_SECONDS:
         token.last_used_at = now
-        token.last_used_ip = _client_ip(request)
+        token.last_used_ip = client_ip(request)
         token.save(update_fields=["last_used_at", "last_used_ip"])
     return token, membership
