@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from apps.jobs.models import Application, ApplicationStatus
+from django.db.models import Prefetch
+
+from apps.jobs.models import Application, ApplicationDocument, ApplicationStatus
 from apps.tenancy.mcp.serializers import application_out
 from apps.tenancy.mcp.tools import ToolContext, ToolError, register, tool_ok, validate
 
@@ -12,8 +14,16 @@ _STATUSES = [c for c, _ in ApplicationStatus.choices]
 
 
 def own_applications(ctx: ToolContext):
+    # Prefetch the through-model rows for the documents overlay so
+    # ``application_out`` on a page of N applications costs one extra query,
+    # not N (ApplicationDocument is a plain manager; no org-scope to lose).
+    docs_prefetch = Prefetch(
+        "applicationdocument_set",
+        queryset=ApplicationDocument.objects.select_related("document").order_by("position"),
+    )
     return (Application.objects.for_org(ctx.org).filter(user=ctx.user)
-            .select_related("job_listing", "job_listing__platform"))
+            .select_related("job_listing", "job_listing__platform")
+            .prefetch_related(docs_prefetch))
 
 
 def own_application(ctx: ToolContext, application_id: int) -> Application:

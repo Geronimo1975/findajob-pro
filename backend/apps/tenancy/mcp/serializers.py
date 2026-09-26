@@ -31,9 +31,15 @@ def job_detail(job: JobListing, application: Application | None) -> dict:
 
 
 def application_out(app: Application) -> dict:
-    docs = [{"id": ad.document.id, "name": ad.document.name, "kind": ad.document.kind}
-            for ad in ApplicationDocument.objects.filter(application=app)
-            .select_related("document").order_by("position")]
+    # Prefer the prefetched rows (own_applications() prefetches
+    # ``applicationdocument_set``) so a list of N applications costs one extra
+    # query, not N; falls back to a per-instance query for a lone ``app``
+    # that was not built from that queryset (still scoped to this instance).
+    if "applicationdocument_set" in getattr(app, "_prefetched_objects_cache", {}):
+        rows = app.applicationdocument_set.all()
+    else:
+        rows = ApplicationDocument.objects.filter(application=app).select_related("document").order_by("position")
+    docs = [{"id": ad.document.id, "name": ad.document.name, "kind": ad.document.kind} for ad in rows]
     return {
         "id": app.id, "job_id": app.job_listing_id, "job_title": app.job_listing.title,
         "company": app.job_listing.company, "platform_slug": app.job_listing.platform_id,
