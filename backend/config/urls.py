@@ -15,6 +15,7 @@ Path                         Owning app      Auth
 ``/api/v1/consent/…``        apps.legal      session
 ``/api/v1/i18n/…``           Django          anonymous
 ``/api/v1/me/``              apps.tenancy    session
+``/api/v1/mcp-tokens/…``     apps.tenancy.mcp  session
 ===========================  ==============  ============================
 
 There is **no** ``/auth/me/`` and **no** ``/auth/session/``. Everything not
@@ -66,6 +67,8 @@ api_v1_patterns = [
     # apps.legal — versioned legal documents (anonymous) …
     *_include_if_present("apps.legal.urls", "legal/"),
     *_include_if_present("apps.tenancy.outbox.urls", "outbox/"),
+    # apps.tenancy.mcp — personal access tokens for the MCP endpoint (/mcp/).
+    *_include_if_present("apps.tenancy.mcp.token_urls", "mcp-tokens/"),
     # apps.jobs — /platforms/ and /jobs/ live at the API root per ENDPOINTS.
     *_include_if_present("apps.jobs.urls", ""),
     # apps.leads — anonymous B2B demo-request form (web/unternehmen.html).
