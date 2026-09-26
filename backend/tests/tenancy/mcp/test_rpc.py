@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from unittest import skip
 
 from django.test import SimpleTestCase, TestCase, override_settings
 from rest_framework import serializers
@@ -69,7 +68,6 @@ class RpcEnvelopeTests(TestCase):
         r = rpc(self.client, self.raw, "tools/call", {"name": "nope", "arguments": {}})
         self.assertEqual(r.json()["error"]["code"], -32602)
 
-    @skip("Task 5")
     def test_tools_call_missing_scope(self):
         raw, _ = make_token(self.user, self.org, scopes=["applications:read"])
         r = rpc(self.client, raw, "tools/call", {"name": "list_jobs", "arguments": {}})
