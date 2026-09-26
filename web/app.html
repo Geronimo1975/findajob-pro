@@ -23,6 +23,9 @@
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
   html, body { margin: 0; padding: 0; background: #101010; }
+  @view-transition { navigation: auto; }
+  main { view-transition-name: workspace; }
+  @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
   body { font-family: Inter, sans-serif; color: #f2f2f2; }
   a { color: #00d992; text-decoration: none; } a:hover { color: #10b981; text-decoration: underline; }
   * { box-sizing: border-box; } input, textarea, select, option { color: #f2f2f2; } select { background: #1a1a1a; }
