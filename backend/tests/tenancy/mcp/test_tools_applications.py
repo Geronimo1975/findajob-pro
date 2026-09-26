@@ -6,10 +6,18 @@ from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 
 from apps.jobs.models import Application, ApplicationStatus, Document
+from apps.tenancy.models import AuditLog
 from apps.tenancy.services import bootstrap_workspace
 from tests.jobs.test_api import seed_listing, seed_platform
 from tests.support import make_user
 from tests.tenancy.mcp.support import call_tool, make_token
+
+
+def make_document(org, user, name="cv.pdf") -> Document:
+    doc = Document(org=org, user=user, name=name, kind="cv")
+    doc.file.save(name, ContentFile(b"%PDF-1.4"), save=False)
+    doc.save()
+    return doc
 
 
 def result_of(response):
@@ -91,3 +99,70 @@ class ReadApplicationTests(ApplicationToolsBase):
         # The point: one extra query for the whole page of documents, not one
         # per application — the count must not grow with the number of rows.
         self.assertEqual(self._jobs_app_query_count(ctx), one_app_query_count)
+
+
+class DraftApplicationTests(ApplicationToolsBase):
+    def test_creates_in_review_with_documents_and_audit(self):
+        doc = make_document(self.org, self.user)
+        sc = self.sc("draft_application", job_id=self.low_job.id, subject="Application",
+                     content="Dear team", cover_letter="CL", notes="n", document_ids=[doc.id])
+        self.assertEqual(sc["status"], "review")
+        self.assertEqual(sc["documents"], [{"id": doc.id, "name": "cv.pdf", "kind": "cv"}])
+        app = Application.objects.for_org(self.org).get()
+        self.assertEqual(app.generated_content, "Dear team")
+        actions = list(AuditLog.objects.for_org(self.org).values_list("action", flat=True))
+        self.assertEqual(actions, ["mcp.draft_application"])
+        payload = AuditLog.objects.for_org(self.org).get().payload
+        self.assertEqual(payload["token_prefix"], self.token.prefix)
+
+    def test_duplicate_is_application_exists(self):
+        self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c")
+        sc = self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c")
+        self.assertEqual(sc["error"]["code"], "application_exists")
+        self.assertEqual(sc["error"]["application_id"], Application.objects.for_org(self.org).get().id)
+
+    def test_unknown_job(self):
+        self.assertEqual(self.sc("draft_application", job_id=99999, subject="s", content="c")["error"]["code"],
+                         "job_not_found")
+
+    def test_foreign_document_is_document_not_found_and_nothing_created(self):
+        other = make_user()
+        other_org = bootstrap_workspace(other).org
+        foreign = make_document(other_org, other)
+        sc = self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c",
+                     document_ids=[foreign.id])
+        self.assertEqual(sc["error"]["code"], "document_not_found")
+        self.assertEqual(Application.all_objects.count(), 0)
+
+    def test_missing_content_is_invalid_arguments(self):
+        self.assertEqual(self.sc("draft_application", job_id=self.low_job.id)["error"]["code"],
+                         "invalid_arguments")
+
+
+class UpdateApplicationTests(ApplicationToolsBase):
+    def _draft(self):
+        return self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c")["id"]
+
+    def test_partial_update_in_review(self):
+        app_id = self._draft()
+        sc = self.sc("update_application", application_id=app_id, content="new body")
+        self.assertEqual(sc["content"], "new body")
+        self.assertEqual(sc["subject"], "s")
+
+    def test_replaces_document_set(self):
+        app_id = self._draft()
+        d1, d2 = make_document(self.org, self.user, "a.pdf"), make_document(self.org, self.user, "b.pdf")
+        self.sc("update_application", application_id=app_id, document_ids=[d1.id, d2.id])
+        sc = self.sc("update_application", application_id=app_id, document_ids=[d2.id])
+        self.assertEqual([d["id"] for d in sc["documents"]], [d2.id])
+
+    def test_locked_after_sent(self):
+        app_id = self._draft()
+        Application.all_objects.filter(pk=app_id).update(status=ApplicationStatus.SENT)
+        self.assertEqual(self.sc("update_application", application_id=app_id, content="x")["error"]["code"],
+                         "application_locked")
+
+    def test_no_fields_is_invalid_arguments(self):
+        app_id = self._draft()
+        self.assertEqual(self.sc("update_application", application_id=app_id)["error"]["code"],
+                         "invalid_arguments")

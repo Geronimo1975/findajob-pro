@@ -19,10 +19,11 @@ Handler = Callable[["ToolContext", dict[str, Any]], dict[str, Any]]
 
 
 class ToolError(Exception):
-    def __init__(self, code: str, detail: str) -> None:
+    def __init__(self, code: str, detail: str, extra: dict | None = None) -> None:
         super().__init__(detail)
         self.code = code
         self.detail = detail
+        self.extra = extra
 
 
 @dataclass(frozen=True)
@@ -76,8 +77,8 @@ def tool_ok(data: dict[str, Any], text: str | None = None) -> dict[str, Any]:
     }
 
 
-def tool_error(code: str, detail: str) -> dict[str, Any]:
-    payload = {"error": {"code": code, "detail": detail}}
+def tool_error(code: str, detail: str, **extra: Any) -> dict[str, Any]:
+    payload = {"error": {"code": code, "detail": detail, **extra}}
     return {
         "content": [{"type": "text", "text": f"{code}: {detail}"}],
         "structuredContent": payload,

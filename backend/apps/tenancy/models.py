@@ -187,6 +187,13 @@ _SENSITIVE_KEY_RE = re.compile(
     r"(?i)(^|_)(code|otp|password|secret|token|api_?key)($|_)"
 )
 
+#: Keys that would otherwise trip ``_SENSITIVE_KEY_RE`` (they contain the word
+#: "token") but hold a public, non-secret value that is already exposed
+#: elsewhere (e.g. the MCP token list API returns the same prefix). Named
+#: explicitly, one at a time, so the allowlist can never accidentally swallow
+#: an actual secret key.
+SAFE_PAYLOAD_KEYS = frozenset({"token_prefix"})
+
 REDACTED = "[redacted]"
 
 MAX_AUDIT_ACTION_LENGTH = 64
@@ -200,7 +207,9 @@ def scrub_payload(value: Any) -> Any:
         cleaned = {}
         for key, item in value.items():
             key_text = str(key)
-            if key_text.lower() in SENSITIVE_PAYLOAD_KEYS or _SENSITIVE_KEY_RE.search(
+            if key_text.lower() in SAFE_PAYLOAD_KEYS:
+                cleaned[key_text] = item
+            elif key_text.lower() in SENSITIVE_PAYLOAD_KEYS or _SENSITIVE_KEY_RE.search(
                 key_text
             ):
                 cleaned[key_text] = REDACTED

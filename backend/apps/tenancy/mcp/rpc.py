@@ -66,7 +66,7 @@ def _tools_call(params: dict[str, Any], ctx: ToolContext) -> dict[str, Any] | No
         with transaction.atomic():
             return tool.handler(ctx, arguments)
     except ToolError as exc:
-        return tool_error(exc.code, exc.detail)
+        return tool_error(exc.code, exc.detail, **(exc.extra or {}))
     except Exception:  # noqa: BLE001 - every tool failure must stay in-band
         logger.exception("MCP tool %s failed", name)
         return tool_error("server_error", "The tool failed unexpectedly.")
