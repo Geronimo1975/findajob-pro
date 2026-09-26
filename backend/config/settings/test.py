@@ -70,3 +70,5 @@ LOGGING = {
         "findajob": {"handlers": ["console"], "level": "CRITICAL", "propagate": False},
     },
 }
+
+MCP_SERVER_ENABLED = True

@@ -93,6 +93,9 @@ urlpatterns = [
     # accounts.SuppressedAddress). Mounted outside /api/ because they are
     # machine-to-machine and signature-verified, not session-authenticated.
     *_include_if_present("apps.accounts.webhook_urls", "webhooks/email/"),
+    # MCP Streamable HTTP endpoint. Outside /api/: bearer-only, CSRF-exempt,
+    # JSON-RPC. See docs/superpowers/specs/2026-09-26-mcp-server-design.md.
+    *_include_if_present("apps.tenancy.mcp.urls", "mcp/"),
 ]
 
 if settings.DEBUG:
