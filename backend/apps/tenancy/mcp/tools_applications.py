@@ -74,7 +74,7 @@ EDITABLE = (ApplicationStatus.PENDING, ApplicationStatus.REVIEW)
 def _audit(ctx: ToolContext, action: str, app: Application, **extra) -> None:
     AuditLog.objects.record(
         action=f"mcp.{action}", org=ctx.org, actor=ctx.user, target=app,
-        payload={"token_prefix": ctx.token.prefix, **extra}, ip=ctx.ip,
+        payload={"prefix": ctx.token.prefix, **extra}, ip=ctx.ip,
     )
 
 
@@ -104,6 +104,11 @@ class DraftArgs(serializers.Serializer):
     document_ids = serializers.ListField(child=serializers.IntegerField(min_value=1),
                                          required=False, default=list)
 
+    def validate_document_ids(self, value):
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("document_ids must not contain duplicates.")
+        return value
+
 
 class UpdateArgs(serializers.Serializer):
     application_id = serializers.IntegerField(min_value=1)
@@ -112,6 +117,11 @@ class UpdateArgs(serializers.Serializer):
     cover_letter = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
     document_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
+
+    def validate_document_ids(self, value):
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("document_ids must not contain duplicates.")
+        return value
 
     def validate(self, attrs):
         if set(attrs) == {"application_id"}:

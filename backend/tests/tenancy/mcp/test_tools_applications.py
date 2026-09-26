@@ -113,7 +113,7 @@ class DraftApplicationTests(ApplicationToolsBase):
         actions = list(AuditLog.objects.for_org(self.org).values_list("action", flat=True))
         self.assertEqual(actions, ["mcp.draft_application"])
         payload = AuditLog.objects.for_org(self.org).get().payload
-        self.assertEqual(payload["token_prefix"], self.token.prefix)
+        self.assertEqual(payload["prefix"], self.token.prefix)
 
     def test_duplicate_is_application_exists(self):
         self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c")
@@ -137,6 +137,13 @@ class DraftApplicationTests(ApplicationToolsBase):
     def test_missing_content_is_invalid_arguments(self):
         self.assertEqual(self.sc("draft_application", job_id=self.low_job.id)["error"]["code"],
                          "invalid_arguments")
+
+    def test_duplicate_document_ids_is_invalid_arguments_and_nothing_created(self):
+        doc = make_document(self.org, self.user)
+        sc = self.sc("draft_application", job_id=self.low_job.id, subject="s", content="c",
+                     document_ids=[doc.id, doc.id])
+        self.assertEqual(sc["error"]["code"], "invalid_arguments")
+        self.assertEqual(Application.all_objects.count(), 0)
 
 
 class UpdateApplicationTests(ApplicationToolsBase):
