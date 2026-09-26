@@ -67,6 +67,19 @@
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
   @media (hover: hover) and (pointer: fine) { .try:hover::before { opacity: 1; } }
   .try.attract { box-shadow: inset 0 0 0 1px rgba(0,217,146,0.35); }
+  .tabs { display: inline-flex; gap: 2px; background: #101010; border: 1px solid #3d3a39; border-radius: 6px; padding: 2px; }
+  .tabs button { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: #8b949e; background: transparent; border: 0; border-radius: 4px; padding: 6px 9px; min-height: 30px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: #2a2a2a; color: #f2f2f2; }
+  .paste { display: none; padding: 12px 16px; border-bottom: 1px solid #3d3a39; }
+  .try[data-src="paste"] .paste { display: block; } .try[data-src="paste"] .jobs { display: none; }
+  .paste textarea { width: 100%; min-height: 148px; resize: vertical; background: #101010; border: 1px solid #3d3a39; border-radius: 6px; color: #f2f2f2; font-family: Inter, sans-serif; font-size: 14px; line-height: 1.5; padding: 10px 12px; field-sizing: content; max-height: 260px; }
+  .paste .local { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #8b949e; }
+  .paste .local::before { content: ""; width: 6px; height: 6px; border-radius: 9999px; background: #2fd6a1; }
+  .out .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .out .actions .btn { min-height: 36px; padding: 7px 12px; font-size: 13px; }
+  .back { display: none; padding: 10px 16px; border-bottom: 1px solid #3d3a39; background: rgba(0,217,146,0.06); font-size: 13px; color: #f2f2f2; }
+  .back .eyebrow { color: #2fd6a1; margin-right: 8px; }
+  .try[data-back="1"] .back { display: block; }
   .presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; border-bottom: 1px solid #3d3a39; }
   .presets button { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #bdbdbd; background: transparent; border: 1px solid #3d3a39; border-radius: 9999px; padding: 6px 10px; min-height: 30px; cursor: pointer; }
   .presets button[aria-pressed="true"] { color: #2fd6a1; border-color: rgba(0,217,146,0.35); background: rgba(0,217,146,0.10); }
@@ -189,6 +202,9 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"findajob.pro","applicationCategory":"BusinessApplication","operatingSystem":"Web","inLanguage":["de","en","ro"],"url":"https://findajob.pro/","description":"Jobbörsen bündeln, Stellen gegen das Profil bewerten, Anschreiben pro Plattform entwerfen. Manueller Review vor jedem Versand.","offers":[{"@type":"Offer","price":"0","priceCurrency":"EUR","name":"Free"},{"@type":"Offer","price":"19","priceCurrency":"EUR","name":"Pro"},{"@type":"Offer","price":"29","priceCurrency":"EUR","name":"Team, pro Sitz"}]}
 </script>
+<script type="speculationrules">
+{"prerender":[{"source":"list","urls":["app.html?demo=1","auth.html"],"eagerness":"moderate"}]}
+</script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Wo liegen meine Daten?","acceptedAnswer":{"@type":"Answer","text":"Auf Servern in Deutschland (IONOS). Dokumente sind verschlüsselt gespeichert. Für KI-Entwürfe können Auftragsverarbeiter außerhalb der EU eingesetzt werden, auf Basis der EU-Standardvertragsklauseln."}},
@@ -247,14 +263,23 @@
       <div class="try" id="try" aria-label="Probier es aus">
         <div class="try-head">
           <strong data-i="try.title">Probier es. Ohne Konto.</strong>
-          <span class="eyebrow" data-i="try.step">1 Skills · 2 Stelle · 3 Entwurf sichern</span>
+          <div class="tabs" role="tablist" aria-label="Quelle">
+            <button type="button" role="tab" aria-selected="true" data-src="sample" data-i="try.tab1">Beispiele</button>
+            <button type="button" role="tab" aria-selected="false" data-src="paste" data-i="try.tab2">Eigene Stelle</button>
+          </div>
         </div>
+        <div class="back"><span class="eyebrow" data-i="try.backk">Willkommen zurück</span><span data-i="try.back">Dein Entwurf wartet. Skills und Stelle sind wiederhergestellt.</span></div>
         <div class="try-skills">
           <label for="skills" data-i="try.skills">Skills</label>
           <input id="skills" value="Python, Django, Postgres" autocomplete="off" spellcheck="false" aria-describedby="presets">
         </div>
         <div class="presets" id="presets" aria-label="Skills schnell wählen"></div>
         <ul class="jobs" id="jobs" role="listbox" aria-label="Stellen"></ul>
+        <div class="paste">
+          <label class="eyebrow" for="paste" data-i="try.pastel">Stellenanzeige einfügen</label>
+          <textarea id="paste" data-i-ph="try.pasteph" placeholder="Titel, Firma und Anforderungen hier einfügen. Von LinkedIn, Indeed, StepStone, egal woher."></textarea>
+          <div class="local" data-i="try.local">Bleibt in deinem Browser. Nichts wird gesendet.</div>
+        </div>
         <div class="out" id="out"><p class="hint" data-i="try.hint">Wähle eine Stelle. Du siehst den Match zu deinen Skills und den Entwurf, den findajob im passenden Ton schreibt.</p></div>
         <div class="try-foot">
           <small data-i="try.note">Beispieldaten. Im Produkt: dein Lebenslauf, echte Stellen, dein Postfach.</small>
@@ -373,7 +398,7 @@
       'try.title':'Try it. No account.','try.skills':'Skills',
       'try.hint':'Pick a job. You get the match against your skills and the draft findajob writes in the right register.',
       'try.note':'Sample data. In the product: your CV, real listings, your mailbox.','try.open':'Open the full app',
-      'try.step':'1 skills · 2 pick a job · 3 keep the draft','try.prov':'AI draft · you review and send','try.save':'Keep this draft. Your account is one email code away.','try.saveph':'name@example.com','try.savebtn':'Keep draft',
+      'try.tab1':'Samples','try.tab2':'Your listing','try.pastel':'Paste a job listing','try.pasteph':'Paste title, company and requirements here. From LinkedIn, Indeed, StepStone, anywhere.','try.local':'Stays in your browser. Nothing is sent.','try.backk':'Welcome back','try.back':'Your draft is waiting. Skills and job restored.','try.share':'Share match card','try.copy':'Copy link','try.copied':'Copied','try.noskills':'No known skills found in that text yet. Paste the requirements section.','h1.b2c.linkedin':'LinkedIn, without the account ban. Every job board, one tracker.','h1.b2c.indeed':'Indeed, without scraping. Every job board, one tracker.','try.prov':'AI draft · you review and send','try.save':'Keep this draft. Your account is one email code away.','try.saveph':'name@example.com','try.savebtn':'Keep draft',
       'pl.h2':'Not every platform tolerates automation. We know which.',
       'pl.intro':'Other tools promise “auto-apply everywhere” and cost you your LinkedIn account. findajob has one rule per source, and keeps it.',
       'pl.th1':'Platform','pl.th2':'Source','pl.th3':'Risk','pl.th4':'What findajob does',
@@ -410,7 +435,7 @@
       'try.title':'Încearcă. Fără cont.','try.skills':'Skills',
       'try.hint':'Alege un job. Vezi potrivirea cu skill-urile tale și draftul pe care findajob îl scrie în tonul potrivit.',
       'try.note':'Date exemplu. În produs: CV-ul tău, joburi reale, căsuța ta de e-mail.','try.open':'Deschide aplicația',
-      'try.step':'1 skills · 2 alege jobul · 3 păstrează draftul','try.prov':'Draft AI · tu verifici și trimiți','try.save':'Păstrează draftul. Contul tău e la un cod pe e-mail distanță.','try.saveph':'nume@exemplu.ro','try.savebtn':'Păstrează draftul',
+      'try.tab1':'Exemple','try.tab2':'Jobul tău','try.pastel':'Lipește un anunț','try.pasteph':'Lipește titlul, firma și cerințele aici. De pe LinkedIn, Indeed, eJobs, de oriunde.','try.local':'Rămâne în browserul tău. Nimic nu e trimis.','try.backk':'Bine ai revenit','try.back':'Draftul tău te așteaptă. Skill-urile și jobul sunt restaurate.','try.share':'Distribuie match card','try.copy':'Copiază link','try.copied':'Copiat','try.noskills':'Nu am găsit încă skill-uri cunoscute în text. Lipește secțiunea cu cerințe.','h1.b2c.linkedin':'LinkedIn, fără suspendarea contului. Toate site-urile, un tracker.','h1.b2c.indeed':'Indeed, fără scraping. Toate site-urile, un tracker.','try.prov':'Draft AI · tu verifici și trimiți','try.save':'Păstrează draftul. Contul tău e la un cod pe e-mail distanță.','try.saveph':'nume@exemplu.ro','try.savebtn':'Păstrează draftul',
       'pl.h2':'Nu orice platformă suportă automatizare. Noi știm care.',
       'pl.intro':'Alte tool-uri promit „auto-apply peste tot" și te costă contul de LinkedIn. findajob are o regulă per sursă și o respectă.',
       'pl.th1':'Platformă','pl.th2':'Sursă','pl.th3':'Risc','pl.th4':'Ce face findajob',
@@ -436,15 +461,26 @@
       'ft.privacy':'Confidențialitate','ft.withdrawal':'Retragere',
     },
   };
-  const de = { 'try.prov':'KI-Entwurf · du prüfst und sendest', 'try.save':'Diesen Entwurf sichern. Dein Konto ist einen Mail-Code entfernt.', 'try.saveph':'name@beispiel.de', 'try.savebtn':'Entwurf sichern' };
+  const de = { 'try.share':'Match-Karte teilen', 'try.copy':'Link kopieren', 'try.copied':'Kopiert', 'try.noskills':'Noch keine bekannten Skills im Text. Füge den Abschnitt mit den Anforderungen ein.', 'h1.b2c.linkedin':'LinkedIn, ohne Kontosperre. Jede Jobbörse, ein Tracker.', 'h1.b2c.indeed':'Indeed, ohne Scraping. Jede Jobbörse, ein Tracker.', 'try.prov':'KI-Entwurf · du prüfst und sendest', 'try.save':'Diesen Entwurf sichern. Dein Konto ist einen Mail-Code entfernt.', 'try.saveph':'name@beispiel.de', 'try.savebtn':'Entwurf sichern' };
   document.querySelectorAll('[data-i]').forEach(el => { de[el.dataset.i] = el.textContent; });
+  document.querySelectorAll('[data-i-ph]').forEach(el => { de[el.dataset.iPh] = el.placeholder; });
   T.de = de;
   let lang = 'de';
+  // Referrer- or ?src=-aware claim: a visitor arriving from LinkedIn gets the LinkedIn promise.
+  // Read client-side, never stored, never sent.
+  let variant = '';
+  try {
+    const src = (new URLSearchParams(location.search).get('src') || '').toLowerCase();
+    const ref = document.referrer ? new URL(document.referrer).hostname : '';
+    variant = ['linkedin', 'indeed'].find(v => src === v || ref.endsWith(v + '.com')) || '';
+  } catch {}
   const t = k => (T[lang] && T[lang][k]) || T.de[k] || k;
   function setLang(l) {
     if (!T[l]) l = 'de';
     lang = l;
     document.querySelectorAll('[data-i]').forEach(el => { const s = T[l][el.dataset.i]; if (s != null) el.textContent = s; });
+    document.querySelectorAll('[data-i-ph]').forEach(el => { const s = T[l][el.dataset.iPh]; if (s != null) el.placeholder = s; });
+    if (variant) { const s = T[l]['h1.b2c.' + variant]; if (s) document.querySelector('h1[data-aud="b2c"]').textContent = s; }
     document.documentElement.lang = l;
     document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === l)));
     try { localStorage.setItem(LANG_KEY, l); } catch {}
@@ -469,6 +505,28 @@
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Skill vocabulary: canonical form → aliases. Used to read pasted listings and to compare
+  // typed skills case-insensitively ("postgres" matches the fixture tag "Postgres").
+  const VOCAB = {
+    Python: ['python'], Django: ['django'], DRF: ['drf', 'django rest framework'], Flask: ['flask'], FastAPI: ['fastapi'],
+    Celery: ['celery'], Redis: ['redis'], Postgres: ['postgres', 'postgresql', 'psql'], MySQL: ['mysql'], SQL: ['sql'],
+    MongoDB: ['mongodb', 'mongo'], Kafka: ['kafka'], RabbitMQ: ['rabbitmq'], Elasticsearch: ['elasticsearch'],
+    JavaScript: ['javascript', 'js'], TypeScript: ['typescript', 'ts'], React: ['react', 'react.js', 'reactjs'], 'Next.js': ['next.js', 'nextjs'],
+    Vue: ['vue', 'vue.js', 'vuejs'], Angular: ['angular'], Svelte: ['svelte'], HTMX: ['htmx'], 'Node.js': ['node', 'node.js', 'nodejs'],
+    Go: ['golang', 'go'], Rust: ['rust'], Java: ['java'], Kotlin: ['kotlin'], Spring: ['spring', 'spring boot'], 'C#': ['c#', '.net', 'dotnet'],
+    PHP: ['php'], Laravel: ['laravel'], Ruby: ['ruby', 'rails'], Swift: ['swift'], 'C++': ['c++'],
+    AWS: ['aws', 'amazon web services'], Azure: ['azure'], GCP: ['gcp', 'google cloud'], Docker: ['docker'], K8s: ['kubernetes', 'k8s'],
+    Terraform: ['terraform'], Ansible: ['ansible'], Linux: ['linux'], 'CI/CD': ['ci/cd', 'cicd', 'github actions', 'gitlab ci', 'jenkins'],
+    Git: ['git'], GraphQL: ['graphql'], REST: ['rest', 'rest api', 'restful'], APIs: ['api', 'apis'], gRPC: ['grpc'], Playwright: ['playwright'],
+    Pytest: ['pytest'], Airflow: ['airflow'], Spark: ['spark', 'pyspark'], Pandas: ['pandas'], 'Machine Learning': ['machine learning', 'ml'],
+    LLM: ['llm', 'llms', 'openai', 'anthropic', 'claude'], PyTorch: ['pytorch'], TensorFlow: ['tensorflow'], n8n: ['n8n'], Stripe: ['stripe'],
+    Payments: ['payments', 'payment'], SAP: ['sap', 'abap'], Salesforce: ['salesforce'], Excel: ['excel'], Power_BI: ['power bi'], Tableau: ['tableau'],
+    Leadership: ['leadership', 'team lead', 'führung'], Management: ['management'], Agile: ['agile', 'scrum', 'kanban'], Infra: ['infrastructure', 'infra'],
+    Security: ['security', 'owasp', 'iso 27001'], Deutsch: ['deutsch', 'german', 'c1', 'b2'], English: ['english', 'englisch'],
+  };
+  const ALIAS = {}; for (const [c, list] of Object.entries(VOCAB)) { ALIAS[c.toLowerCase()] = c; for (const a of list) ALIAS[a] = c; }
+  const canon = sk => ALIAS[sk.toLowerCase().trim()] || sk.trim();
+
   // ?skills=Python,Django deep-links a pre-filled widget (ads, posts, mails).
   try {
     const q = new URLSearchParams(location.search).get('skills');
@@ -476,18 +534,18 @@
   } catch {}
 
   // Preset chips: one click toggles a skill in the input; scores recompute instantly.
-  const PRESETS = ['Python', 'Django', 'React', 'TypeScript', 'AWS', 'Celery', 'PostgreSQL', 'Go'];
+  const PRESETS = ['Python', 'Django', 'React', 'TypeScript', 'AWS', 'Celery', 'Postgres', 'Go', 'SAP', 'Deutsch'];
   const presetsEl = document.getElementById('presets');
   const skillList = () => skillsEl.value.split(',').map(s => s.trim()).filter(Boolean);
   function renderPresets() {
-    const have = new Set(skillList().map(s => s.toLowerCase()));
+    const have = new Set(skillList().map(s => canon(s).toLowerCase()));
     presetsEl.innerHTML = '';
     for (const sk of PRESETS) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = sk;
       b.setAttribute('aria-pressed', String(have.has(sk.toLowerCase())));
       b.addEventListener('click', () => {
         touched = true;
-        const cur = skillList(); const i = cur.findIndex(s => s.toLowerCase() === sk.toLowerCase());
+        const cur = skillList(); const i = cur.findIndex(s => canon(s).toLowerCase() === sk.toLowerCase());
         if (i >= 0) cur.splice(i, 1); else cur.push(sk);
         skillsEl.value = cur.join(', ');
         renderPresets(); renderJobs(); if (selected) renderOut(true);
@@ -496,6 +554,79 @@
     }
   }
   renderPresets();
+
+  const pasteEl = document.getElementById('paste');
+  tryEl.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    touched = true;
+    tryEl.dataset.src = b.dataset.src;
+    tryEl.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    if (b.dataset.src === 'paste') { pasteEl.focus(); if (pasteEl.value.trim()) onPaste(); }
+    else { selected = sample.includes(selected) ? selected : null; renderJobs(); if (selected) renderOut(true); else out.innerHTML = `<p class="hint">${t('try.hint')}</p>`; }
+  }));
+  let pasteTimer = 0;
+  function onPaste() {
+    const text = pasteEl.value.trim();
+    if (text.length < 20) return;
+    const j = jobFromText(text);
+    if (!j.tags.length) { selected = null; out.innerHTML = `<p class="hint">${t('try.noskills')}</p>`; return; }
+    selected = j; renderOut();
+  }
+  pasteEl.addEventListener('input', () => { touched = true; clearTimeout(pasteTimer); pasteTimer = setTimeout(onPaste, 350); });
+
+  // Returning visitor: the last draft's inputs are kept locally (functional storage at the
+  // visitor's own request, no consent needed) and restored on the next visit.
+  const MEM_KEY = 'findajob.try.v1';
+  function remember() {
+    try {
+      const j = selected; if (!j) return;
+      localStorage.setItem(MEM_KEY, JSON.stringify({ skills: skillsEl.value, job: j.id === 'paste' ? { text: pasteEl.value.slice(0, 4000) } : { id: j.id }, at: Date.now() }));
+    } catch {}
+  }
+  function restore() {
+    let m = null;
+    try { m = JSON.parse(localStorage.getItem(MEM_KEY) || 'null'); } catch {}
+    if (!m || !m.job || new URLSearchParams(location.search).has('skills')) return false;
+    if (typeof m.skills === 'string') skillsEl.value = m.skills.slice(0, 200);
+    if (m.job.text) { pasteEl.value = m.job.text; tryEl.querySelector('.tabs button[data-src="paste"]').click(); }
+    else { selected = sample.find(j => j.id === m.job.id) || null; }
+    if (!selected) return false;
+    touched = true; tryEl.dataset.back = '1';
+    renderPresets(); renderJobs(); renderOut(true);
+    return true;
+  }
+
+  // ---- Share: a 1200×630 match card drawn on canvas, shared via Web Share or downloaded ----
+  async function shareCard(j, r) {
+    try { await document.fonts.ready; } catch {}
+    const W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#101010'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = '#3d3a39'; g.lineWidth = 2; g.strokeRect(1, 1, W - 2, H - 2);
+    g.fillStyle = '#f2f2f2'; g.font = '700 30px Inter, sans-serif'; g.fillText('findajob', 64, 84);
+    g.fillStyle = '#00d992'; g.fillText('.pro', 64 + g.measureText('findajob').width, 84);
+    g.fillStyle = '#8b949e'; g.font = '500 18px "JetBrains Mono", monospace'; g.fillText('SKILL MATCH', 64, 168);
+    g.fillStyle = r.score >= 66 ? '#2fd6a1' : r.score >= 34 ? '#e6b34d' : '#e5534b'; g.font = '600 120px "JetBrains Mono", monospace'; g.fillText(r.score + '%', 58, 290);
+    g.fillStyle = '#ffffff'; g.font = '400 36px Inter, sans-serif';
+    const title = j.title.length > 44 ? j.title.slice(0, 43) + '…' : j.title; g.fillText(title, 64, 360);
+    g.fillStyle = '#bdbdbd'; g.font = '400 24px Inter, sans-serif'; g.fillText(j.company, 64, 398);
+    let x = 64, y = 470; g.font = '500 20px "JetBrains Mono", monospace';
+    const chip = (txt, ok) => {
+      const w = g.measureText(txt).width + 28; if (x + w > W - 64) { x = 64; y += 48; } if (y > H - 70) return;
+      g.fillStyle = ok ? 'rgba(0,217,146,0.10)' : 'transparent'; g.strokeStyle = ok ? 'rgba(0,217,146,0.5)' : '#3d3a39';
+      g.beginPath(); g.roundRect(x, y - 26, w, 38, 19); g.fill(); g.stroke();
+      g.fillStyle = ok ? '#2fd6a1' : '#8b949e'; g.fillText(txt, x + 14, y); x += w + 10;
+    };
+    r.matched.forEach(tg => chip(tg, true)); r.missing.forEach(tg => chip(tg, false));
+    g.fillStyle = '#8b949e'; g.font = '500 18px "JetBrains Mono", monospace'; g.fillText('findajob.pro · KI-Entwurf, du prüfst und sendest', 64, H - 44);
+    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    const file = new File([blob], 'findajob-match.png', { type: 'image/png' });
+    const link = location.origin + '/?skills=' + encodeURIComponent(skillList().join(','));
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'findajob.pro', text: `${r.score}% match · ${j.title}`, url: link }); return; } catch {}
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'findajob-match.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
 
   // Spotlight border follows a fine pointer (CSS does the drawing; JS only moves the origin).
   if (finePointer) tryEl.addEventListener('pointermove', e => {
@@ -514,13 +645,34 @@
     hero.addEventListener('pointerleave', () => { m.style.transform = ''; });
   }
   const profile = () => ({ ...PROFILE, skills: skillsEl.value.split(',').map(s => s.trim()).filter(Boolean) });
+  function matchOf(job, p) {
+    const have = new Set(p.skills.map(x => canon(x).toLowerCase()));
+    const tags = job.tags || [];
+    const matched = tags.filter(x => have.has(canon(x).toLowerCase())), missing = tags.filter(x => !have.has(canon(x).toLowerCase()));
+    return { score: tags.length ? Math.round(matched.length / tags.length * 100) : 0, matched, missing };
+  }
   const cls = s => s >= 66 ? 'm-hi' : s >= 34 ? 'm-mid' : 'm-lo';
+
+  // ---- "Your listing": read a pasted ad entirely client-side ----
+  const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const ALIAS_RE = Object.keys(ALIAS).sort((a, b) => b.length - a.length).map(a => `(?<![\\w#+.])${esc(a)}(?![\\w#+])`).join('|');
+  const VOCAB_RE = new RegExp(ALIAS_RE, 'gi');
+  function jobFromText(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const title = (lines.find(l => l.length <= 90) || 'Stelle').replace(/\s*\(m\/w\/d\)\s*/i, ' ').trim();
+    let company = '';
+    const m = text.match(/(?:\bbei|\bat|@)[ \t]+([A-Z][\w&.-]+(?:[ \t]+[A-Z][\w&.-]+){0,2})/);
+    if (m) company = m[1]; else if (lines[1] && lines[1].length <= 60) company = lines[1];
+    const seen = new Set(), tags = [];
+    for (const hit of text.match(VOCAB_RE) || []) { const c = ALIAS[hit.toLowerCase()]; if (c && !seen.has(c)) { seen.add(c); tags.push(c); } }
+    return { id: 'paste', platform: 'paste', title, company: company || '—', tags: tags.slice(0, 12), psd: {} };
+  }
 
   function renderJobs() {
     const p = profile();
     list.innerHTML = '';
     for (const j of sample) {
-      const { score } = skillMatch(j, p);
+      const { score } = matchOf(j, p);
       const li = document.createElement('li');
       li.setAttribute('role', 'option'); li.tabIndex = 0;
       li.setAttribute('aria-selected', String(selected === j));
@@ -534,7 +686,7 @@
   }
   function renderOut(instantOverride) {
     const p = profile(), j = selected;
-    const { score, matched, missing } = skillMatch(j, p);
+    const { score, matched, missing } = matchOf(j, p);
     const text = generateContent(j, p).message.split('\n').slice(0, 6).join('\n');
     out.innerHTML = '';
     const row = document.createElement('div'); row.className = 'row';
@@ -556,8 +708,17 @@
       if (!v.includes('@')) return;
       location.href = 'auth.html?email=' + encodeURIComponent(v) + '&next=' + encodeURIComponent('/app.html');
     });
+    const actions = document.createElement('div'); actions.className = 'actions'; actions.hidden = true;
+    const shareBtn = document.createElement('button'); shareBtn.type = 'button'; shareBtn.className = 'btn'; shareBtn.textContent = t('try.share');
+    shareBtn.addEventListener('click', () => shareCard(j, { score, matched, missing }));
+    const copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'btn'; copyBtn.textContent = t('try.copy');
+    copyBtn.addEventListener('click', async () => {
+      const link = location.origin + '/?skills=' + encodeURIComponent(skillList().join(','));
+      try { await navigator.clipboard.writeText(link); copyBtn.textContent = t('try.copied'); setTimeout(() => { copyBtn.textContent = t('try.copy'); }, 1500); } catch {}
+    });
+    actions.append(shareBtn, copyBtn); out.appendChild(actions);
     out.appendChild(save);
-    const done = () => { pre.classList.remove('cursor'); save.hidden = false; };
+    const done = () => { pre.classList.remove('cursor'); actions.hidden = false; save.hidden = false; remember(); };
     // Typewriter = "this is being generated", not decoration. Reduced-motion prints at once.
     const id = ++typing;
     if (reduced || instantOverride) { pre.textContent = text; done(); return; }
@@ -570,6 +731,7 @@
     })();
   }
   skillsEl.addEventListener('input', () => { touched = true; renderPresets(); renderJobs(); if (selected) renderOut(true); });
+  const restored = restore();
 
   // Auto-demo: once the widget is on screen and nobody has touched it, pick the best match
   // and let the draft type itself. Motion draws the eye before any click; first touch cancels.
@@ -578,8 +740,8 @@
       if (!entries.some(e => e.isIntersecting)) return;
       io.disconnect();
       setTimeout(() => {
-        if (touched || selected) return;
-        const best = sample.map(j => [skillMatch(j, profile()).score, j]).sort((a, b) => b[0] - a[0])[0];
+        if (touched || selected || restored) return;
+        const best = sample.map(j => [matchOf(j, profile()).score, j]).sort((a, b) => b[0] - a[0])[0];
         if (!best) return;
         selected = best[1]; tryEl.classList.add('attract'); renderJobs(); renderOut();
         setTimeout(() => tryEl.classList.remove('attract'), 1800);
