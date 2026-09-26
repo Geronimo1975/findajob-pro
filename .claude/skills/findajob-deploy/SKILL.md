@@ -299,6 +299,11 @@ total login outage.
 - The CSP needs `'unsafe-eval'` (the .dc runtime evaluates its page script through
   `new Function`) and `'unsafe-inline'` for styles (the prototype is 100% inline styles). What
   it does buy is `default-src 'self'` — no third-party origin can be contacted — plus no framing.
+- **`/mcp/`** — proxied to the api container exactly like `/api/`. The Django side is off until
+  `MCP_SERVER_ENABLED=true` is in the api container's env; `verify_platform --module mcp` SKIPs
+  while either half is missing, and PASSes the anonymous probe once both are live.
+  `MCP_VERIFY_TOKEN` (a token created in Settings → Connected assistants) enables the
+  `tools/list` check.
 
 ## Third-party origins: zero, on purpose
 
