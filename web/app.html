@@ -818,7 +818,7 @@
                   <button type="button" role="checkbox" aria-checked="{{ sc.ariaChecked }}" onClick="{{ sc.toggle }}" title="{{ sc.hint }}" style="{{ sc.style }}" style-hover="opacity: 0.85;"><span style="color: {{ sc.checkColor }};">{{ sc.check }}</span> {{ sc.id }}</button>
                 </sc-for>
               </div>
-              <div style="font-size: 11.5px; color: #8b949e; margin-top: 8px; line-height: 1.45;">applications:send lets the assistant send application email from your connected mailbox, only where the platform allows auto-send. LinkedIn, Indeed and Wellfound stay manual whatever you tick.</div>
+              <div style="font-size: 11.5px; color: #8b949e; margin-top: 8px; line-height: 1.45;">applications:send lets the assistant mark applications as sent manually on LinkedIn, Indeed and Wellfound. Email sending from your connected mailbox is not available yet. LinkedIn, Indeed and Wellfound stay manual whatever you tick.</div>
             </div>
             <sc-if value="{{ mcpError }}" hint-placeholder-val="{{ false }}">
               <div role="alert" style="font-size: 12.5px; color: #e5534b; background: rgba(229,83,75,0.12); border: 1px solid rgba(229,83,75,0.35); border-radius: 6px; padding: 9px 12px;">{{ mcpError }}</div>
