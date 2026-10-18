@@ -1,1 +1,73 @@
-{% extends "dashboard_app/base.html" %}{% block content %}Dashboard{% endblock %}
+{% extends "dashboard_app/base.html" %}
+{% block title %}Command center{% endblock %}
+{% block content %}
+<div class="content-body">
+	<div class="container-fluid">
+		<div class="row">
+			{% with k=cc.kpis %}
+			<div class="col-sm-4">
+				<div class="card"><div class="card-body">
+					<span class="d-block mb-2">Applications Sent</span>
+					<h2 class="mb-0 lh-1" data-kpi="sent">{{ k.sent }}</h2>
+				</div></div>
+			</div>
+			<div class="col-sm-4">
+				<div class="card"><div class="card-body">
+					<span class="d-block mb-2">In Progress</span>
+					<h2 class="mb-0 lh-1" data-kpi="in_progress">{{ k.in_progress }}</h2>
+				</div></div>
+			</div>
+			<div class="col-sm-4">
+				<div class="card"><div class="card-body">
+					<span class="d-block mb-2">Interviews</span>
+					<h2 class="mb-0 lh-1" data-kpi="interviews">{{ k.interviews }}</h2>
+				</div></div>
+			</div>
+			{% endwith %}
+		</div>
+		<div class="row">
+			<div class="col-xl-6">
+				<div class="card">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Recent jobs</h4></div>
+					<div class="card-body">
+						{% for job in cc.recent_jobs %}
+						<div class="d-flex justify-content-between border-bottom py-2">
+							<div>
+								<h6 class="mb-0">{{ job.title }}</h6>
+								<small>{{ job.company }}{% if job.location %} &middot; {{ job.location }}{% endif %}</small>
+							</div>
+						</div>
+						{% empty %}
+						<div class="text-center text-muted py-4">
+							<i class="flaticon-381-notepad fs-1 d-block mb-2"></i>
+							<p class="mb-0">No jobs yet. New listings will show up here once ingestion runs.</p>
+						</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-6">
+				<div class="card">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Active applications</h4></div>
+					<div class="card-body">
+						{% for app in cc.active_applications %}
+						<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+							<div>
+								<h6 class="mb-0">{{ app.job_listing.title }}</h6>
+								<small>{{ app.job_listing.company }}</small>
+							</div>
+							<span class="badge badge-primary light">{{ app.get_status_display }}</span>
+						</div>
+						{% empty %}
+						<div class="text-center text-muted py-4">
+							<i class="flaticon-381-send fs-1 d-block mb-2"></i>
+							<p class="mb-0">No active applications yet.</p>
+						</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
