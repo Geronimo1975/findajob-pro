@@ -29,7 +29,7 @@ import importlib
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 
 #: Django resolves these by dotted path for URLConf-level 404s and unhandled
 #: 500s. They keep the shared ``{"error": {...}}`` envelope for anything under
@@ -113,3 +113,24 @@ if "debug_toolbar" in settings.INSTALLED_APPS:
     from debug_toolbar.toolbar import debug_toolbar_urls
 
     urlpatterns += debug_toolbar_urls()
+
+# DEV ONLY: serve the static ``web/`` frontend (auth.html, index.html, api.js,
+# legal.js, fonts/, vendor/, …) from this very process.
+#
+# In production nginx serves these files and proxies only ``/api/`` to Django,
+# so the two are same-origin. Under bare ``runserver`` there is no nginx, so a
+# redirect to ``/auth.html?next=/app/`` (emitted by ``session_required``) 404s
+# and, worse, logging in on a second ``http.server`` port sets the session
+# cookie on a different origin than ``/app/``. Serving ``web/`` here puts the
+# whole OTP flow on one origin (:8000 by default) so login → ``/app/`` works in
+# one tab. This branch is skipped entirely in prod (DEBUG=False) and MUST stay
+# last: it is a catch-all, so ``/api/``, ``/app/``, ``/admin/`` and
+# ``__debug__/`` are all matched by the patterns above before it is reached.
+if settings.DEBUG:
+    from django.views.static import serve as _serve_static
+
+    _WEB_ROOT = settings.REPO_ROOT / "web"
+    urlpatterns += [
+        path("", _serve_static, {"document_root": _WEB_ROOT, "path": "index.html"}),
+        re_path(r"^(?P<path>.+)$", _serve_static, {"document_root": _WEB_ROOT}),
+    ]
