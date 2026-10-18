@@ -99,3 +99,19 @@ def test_empty_workspace_new_keys_empty():
     cc = build_command_center(None, make_user())
     for key in ("documents_summary", "job_rows", "recommendations", "ingestion_runs"):
         assert cc[key] == []
+
+
+def test_teammate_applications_excluded_from_kpis_and_active():
+    from apps.jobs.models import Application, ApplicationStatus as S
+    from apps.tenancy.models import Membership
+
+    user, org = _workspace()
+    mate = make_user(email="mate@example.com")
+    Membership.objects.unscoped().create(org=org, user=mate, role="member")
+    Application.objects.create(
+        org=org, user=mate, status=S.SENT,
+        job_listing=make_listing(url="https://remoteok.com/jobs/9"),
+    )
+    cc = build_command_center(org, user)
+    assert cc["kpis"] == {"sent": 0, "in_progress": 0, "interviews": 0}
+    assert cc["active_applications"] == []

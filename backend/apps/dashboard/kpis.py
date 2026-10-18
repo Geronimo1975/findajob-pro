@@ -37,7 +37,7 @@ def build_command_center(org, user, limit: int = 10) -> dict:
         Document.objects.for_org(org).for_user(user).filter(user=user)
         .values("kind").annotate(n=Count("id")).order_by("kind")
     )
-    apps = Application.objects.for_org(org).for_user(user)
+    apps = Application.objects.for_org(org).for_user(user).filter(user=user)
     return {
         "kpis": {
             "sent": apps.filter(status=S.SENT).count(),
