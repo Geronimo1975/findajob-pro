@@ -54,7 +54,7 @@ MODEL_ORDER: dict[str, tuple[str, ...]] = {
     # mail stopped arriving — the exact sequence of a "cannot log in" ticket.
     "accounts": ("user", "emailotp", "suppressedaddress"),
     # The workspace, its members, then everything that happened in it.
-    "tenancy": ("organization", "membership", "auditlog"),
+    "tenancy": ("organization", "membership", "auditlog", "mcptoken"),
     # The text first, because a consent record is meaningless until you can see
     # which document version its hash belongs to.
     "legal": ("legaldocument", "consentrecord"),

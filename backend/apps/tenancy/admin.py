@@ -405,3 +405,40 @@ class AuditLogAdmin(
     @admin.display(description=_("payload"))
     def payload_pretty(self, obj: AuditLog):
         return pretty_json(obj.payload)
+
+
+from django.utils import timezone as _tz
+
+from apps.tenancy.mcp.models import McpToken
+
+
+@admin.register(McpToken)
+class McpTokenAdmin(UnguardedQuerySetMixin, LargeTableAdminMixin, admin.ModelAdmin):
+    """Operator view of MCP tokens. Hash never shown; revoke is the one action.
+
+    Not a :class:`ReadOnlyAdminMixin` subclass on purpose: that mixin sets
+    ``has_change_permission`` to ``False``, which hides the action bar
+    (including ``revoke``) along with the edit form. Every field is instead
+    declared in ``readonly_fields`` to get the same "look, don't edit"
+    behaviour while keeping ``has_change_permission`` at its default so the
+    changelist still renders actions.
+    """
+
+    list_display = ("prefix", "name", "user", "org", "scopes", "expires_at",
+                    "last_used_at", "revoked_at")
+    list_filter = ("org",)
+    search_fields = ("prefix", "name", "user__email")
+    readonly_fields = ("prefix", "name", "user", "org", "scopes", "expires_at",
+                       "last_used_at", "last_used_ip", "revoked_at", "created_at")
+    exclude = ("token_hash",)
+    actions = ("revoke",)
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+    @admin.action(description=_("Revoke selected tokens"))
+    def revoke(self, request, queryset):
+        queryset.filter(revoked_at__isnull=True).update(revoked_at=_tz.now())

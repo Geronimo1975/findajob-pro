@@ -14,18 +14,21 @@ platform. `.claude/rules/` is empty on disk, but an agent may still be handed th
 ## Commands
 
 There is **no root-level entry point**: no Makefile, no package.json, no pyproject.toml. All
-Python commands run from `backend/`. Two virtualenvs exist (`.venv/` and `backend/.venv/`), both
-Python 3.12 with identical packages; either works, the working directory is what matters.
+Python commands run from `backend/`. The two-virtualenv setup this file used to describe (`.venv/`
+and `backend/.venv/`) no longer exists; the working one is `backend/.venv` (git-ignored). If it is
+missing, recreate it with `python3 -m venv backend/.venv && backend/.venv/bin/pip install -r
+backend/requirements.txt -r backend/requirements-dev.txt` (redone 2026-09-26). The example commands
+below therefore run as `.venv/bin/pytest`, from inside `backend/`.
 
 ```bash
 cd backend
-../.venv/bin/pytest                                   # whole suite, ~3s
-../.venv/bin/pytest tests/accounts/test_ratelimit.py  # one file
-../.venv/bin/pytest tests/test_boot_checks.py::SharedCacheCheckTests::test_shared_cache_is_accepted
-../.venv/bin/pytest -k subnet                         # by name
-../.venv/bin/python manage.py runserver                # DEBUG on, OTP codes print to the console
-../.venv/bin/python manage.py migrate                  # first local run: db.sqlite3 starts empty
-../.venv/bin/python manage.py verify_platform   # external smoke of prod; --json, --module <name>
+.venv/bin/pytest                                   # whole suite, ~3s
+.venv/bin/pytest tests/accounts/test_ratelimit.py  # one file
+.venv/bin/pytest tests/test_boot_checks.py::SharedCacheCheckTests::test_shared_cache_is_accepted
+.venv/bin/pytest -k subnet                         # by name
+.venv/bin/python manage.py runserver                # DEBUG on, OTP codes print to the console
+.venv/bin/python manage.py migrate                  # first local run: db.sqlite3 starts empty
+.venv/bin/python manage.py verify_platform   # external smoke of prod; --json, --module <name>
 ```
 
 - **pytest must run from `backend/`.** `pytest.ini` lives there and supplies
@@ -177,6 +180,17 @@ Every failure is `{"error": {"code": "<machine_code>", "detail": "<human>"}}`, p
 `apps/common/errors.py` (DRF exception handler + the CSRF failure view, wired in settings).
 `web/api.js` only knows how to read that shape. DRF defaults to cookie-session auth and
 `IsAuthenticated`, JSON only — a new view is protected unless its author opts out.
+
+### MCP server
+
+`/mcp/` (`apps/tenancy/mcp/`) exposes findajob.pro's pipeline as MCP tools for
+Claude/ChatGPT. It is bearer-only (personal access tokens), CSRF-exempt, and
+mounted outside `/api/v1/` on purpose — it must not inherit DRF's session auth
+or CSRF defaults. Feature-flagged by `MCP_SERVER_ENABLED` (default off in
+prod). Tokens are managed through the ordinary session-authenticated API at
+`/api/v1/mcp-tokens/`. Tools never automate LinkedIn, Indeed or Wellfound —
+same risk table as the outbox. Spec:
+`docs/superpowers/specs/2026-09-26-mcp-server-design.md`.
 
 ### The frontend is a rendered prototype, not hand-written HTML
 

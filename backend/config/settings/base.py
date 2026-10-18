@@ -58,6 +58,10 @@ CSRF_TRUSTED_ORIGINS = env.get_list("CSRF_TRUSTED_ORIGINS", [])
 # high lets a visitor forge their own address, so the default is the useless one.
 TRUSTED_PROXY_COUNT = env.get_int("TRUSTED_PROXY_COUNT", 0)
 
+# MCP server (docs/superpowers/specs/2026-09-26-mcp-server-design.md). Off by
+# default until nginx carries the /mcp/ route on the target.
+MCP_SERVER_ENABLED = env.get_bool("MCP_SERVER_ENABLED", False)
+
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"

@@ -45,6 +45,9 @@ _SENSITIVE_ASSIGNMENT = re.compile(
 #: A bare six-digit number sitting next to the word "code" is the OTP itself.
 _BARE_OTP = re.compile(r"(?i)\b(code)\b(\W{0,4})(\d{6})\b")
 
+#: An MCP personal access token anywhere in a log line.
+_MCP_TOKEN = re.compile(r"fjp_[A-Za-z0-9_-]{40}")
+
 
 def redact(text: str) -> str:
     """Replace secret-looking values in ``text``."""
@@ -52,7 +55,9 @@ def redact(text: str) -> str:
     text = _SENSITIVE_ASSIGNMENT.sub(
         lambda m: f"{m.group(1)}{m.group(2)}{REDACTED}", text
     )
-    return _BARE_OTP.sub(lambda m: f"{m.group(1)}{m.group(2)}{REDACTED}", text)
+    text = _BARE_OTP.sub(lambda m: f"{m.group(1)}{m.group(2)}{REDACTED}", text)
+    text = _MCP_TOKEN.sub(REDACTED, text)
+    return text
 
 
 class RedactingFilter(logging.Filter):
