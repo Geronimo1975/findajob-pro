@@ -132,6 +132,8 @@ LOCAL_APPS = [
     "apps.tenancy.outbox",
     # Platform catalog, scraped listings, applications, documents.
     "apps.jobs",
+    # Candidate UserProfile + SearchProfile feeding the matcher.
+    "apps.profiles",
     # Server-rendered dashboard at /app/.
     "apps.dashboard",
 ]
