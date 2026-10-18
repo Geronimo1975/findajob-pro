@@ -79,6 +79,7 @@ api_v1_patterns = [
 
 urlpatterns = [
     path("api/v1/", include(api_v1_patterns)),
+    path("app/", include("apps.dashboard.urls")),
     # Read-only n8n panel. MUST be listed BEFORE `admin.site.urls`:
     # `AdminSite.get_urls` ends in a catch-all, so anything mounted after it is
     # unreachable. The view itself is wrapped in `admin.site.admin_view`, so it

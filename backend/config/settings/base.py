@@ -132,6 +132,8 @@ LOCAL_APPS = [
     "apps.tenancy.outbox",
     # Platform catalog, scraped listings, applications, documents.
     "apps.jobs",
+    # Server-rendered dashboard at /app/.
+    "apps.dashboard",
 ]
 
 # ORDER IS LOAD-BEARING, in exactly one place: `apps.common` must precede the
