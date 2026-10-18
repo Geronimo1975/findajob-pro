@@ -1,0 +1,162 @@
+/* findajob Voltagent dark theme for the Jobick shell.
+   Everything is scoped under [data-theme="dark"]; light (or no attribute) = stock Jobick.
+   Tokens: Voltagent design system. Green is CTA / active nav / live status ONLY.
+   Fonts are the self-hosted Inter + JetBrains Mono copies in ../fonts (no third-party origin). */
+@import url("../fonts/fonts.css");
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --fj-canvas: #101010;
+  --fj-soft: #1a1a1a;
+  --fj-softer: #2a2a2a;
+  --fj-edge: #3d3a39;
+  --fj-primary: #00d992;
+  --fj-on-primary: #101010;
+  --fj-success: #2fd6a1;
+  --fj-link: #10b981;
+  --fj-ink: #f2f2f2;
+  --fj-strong: #ffffff;
+  --fj-body: #bdbdbd;
+  --fj-mute: #8b949e;
+  --fj-warning: #e6b34d;
+  --fj-danger: #e5534b;
+  --fj-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fj-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Canvas */
+[data-theme="dark"] body,
+[data-theme="dark"] #main-wrapper,
+[data-theme="dark"] .content-body {
+  background: var(--fj-canvas);
+  color: var(--fj-body);
+  font-family: var(--fj-ui);
+}
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+[data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6,
+[data-theme="dark"] .h1, [data-theme="dark"] .h2, [data-theme="dark"] .h3,
+[data-theme="dark"] .h4, [data-theme="dark"] .h5, [data-theme="dark"] .h6,
+[data-theme="dark"] .text-dark, [data-theme="dark"] .card-title,
+[data-theme="dark"] .dashboard_bar { color: var(--fj-ink) !important; }
+[data-theme="dark"] .text-muted, [data-theme="dark"] small { color: var(--fj-mute) !important; }
+[data-theme="dark"] a { color: var(--fj-link); }
+[data-theme="dark"] hr { border-color: var(--fj-edge); opacity: 1; }
+[data-theme="dark"] #preloader { background: var(--fj-canvas); }
+
+/* Chrome: logo bar, topbar, sidebar, footer. Hairlines are the elevation; no shadows. */
+[data-theme="dark"] .nav-header,
+[data-theme="dark"] .header,
+[data-theme="dark"] .header-content,
+[data-theme="dark"] .header .navbar,
+[data-theme="dark"] .dlabnav,
+[data-theme="dark"] .footer { background: var(--fj-canvas); box-shadow: none; }
+[data-theme="dark"] .nav-header { border-bottom: 1px solid var(--fj-edge); border-right: 1px solid var(--fj-edge); }
+[data-theme="dark"] .header { border-bottom: 1px solid var(--fj-edge); }
+[data-theme="dark"] .dlabnav { border-right: 1px solid var(--fj-edge); }
+[data-theme="dark"] .footer { border-top: 1px solid var(--fj-edge); color: var(--fj-mute); }
+[data-theme="dark"] .footer .copyright p { color: var(--fj-mute); }
+[data-theme="dark"] .hamburger .line { background: var(--fj-body); }
+[data-theme="dark"] .brand-logo .brand-title { color: var(--fj-ink) !important; font-family: var(--fj-ui); }
+[data-theme="dark"] .brand-logo .text-primary { color: var(--fj-primary) !important; }
+
+/* Sidebar nav: accent only on the active row */
+[data-theme="dark"] .dlabnav .header-profile2 .font-w400,
+[data-theme="dark"] .dlabnav .sidebar-info span { color: var(--fj-ink); }
+[data-theme="dark"] .dlabnav .sidebar-info small { color: var(--fj-mute) !important; font-family: var(--fj-mono); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; }
+[data-theme="dark"] .dlabnav .metismenu > li > a { color: var(--fj-body); border-radius: 6px; }
+[data-theme="dark"] .dlabnav .metismenu > li > a i { color: var(--fj-mute); }
+[data-theme="dark"] .dlabnav .metismenu > li:hover > a { background: var(--fj-soft); color: var(--fj-ink); }
+[data-theme="dark"] .dlabnav .metismenu > li:hover > a i { color: var(--fj-ink); }
+[data-theme="dark"] .dlabnav .metismenu > li.mm-active > a,
+[data-theme="dark"] .dlabnav .metismenu > li.mm-active > a i,
+[data-theme="dark"] .dlabnav .metismenu > li.mm-active > a .nav-text { color: var(--fj-primary) !important; }
+[data-theme="dark"] .dlabnav .metismenu > li.mm-active > a { background: rgba(0,217,146,.10); }
+[data-theme="dark"] .dlabnav .metismenu > li.mm-active > a:before { background: var(--fj-primary); }
+
+/* Cards: hairline, 10px radius, no shadow */
+[data-theme="dark"] .card {
+  background: var(--fj-canvas);
+  border: 1px solid var(--fj-edge);
+  border-radius: 10px;
+  box-shadow: none;
+  color: var(--fj-body);
+}
+[data-theme="dark"] .card-header, [data-theme="dark"] .card-footer {
+  background: transparent; border-color: var(--fj-edge);
+}
+[data-theme="dark"] .bg-white, [data-theme="dark"] .bg-light { background: var(--fj-soft) !important; }
+
+/* Tables: mono-caps eyebrow header on soft surface, hairline rows */
+[data-theme="dark"] .table { color: var(--fj-body); border-color: var(--fj-edge); --bs-table-bg: transparent; --bs-table-color: var(--fj-body); }
+[data-theme="dark"] .table > :not(caption) > * > * { background: transparent; color: var(--fj-body); border-bottom-color: var(--fj-edge); box-shadow: none; }
+[data-theme="dark"] .table thead th {
+  background: var(--fj-soft); color: var(--fj-mute);
+  font-family: var(--fj-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase;
+  border-bottom: 1px solid var(--fj-edge);
+}
+[data-theme="dark"] .table-hover > tbody > tr:hover > * { background: var(--fj-soft); color: var(--fj-ink); }
+
+/* Metrics / data in mono */
+[data-theme="dark"] .fs-1, [data-theme="dark"] .fs-2, [data-theme="dark"] .count,
+[data-theme="dark"] .font-w600 { font-family: var(--fj-mono); }
+
+/* Buttons: primary = CTA green on ink-dark text; others are outline */
+[data-theme="dark"] .btn { border-radius: 6px; font-family: var(--fj-ui); font-weight: 600; box-shadow: none; }
+[data-theme="dark"] .btn-primary {
+  background: var(--fj-primary); border-color: var(--fj-primary); color: var(--fj-on-primary);
+}
+[data-theme="dark"] .btn-primary:hover, [data-theme="dark"] .btn-primary:focus { background: var(--fj-primary); border-color: var(--fj-primary); color: var(--fj-on-primary); opacity: .9; }
+[data-theme="dark"] .btn-outline-primary, [data-theme="dark"] .btn-light, [data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-outline-secondary, [data-theme="dark"] .btn-dark {
+  background: var(--fj-canvas); color: var(--fj-ink); border: 1px solid var(--fj-edge);
+}
+[data-theme="dark"] .btn-outline-primary:hover, [data-theme="dark"] .btn-light:hover,
+[data-theme="dark"] .btn-secondary:hover { background: var(--fj-soft); color: var(--fj-strong); border-color: var(--fj-edge); }
+
+/* Inputs */
+[data-theme="dark"] .form-control, [data-theme="dark"] .form-select,
+[data-theme="dark"] .bootstrap-select > .dropdown-toggle, [data-theme="dark"] textarea {
+  background: var(--fj-soft); color: var(--fj-ink); border: 1px solid var(--fj-edge); border-radius: 6px;
+}
+[data-theme="dark"] .form-control::placeholder { color: var(--fj-mute); }
+[data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .btn:focus-visible, [data-theme="dark"] a:focus-visible, [data-theme="dark"] #theme-toggle:focus-visible {
+  outline: 2px solid var(--fj-primary); outline-offset: -1px; box-shadow: none; background: var(--fj-soft); color: var(--fj-ink);
+}
+[data-theme="dark"] .dropdown-menu { background: var(--fj-soft); border: 1px solid var(--fj-edge); box-shadow: none; }
+[data-theme="dark"] .dropdown-item { color: var(--fj-body); }
+[data-theme="dark"] .dropdown-item:hover { background: var(--fj-softer); color: var(--fj-ink); }
+
+/* Status pills (9999px, tinted fill pair; green = live/sent only) */
+[data-theme="dark"] .badge { border-radius: 9999px; border: 1px solid var(--fj-edge); background: transparent; color: var(--fj-mute); font-family: var(--fj-mono); font-weight: 500; }
+[data-theme="dark"] .badge-success, [data-theme="dark"] .badge.bg-success, [data-theme="dark"] .badge-primary {
+  background: rgba(0,217,146,.10); border-color: rgba(0,217,146,.35); color: var(--fj-success) !important;
+}
+[data-theme="dark"] .badge-warning, [data-theme="dark"] .badge.bg-warning {
+  background: rgba(230,179,77,.10); border-color: rgba(230,179,77,.35); color: var(--fj-warning) !important;
+}
+[data-theme="dark"] .badge-danger, [data-theme="dark"] .badge.bg-danger {
+  background: rgba(229,83,75,.12); border-color: rgba(229,83,75,.35); color: var(--fj-danger) !important;
+}
+[data-theme="dark"] .badge-info, [data-theme="dark"] .badge-secondary, [data-theme="dark"] .badge-light, [data-theme="dark"] .badge-dark {
+  background: transparent; color: var(--fj-mute) !important;
+}
+[data-theme="dark"] .text-success { color: var(--fj-success) !important; }
+[data-theme="dark"] .text-warning { color: var(--fj-warning) !important; }
+[data-theme="dark"] .text-danger { color: var(--fj-danger) !important; }
+[data-theme="dark"] .text-primary { color: var(--fj-link) !important; }
+[data-theme="dark"] .progress { background: var(--fj-softer); }
+[data-theme="dark"] .progress-bar { background: var(--fj-primary); }
+
+/* Theme toggle (both themes). Shows the icon of the theme you would switch TO. 44px target. */
+#theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0; cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 6px; color: inherit;
+}
+#theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#theme-toggle .ico-sun { display: none; }
+[data-theme="dark"] #theme-toggle { color: var(--fj-body); border-color: var(--fj-edge); }
+[data-theme="dark"] #theme-toggle:hover { background: var(--fj-soft); color: var(--fj-ink); }
+[data-theme="dark"] #theme-toggle .ico-sun { display: block; }
+[data-theme="dark"] #theme-toggle .ico-moon { display: none; }
