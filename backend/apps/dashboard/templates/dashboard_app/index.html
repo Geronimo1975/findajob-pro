@@ -122,8 +122,8 @@
 									<td>{{ r.listing.platform.name|default:r.listing.platform.slug }}</td>
 									<td><span class="fj-score {% if r.match.score >= cc.min_prescore %}fj-score-hi{% endif %}">{{ r.match.score }}%</span></td>
 									<td>{{ r.listing.salary|default:"&mdash;" }}</td>
-									<td><span class="badge badge-light">New</span></td>
-									<td><a class="btn btn-primary btn-sm" href="#">Apply</a></td>
+									<td><span class="badge badge-light">{{ r.app_status|default:"Not applied" }}</span></td>
+									<td>{% if r.listing.url %}<a class="btn btn-outline-primary btn-sm" href="{{ r.listing.url }}" target="_blank" rel="noopener">View</a>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
 								</tr>
 								{% endfor %}
 								</tbody>

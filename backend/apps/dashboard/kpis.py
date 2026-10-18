@@ -39,6 +39,11 @@ def build_command_center(org, user, limit: int = 10) -> dict:
         .values("kind").annotate(n=Count("id")).order_by("kind")
     )
     apps = Application.objects.for_org(org).for_user(user).filter(user=user)
+    app_status = {
+        a.job_listing_id: a.get_status_display() for a in apps.order_by("created_at")
+    }
+    for row in job_rows:
+        row["app_status"] = app_status.get(row["listing"].id)
     return {
         "kpis": {
             "sent": apps.filter(status=S.SENT).count(),
