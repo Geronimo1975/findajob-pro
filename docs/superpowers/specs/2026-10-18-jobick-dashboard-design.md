@@ -210,6 +210,31 @@ can rely on them without changing what ships:
   center looks populated from day one. The plan needs an import path (management
   command or admin entry) for George's real application history.
 
+## 8b. Enriched command center + dark theme (George, 2026-10-18, after seeing Plan 1)
+
+New requirements for the dashboard, built as **Plan 2**:
+- **Dark theme is the home, with a toggle to light that remembers the choice.** The dark
+  variant is styled to the **Voltagent design system** (`voltagent-design` skill: canvas
+  `#101010`, hairline borders `#3d3a39`, accent green `#00d992` for CTA/status only, Inter +
+  JetBrains Mono) — not Jobick's generic Bootstrap dark — because that is findajob's identity
+  (the design system is dark-first). Light = Jobick's light, secondary. SSR default = dark;
+  the toggle writes `localStorage` + a `data-theme` attribute so there is no flash.
+- **Phase-1 command-center blocks:** (a) a **Documents** summary (what documents/CVs you have,
+  by kind), (b) **Recommendations** (top matched nomad jobs), (c) a **main jobs table** — nomad
+  jobs with **match %** (title, company, platform, match %, salary, status, action), inspired by
+  the old findajob dashboard and `Job_app`, and (d) an **internal automation table** showing
+  **job-ingestion runs** (what the automated pipeline scraped: per platform, new count, when).
+- **Match % requires matching + a profile.** Port the deterministic matcher from `Job_app`
+  (`filters/relevance.py` → `apps/jobs/matching.py`: `prescore`, `skill_tokens`, `skill_match`)
+  with its tests, per the pipeline-port spec §5/§10. Add `apps.profiles` with `SearchProfile`
+  (pipeline-port §4), lazily created; an empty profile yields a neutral match (no crash). This
+  pulls matching forward from the old Plan 3 into Plan 2 because the main table needs it.
+- **Automation table data (phase 1):** derive ingestion runs from existing `JobListing` data
+  (per `platform`: latest `scraped_at` + count in the last window) rather than a new model —
+  honest and cheap; a dedicated `IngestionRun` model is a later refinement.
+- `Job_app` is inspiration, not a drop-in: port the pure functions and tests, re-express the UI.
+- UI work must invoke `voltagent-design` + `ui-ux-pro-max` before writing templates/CSS.
+
 ## 8a. Gate & interop calls settled from Q1 (builder's call)
 
 - **Session gate on rendered pages:** server-rendered dashboard views are guarded
