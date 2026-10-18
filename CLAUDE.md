@@ -77,6 +77,19 @@ later modules (profile, matching, chatbot) build on the pipeline-port spec
 `apps/dashboard/static/` tree means `collectstatic` must run before nginx serves
 `/app/`.
 
+**Plan 2 (enrichment) shipped:** the dashboard defaults to a **dark Voltagent theme**
+(`static/dashboard_app/css/theme-voltagent.css`, `data-theme="dark"` on `<html>`, a
+persisted `#theme-toggle` to light; Inter + JetBrains Mono vendored under
+`static/dashboard_app/fonts/`). The deterministic matcher is ported byte-identically
+from `~/Projects/Job_app/filters/relevance.py` into `apps/jobs/matching.py`
+(`prescore`, `skill_tokens`, `skill_match`). New app **`apps.profiles`**
+(`UserProfile`, `SearchProfile.to_matching_config()`, lazy `get_or_create_*` in
+`profiles/services.py`). The command center (`apps/dashboard/kpis.py` +
+`index.html`) now shows a Documents summary, Recommendations, a **nomad-jobs table
+with match %**, and a job-ingestion automation table — all owner-scoped
+(`.filter(user=user)` is required because `OrgScopedQuerySet.for_user` scopes by org
+membership, not owner). Deploy also needs `migrate` (profiles.0001).
+
 ### The gate is the API, not the shell
 
 `index.html`, `app.html` and `auth.html` are served publicly by nginx and hold no user data, so
