@@ -60,6 +60,23 @@ Deploy commands, VPS layout, nginx/Traefik specifics and the Brevo mail setup ar
 
 ## Architecture
 
+### The dashboard is server-rendered at `/app/` (2026-10-18 pivot)
+
+A second frontend surface now exists alongside the static one: a **server-rendered
+Django app `apps.dashboard`, mounted at `/app/`**, themed with the vendored Jobick
+Bootstrap template (assets under `apps/dashboard/static/dashboard_app/`, all local —
+no CDN). It is gated by the OTP **session** (the `session_required` decorator in
+`apps/dashboard/auth.py` redirects anonymous visitors to `/auth.html?next=…`, which
+now defaults post-login to `/app/`). This is a deliberate exception to the
+"static frontend only" rule below — the **marketing** pages (`index.html`,
+`unternehmen.html`, `auth.html`) stay static + nginx, but the **product dashboard**
+is server-rendered. The old React prototype `app.html`/`support.js` is archived, not
+extended. Design: `docs/superpowers/specs/2026-10-18-jobick-dashboard-design.md`;
+later modules (profile, matching, chatbot) build on the pipeline-port spec
+`docs/superpowers/specs/2026-09-26-pipeline-port-design.md`. Deploy note: a new
+`apps/dashboard/static/` tree means `collectstatic` must run before nginx serves
+`/app/`.
+
 ### The gate is the API, not the shell
 
 `index.html`, `app.html` and `auth.html` are served publicly by nginx and hold no user data, so
