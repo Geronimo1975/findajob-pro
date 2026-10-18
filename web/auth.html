@@ -710,7 +710,7 @@ els.terms.addEventListener('change', () => {
 function safeNext() {
   const next = new URLSearchParams(location.search).get('next');
   if (next && /^\/[^/\\]/.test(next)) return next;
-  return '/app.html';
+  return '/app/';
 }
 
 // ── mount ────────────────────────────────────────────────────────────────────
