@@ -121,7 +121,11 @@ EMAIL_BACKEND = env.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBa
 STORAGES = {
     **STORAGES,
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+        # Forgiving subclass: a broken url()/@import in the vendored Jobick theme
+        # CSS (unused demo images / un-vendored source maps) no longer aborts the
+        # whole collectstatic run — see apps/common/storage.py. Our own assets
+        # still content-hash normally.
+        "BACKEND": "apps.common.storage.ForgivingManifestStaticFilesStorage",
         "OPTIONS": {
             "file_permissions_mode": STATIC_FILE_PERMISSIONS_MODE,
             "directory_permissions_mode": STATIC_DIRECTORY_PERMISSIONS_MODE,

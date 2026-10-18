@@ -216,7 +216,17 @@ class ProductionSettingsTests(SimpleTestCase):
 
     def test_static_files_use_a_manifest_store(self):
         prod = self.load_prod()
+        backend = prod.STORAGES["staticfiles"]["BACKEND"]
+        # The forgiving subclass (apps/common/storage.py) still content-hashes
+        # every real asset — it only tolerates broken references in the vendored
+        # Jobick theme CSS instead of aborting collectstatic. Assert it IS a
+        # ManifestStaticFilesStorage so the 30-day /static/ cache still holds.
         self.assertEqual(
-            prod.STORAGES["staticfiles"]["BACKEND"],
-            "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+            backend, "apps.common.storage.ForgivingManifestStaticFilesStorage"
+        )
+        from django.contrib.staticfiles.storage import ManifestStaticFilesStorage
+        from django.utils.module_loading import import_string
+
+        self.assertTrue(
+            issubclass(import_string(backend), ManifestStaticFilesStorage)
         )
