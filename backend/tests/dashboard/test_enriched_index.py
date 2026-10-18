@@ -102,3 +102,14 @@ def test_status_reflects_real_application_and_score_pill_threshold():
     assert f'{rows["Beta Pastry Chef"]}%' in b and "fj-score-hi" not in b
     assert str(S.SENT.label) in a and "Not applied" not in a
     assert "Not applied" in b
+
+
+def test_non_http_listing_url_is_not_rendered_as_link():
+    client, user, org = _login()
+    make_listing(url="javascript:alert(1)", title="Evil Listing")
+    make_listing(url="https://remoteok.com/jobs/safe", title="Safe Listing")
+    html = client.get("/app/").content.decode()
+    jobs = _section(html, "jobs-table")
+    assert "Evil Listing" in jobs and "Safe Listing" in jobs
+    assert 'href="javascript:' not in html
+    assert 'href="https://remoteok.com/jobs/safe"' in jobs

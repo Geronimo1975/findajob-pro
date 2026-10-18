@@ -28,7 +28,9 @@ def build_command_center(org, user, limit: int = 10) -> dict:
             "min_prescore": None,
         }
     profile = get_or_create_search_profile(org, user)
-    listings = list(JobListing.objects.select_related("platform")[:limit])
+    listings = list(
+        JobListing.objects.select_related("platform").order_by("-scraped_at", "-id")[:limit]
+    )
     job_rows = sorted(
         ({"listing": jl, "match": skill_match(jl, profile)} for jl in listings),
         key=lambda r: r["match"]["score"], reverse=True,
@@ -50,7 +52,7 @@ def build_command_center(org, user, limit: int = 10) -> dict:
             "in_progress": apps.filter(status__in=IN_PROGRESS).count(),
             "interviews": apps.filter(status=S.INTERVIEW).count(),
         },
-        "recent_jobs": list(JobListing.objects.all()[:limit]),
+        "recent_jobs": listings,
         "documents_summary": [
             {"kind": d["kind"], "label": str(labels.get(d["kind"], d["kind"])),
              "count": d["n"]}
