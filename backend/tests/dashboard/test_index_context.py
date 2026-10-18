@@ -42,6 +42,10 @@ def test_empty_workspace_zeroes():
         "kpis": {"sent": 0, "in_progress": 0, "interviews": 0},
         "recent_jobs": [],
         "active_applications": [],
+        "documents_summary": [],
+        "job_rows": [],
+        "recommendations": [],
+        "ingestion_runs": [],
     }
     user, org = _workspace()
     cc = build_command_center(org, user)
