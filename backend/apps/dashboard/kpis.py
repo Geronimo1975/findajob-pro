@@ -25,6 +25,7 @@ def build_command_center(org, user, limit: int = 10) -> dict:
             "job_rows": [],
             "recommendations": [],
             "ingestion_runs": [],
+            "min_prescore": None,
         }
     profile = get_or_create_search_profile(org, user)
     listings = list(JobListing.objects.select_related("platform")[:limit])
@@ -55,6 +56,7 @@ def build_command_center(org, user, limit: int = 10) -> dict:
             r for r in job_rows if r["match"]["score"] >= profile.min_prescore
         ][:5],
         "ingestion_runs": ingestion_runs(),
+        "min_prescore": profile.min_prescore,
         "active_applications": list(
             apps.exclude(status__in=TERMINAL).select_related("job_listing")
         ),

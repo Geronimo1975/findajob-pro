@@ -45,7 +45,7 @@ def test_index_renders_shell():
     assert "Zeta Corp" in html            # company
     assert 'badge-primary light">interview<' in html  # get_status_display
     # active_applications: the title appears in both feeds
-    assert html.count("Interview Zeta Corp") == 2
+    assert html.count("Interview Zeta Corp") == 3  # + jobs table
     for label in ("Applications Sent", "In Progress", "Interviews"):
         assert label in html
     assert re.search(r'data-kpi="sent">2<', html)

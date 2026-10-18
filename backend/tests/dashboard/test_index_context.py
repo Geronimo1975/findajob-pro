@@ -46,6 +46,7 @@ def test_empty_workspace_zeroes():
         "job_rows": [],
         "recommendations": [],
         "ingestion_runs": [],
+        "min_prescore": None,
     }
     user, org = _workspace()
     cc = build_command_center(org, user)

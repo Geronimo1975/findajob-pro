@@ -68,6 +68,101 @@
 				</div>
 			</div>
 		</div>
+		<div class="row">
+			<div class="col-xl-6">
+				<div class="card fj-block" data-block="documents">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Documents</h4></div>
+					<div class="card-body">
+						{% for d in cc.documents_summary %}
+						<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+							<span>{{ d.label }}</span>
+							<span class="fj-mono">{{ d.count }}</span>
+						</div>
+						{% empty %}
+						<p class="text-muted mb-0 py-3">No documents yet</p>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-6">
+				<div class="card fj-block" data-block="recommendations">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Recommendations</h4></div>
+					<div class="card-body">
+						{% for r in cc.recommendations %}
+						<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+							<div>
+								<h6 class="mb-0">{{ r.listing.title }}</h6>
+								<small>{{ r.listing.company }}</small>
+							</div>
+							<span class="fj-score fj-score-hi">{{ r.match.score }}%</span>
+						</div>
+						{% empty %}
+						<p class="text-muted mb-0 py-3">No matches yet &mdash; add skills to your profile</p>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-12">
+				<div class="card fj-block" data-block="jobs-table">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Nomad jobs</h4></div>
+					<div class="card-body">
+						{% if cc.job_rows %}
+						<div class="fj-table-wrap" style="overflow-x:auto;max-width:100%">
+							<table class="fj-table">
+								<thead><tr>
+									<th>Role / Company</th><th>Platform</th><th>Match %</th>
+									<th>Salary</th><th>Status</th><th>Action</th>
+								</tr></thead>
+								<tbody>
+								{% for r in cc.job_rows %}
+								<tr>
+									<td><strong>{{ r.listing.title }}</strong><br><small>{{ r.listing.company }}</small></td>
+									<td>{{ r.listing.platform.name|default:r.listing.platform.slug }}</td>
+									<td><span class="fj-score {% if r.match.score >= cc.min_prescore %}fj-score-hi{% endif %}">{{ r.match.score }}%</span></td>
+									<td>{{ r.listing.salary|default:"&mdash;" }}</td>
+									<td><span class="badge badge-light">New</span></td>
+									<td><a class="btn btn-primary btn-sm" href="#">Apply</a></td>
+								</tr>
+								{% endfor %}
+								</tbody>
+							</table>
+						</div>
+						{% else %}
+						<p class="text-muted mb-0 py-3">No jobs yet. New listings will show up here once ingestion runs.</p>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-12">
+				<div class="card fj-block" data-block="automation">
+					<div class="card-header border-0 pb-0"><h4 class="card-title mb-0">Automation</h4></div>
+					<div class="card-body">
+						{% if cc.ingestion_runs %}
+						<div class="fj-table-wrap" style="overflow-x:auto;max-width:100%">
+							<table class="fj-table">
+								<thead><tr><th>Platform</th><th>Last run</th><th>New jobs</th></tr></thead>
+								<tbody>
+								{% for run in cc.ingestion_runs %}
+								<tr>
+									<td>{{ run.platform }}</td>
+									<td class="fj-mono">{{ run.last_scraped_at|date:"Y-m-d H:i" }}</td>
+									<td class="fj-mono">{{ run.new_count }}</td>
+								</tr>
+								{% endfor %}
+								</tbody>
+							</table>
+						</div>
+						{% else %}
+						<p class="text-muted mb-0 py-3">No ingestion runs yet</p>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 {% endblock %}
