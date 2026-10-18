@@ -31,11 +31,21 @@ def test_index_renders_shell():
     for n, status in enumerate([S.SENT, S.SENT, S.INTERVIEW, S.RUNNING]):
         Application.objects.create(
             org=org, user=user, status=status,
-            job_listing=make_listing(url=f"https://remoteok.com/jobs/{n}"),
+            job_listing=make_listing(
+                url=f"https://remoteok.com/jobs/{n}",
+                title="Interview Zeta Corp" if status == S.INTERVIEW
+                else "Other Role",
+                company="Zeta Corp" if status == S.INTERVIEW else "Other Co",
+            ),
         )
     html = client.get("/app/").content.decode()
     for label in NAV:
-        assert label in html
+        assert f'nav-text">{label}<' in html
+    assert "Interview Zeta Corp" in html  # recent_jobs: title
+    assert "Zeta Corp" in html            # company
+    assert 'badge-primary light">interview<' in html  # get_status_display
+    # active_applications: the title appears in both feeds
+    assert html.count("Interview Zeta Corp") == 2
     for label in ("Applications Sent", "In Progress", "Interviews"):
         assert label in html
     assert re.search(r'data-kpi="sent">2<', html)
